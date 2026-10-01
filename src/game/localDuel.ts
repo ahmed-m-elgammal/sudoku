@@ -3,7 +3,7 @@
 'use client';
 import {
   createDuel, place, useAbility, tick, resign, cellFlags, swapOrder,
-  type DuelState, type DuelEvent, type PlaceResult,
+  type DuelState, type DuelEvent, type PlaceResult, type RuleMods,
 } from '@shared/engine';
 import { shadeAct, profileForStanding, type ShadeProfile } from '@shared/shade';
 import { tutorialAct, newTutorialScript, type TutorialScriptState } from '@shared/tutorial';
@@ -22,9 +22,10 @@ export interface LocalDuelOpts {
   names: [string, string];
   seals?: [number, number];
   foeProfile?: ShadeProfile;
-  mode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'replay' | 'endless';
+  mode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'replay' | 'endless' | 'weekly';
   adaptive?: boolean;             // T4: the Ninth swaps Orders when he falls to 4 Seals
   foeScript?: BossScript;         // T18: the foe's PhaseScript arc (campaign Magistrates, endless boss rungs)
+  mods?: RuleMods;                // T21: the Weekly Assize rule overlay (sanitized by the engine)
   replay?: DuelReplay;            // T7: the ink-echo this duel's foe replays (mode 'replay')
   settingsHaptics?: () => boolean;
   onEnd?: (r: { winner: PlayerId | 'draw'; reason: string }) => void;
@@ -94,6 +95,7 @@ export class LocalDuel {
       names: opts.names,
       orders: opts.orders,
       magistrateSeals: opts.seals,
+      mods: opts.mods,
     });
     this.state.events = [];
     if (opts.mode === 'replay' && opts.replay) {
@@ -326,6 +328,18 @@ export class LocalDuel {
       if (this.state.phase === 'ended') { this.finish(); return; }
     } else if (act.kind === 'ability') {
       useAbility(this.state, 1, act.id, { cell: act.cell, unit: act.unit });
+    } else if (act.kind === 'swap') {
+      // T20 — a cross-Order boss phase: the arc sets one Order aside mid-duel.
+      // The engine's swapOrder is the same atomic primitive T4 proved; the brass
+      // callout, sting and haptics are the T4 presentation, reused verbatim.
+      const from = this.state.players[1].order;
+      if (swapOrder(this.state, 1, act.to)) {
+        this.swapFlash = { from, to: act.to };
+        this.swapFlashAt = performance.now();
+        synth.orderSwap();
+        if (this.opts.settingsHaptics?.() ?? true) navigator.vibrate?.([40, 70, 110]);
+        this.bump(true);
+      }
     }
     // post-action cadence: shipped bots reschedule at a fixed 900 ms; a T17 mined
     // profile carries its own ink cadence so your Shade paces ink at YOUR tempo

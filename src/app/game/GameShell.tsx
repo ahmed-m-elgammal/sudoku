@@ -28,6 +28,7 @@ import PurseScreen from './PurseScreen';
 import FriendScreen from './FriendScreen';
 import EchoesScreen from './EchoesScreen';
 import EndlessScreen from './EndlessScreen';
+import WeeklyScreen from './WeeklyScreen';
 
 export default function GameShell() {
   const screen = useUi((s) => s.screen);
@@ -91,6 +92,7 @@ export default function GameShell() {
     case 'friend': return <FriendScreen />;
     case 'echoes': return <EchoesScreen />;
     case 'endless': return <EndlessScreen />;
+    case 'weekly': return <WeeklyScreen />;
     default: return <BootScreen />;
   }
 }

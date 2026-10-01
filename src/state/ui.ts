@@ -9,7 +9,8 @@ export type Screen =
   | 'season' | 'ledger' | 'settings' | 'offline' | 'story' | 'purse' | 'friend'
   | 'endingChoice' // T6 — the Balance / Burn verdict after the Orsolo reveal
   | 'echoes'       // T7 — the Shade Echoes shelf (duel a stored replay)
-  | 'endless';     // T18 — the Endless Assize ladder
+  | 'endless'      // T18 — the Endless Assize ladder
+  | 'weekly';      // T21 — the Weekly Assize (rotating rule modifiers)
 
 export interface StoryPayload {
   lines: string[];
@@ -24,7 +25,7 @@ interface UiStore {
   prev: Screen | null;
   direction: number; // page turn variant
   story: StoryPayload | null;
-  duelMode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'ranked' | 'friend' | 'replay' | 'endless';
+  duelMode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'ranked' | 'friend' | 'replay' | 'endless' | 'weekly';
   pendingEcho: import('@shared/replay').DuelReplay | null; // T7 — the chosen echo for a replay duel
   // T17 — "Your Shade": the echo mined into a personal profile + the echo it came from
   pendingPersonalShade: { replay: import('@shared/replay').DuelReplay; profile: import('@shared/shade').ShadeProfile } | null;

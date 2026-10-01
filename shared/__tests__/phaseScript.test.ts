@@ -9,7 +9,7 @@
 //   · envelope idempotence under ~500 hostile patches
 import { describe, it, expect } from 'vitest';
 import {
-  createDuel, tick, place, useAbility, serializeDuel, type DuelState,
+  createDuel, tick, place, useAbility, serializeDuel, swapOrder, type DuelState,
 } from '../engine';
 import { Rng } from '../rng';
 import { generatePuzzle } from '../sudoku';
@@ -59,7 +59,13 @@ const stepFoe = (script: BossScript, sst: BossScriptState, st: DuelState, rng: R
   if (st.phase !== 'live') return;
   const act = bossAct(script, sst, st, ME, baseProfile(), () => rng.next(), 0);
   if (act.kind === 'place') place(st, ME, act.cell, act.digit);
-  else if (act.kind === 'ability') useAbility(st, ME, act.id, { cell: act.cell, unit: act.unit });
+  else if (act.kind === 'ability') {
+    // T20 — a cast must belong to the boss's CURRENT Order, whatever the ladder
+    // did to it; a foreign rite would be refused by the engine anyway, but the
+    // contract is asserted here so the drive fails loudly, not silently fizzles.
+    expect(ORDER_ABILITIES[st.players[ME].order], `cast ${act.id} fits live Order ${st.players[ME].order}`).toContain(act.id);
+    useAbility(st, ME, act.id, { cell: act.cell, unit: act.unit });
+  } else if (act.kind === 'swap') swapOrder(st, ME, act.to); // T20 — the runtime path, in the pure drive too
 };
 
 const invariants = (st: DuelState, where: string): void => {
@@ -320,7 +326,9 @@ describe('PS · signature rites fire once, legally, or not at all', () => {
 describe('PS · the nine Magistrate arcs duel lawfully, end to end', () => {
   const SCRIPT_IDS = FOLIOS.map((f) => f.duels[2].script!).filter(Boolean);
 
-  it('PS13 every Magistrate carries a real arc whose signatures fit their Order', () => {
+  it('PS13 every Magistrate carries a real arc whose signatures fit their EFFECTIVE Order', () => {
+    // T20 contract — a phase's signatures must fit the Order the boss can wear
+    // DURING that phase: the base Order, or the phase's own swapTo target.
     expect(SCRIPT_IDS).toHaveLength(9);
     for (const folio of FOLIOS) {
       const boss = folio.duels[2];
@@ -329,8 +337,9 @@ describe('PS · the nine Magistrate arcs duel lawfully, end to end', () => {
       expect(script.phases.length).toBeGreaterThanOrEqual(2);
       expect(script.id).toBe(boss.script);
       for (const rule of script.phases) {
+        const effective = rule.swapTo ?? boss.order;
         for (const sig of rule.signature ?? []) {
-          expect(ORDER_ABILITIES[boss.order], `${script.id}: ${sig.id} fits ${boss.order}`).toContain(sig.id);
+          expect(ORDER_ABILITIES[effective], `${script.id}: ${sig.id} fits ${effective}`).toContain(sig.id);
         }
       }
     }

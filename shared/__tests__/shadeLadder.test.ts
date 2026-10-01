@@ -72,8 +72,13 @@ const runShadeDuel = (
       if (!res.ok && res.reason !== 'invalidTarget') badReasons.push(`ability:${act.id}:${res.reason}`);
       casts.push(act.id);
       wake = st.clockMs + 900;
-    } else {
+    } else if (act.kind === 'wait') {
       wake = st.clockMs + Math.max(400, act.untilMs - st.clockMs);
+    } else {
+      // T20 — shadeAct never returns 'swap' (only bossAct does); if it ever did
+      // here it would be a contract breach, so fail the sweep loudly
+      badReasons.push('shadeAct returned a swap action');
+      wake = st.clockMs + 900;
     }
   }
   return { st, placements, badReasons, casts };

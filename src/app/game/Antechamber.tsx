@@ -9,6 +9,7 @@ import i18n from '@/i18n/en.json';
 import Ribbon from './Ribbon';
 import { synth } from '@/audio/synth';
 import { todayUtcKey } from '@shared/rng';
+import { weekIndexFor, weeklyModDefs } from '@shared/weekly';
 
 export default function Antechamber() {
   const ui = useUi();
@@ -87,6 +88,12 @@ export default function Antechamber() {
           <p>{i18n.hub.endlessSub
             .replace('{rung}', String((save.endless?.current ?? 0) + 1))
             .replace('{best}', String(save.endless?.best ?? 0))}</p>
+        </button>
+
+        {/* T21 — the Weekly Assize: two writs, one sitting, every Clerk the same duel */}
+        <button className="panel card" onClick={() => { synth.uiTap(); ui.go('weekly'); }}>
+          <h3>{i18n.hub.weekly}</h3>
+          <p>{i18n.hub.weeklySub.replace('{mods}', weeklyModDefs(weekIndexFor(Date.now())).map((m) => m.name).join(' + '))}</p>
         </button>
       </div>
       <Ribbon />

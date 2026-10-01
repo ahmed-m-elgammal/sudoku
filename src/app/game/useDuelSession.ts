@@ -9,10 +9,11 @@ import { useSave } from '@/state/save';
 import { synth } from '@/audio/synth';
 import { profileForStanding, tieredTechniques, type ShadeProfile } from '@shared/shade';
 import { endlessFoe, newEndlessState } from '@shared/endless';
+import { weekIndexFor, weeklyForWeek } from '@shared/weekly';
 import { BOSS_SCRIPTS, type BossScript } from '@shared/phaseScript';
 import type { DuelReplay } from '@shared/replay';
 import { FOLIOS } from '@shared/orders';
-import type { DuelEvent } from '@shared/engine';
+import type { DuelEvent, RuleMods } from '@shared/engine';
 
 export interface DuelSessionSpec {
   mode: LocalDuelOpts['mode'];
@@ -24,6 +25,7 @@ export interface DuelSessionSpec {
   foeProfile?: ShadeProfile;
   adaptive?: boolean;   // T4: Magistrate Orsolo (Folio IX, duel III) swaps Orders at 4 Seals
   foeScript?: BossScript; // T18: the Magistrate's named PhaseScript arc
+  mods?: RuleMods;      // T21: the Weekly Assize rule overlay
   replay?: DuelReplay;  // T7: duel against a stored human log (the ink-echo)
 }
 
@@ -176,6 +178,22 @@ export function specFromUi(): DuelSessionSpec {
       seals: foe.seals,
       foeProfile: foe.profile,
       foeScript: foe.script,
+    };
+  }
+  // T21 — the Weekly Assize: one deterministic modified duel per week, identical
+  // for every Clerk; the week's two named modifiers ride the engine's RuleMods
+  if (mode === 'weekly') {
+    const foe = weeklyForWeek(weekIndexFor(Date.now()));
+    return {
+      mode: 'weekly',
+      seed: foe.seed,
+      tier: foe.tier,
+      orders: [save.order, foe.order],
+      names: ['You', foe.name],
+      seals: foe.seals,
+      foeProfile: foe.profile,
+      foeScript: foe.script,
+      mods: foe.mods,
     };
   }
   const tier = (ui as { practiceTier?: string }).practiceTier as 'Easy' | 'Medium' | 'Hard' | 'Expert' | undefined;

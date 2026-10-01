@@ -5,3 +5,4 @@ export * from './sudoku';
 export * from './engine';
 export * from './orders';
 export * from './shade';
+export * from './weekly';

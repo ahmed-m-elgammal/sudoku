@@ -117,7 +117,12 @@ export const tieredTechniques = (
 export type ShadeAction =
   | { kind: 'wait'; untilMs: number }
   | { kind: 'place'; cell: number; digit: Digit }
-  | { kind: 'ability'; id: AbilityId; cell?: number; unit?: string };
+  | { kind: 'ability'; id: AbilityId; cell?: number; unit?: string }
+  // T20 — cross-Order boss phases: the arc changes the boss's Order mid-duel.
+  // Only bossAct ever returns this (shadeAct never swaps); the runtime applies it
+  // through the engine's atomic swapOrder, which rebuilds ability runtimes and
+  // lapses windows while preserving everything earned or suffered.
+  | { kind: 'swap'; to: OrderId };
 
 // ---------------------------------------------------------------- T16 tempo adaptation
 // One sealed gap between the pleaders and the Shade changes tempo — bounded so the

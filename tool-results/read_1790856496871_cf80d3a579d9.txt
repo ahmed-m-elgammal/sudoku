@@ -1,0 +1,601 @@
+     1→// ASSIZE duel engine — pure, deterministic, seeded (spec R6, §2).
+     2→// Time is the duel clock (ms since start). All randomness flows through state.rngState.
+     3→// The server runs this with the private solution; solo/Shade modes run it locally with solution attached.
+     4→import {
+     5→  CONFIG, ORDER_ABILITIES, STATUS_OF_ABILITY, CELL_UNITS, UNIT_CELLS,
+     6→  type AbilityId, type Digit, type OrderId, type PlayerId, type StatusType, type UnitId,
+     7→} from './config';
+     8→import { Rng } from './rng';
+     9→
+    10→export interface StatusInst {
+    11→  uid: number;
+    12→  type: StatusType;
+    13→  target: PlayerId;
+    14→  endsAtMs: number;      // duel clock
+    15→  cell?: number;         // chain: locked empty cell on the target's board
+    16→  cells?: number[];      // smudge: blurred placed cells on the target's board
+    17→  unit?: UnitId;         // quarantine: unit the target cannot claim
+    18→}
+    19→
+    20→export interface AbilityRuntime {
+    21→  cdLeftMs: number;
+    22→  usedOnce: boolean;
+    23→  usesLeft: number | null; // null = unlimited per duel
+    24→}
+    25→
+    26→export interface PlayerState {
+    27→  id: PlayerId;
+    28→  name: string;
+    29→  order: OrderId;
+    30→  seals: number;
+    31→  mistakes: number;
+    32→  mistakesByUnit: Record<string, number>;
+    33→  augurRevealed: Record<string, boolean>; // unitId -> true (Clean claim voids)
+    34→  claimed: UnitId[];
+    35→  progress: number;
+    36→  abilities: Record<string, AbilityRuntime>;
+    37→  marginaliaUsed: boolean;  // scholar passive
+    38→  bulwarkUsed: boolean;     // warden passive
+    39→  reckoningUntilMs: number;
+    40→  wardUntilMs: number;
+    41→  mirrorUntilMs: number;
+    42→  flinchUntilMs: number;
+    43→  cdSyncedAtMs: number;     // last time cooldowns were reduced
+    44→  board: Uint8Array;        // givens + own correct placements
+    45→  statuses: StatusInst[];
+    46→  immuneUntil: Record<string, number>; // statusType -> duel-clock ms
+    47→}
+    48→
+    49→export type WinReason = 'seals' | 'reckoning' | 'suddenJudgment' | 'forfeit';
+    50→export type EventKind =
+    51→  | 'placed' | 'mistake' | 'claim' | 'ink' | 'ability' | 'status' | 'statusEnded'
+    52→  | 'negated' | 'mirrored' | 'forfeit' | 'end' | 'orderSwap';
+    53→
+    54→export interface DuelEvent {
+    55→  seq: number;
+    56→  atMs: number;
+    57→  kind: EventKind;
+    58→  player?: PlayerId;
+    59→  [k: string]: unknown;
+    60→}
+    61→
+    62→export interface DuelState {
+    63→  seed: string;
+    64→  givens: Uint8Array;
+    65→  solution: Uint8Array | null; // server-private in PvP; present in solo/Shade
+    66→  clockMs: number;
+    67→  players: [PlayerState, PlayerState];
+    68→  unitOwner: Record<string, PlayerId>;
+    69→  phase: 'live' | 'ended';
+    70→  winner: PlayerId | 'draw' | null;
+    71→  winReason: WinReason | null;
+    72→  rngState: number;
+    73→  lastStatusAtMs: number;
+    74→  statusUid: number;
+    75→  events: DuelEvent[];
+    76→  eventSeq: number;
+    77→  durationMs: number;
+    78→}
+    79→
+    80→export interface PlaceResult {
+    81→  ok: boolean;
+    82→  reason?: 'ended' | 'filled' | 'given' | 'chained' | 'hushed' | 'noSolution' | 'invalidTarget';
+    83→  correct?: boolean;
+    84→  claim?: { unit: UnitId; clean: boolean; damage: number; deferred?: boolean };
+    85→  inkAward?: number;
+    86→}
+    87→
+    88→export interface AbilityResult {
+    89→  ok: boolean;
+    90→  reason?: 'ended' | 'unknown' | 'wrongOrder' | 'cooldown' | 'noUses' | 'invalidTarget' | 'banned';
+    91→  applied?: boolean;
+    92→  statusReflected?: boolean;
+    93→  statusNegated?: boolean;
+    94→}
+    95→
+    96→// ---------------------------------------------------------------- creation
+    97→// Known-status / known-ability sets — hostile-input hardening (adversarial suite H/H16).
+    98→const VALID_STATUS: readonly string[] = ['chain', 'smudge', 'hush', 'miasma', 'quarantine'];
+    99→const ALL_ABILITIES = new Set<AbilityId>(Object.values(ORDER_ABILITIES).flat());
+   100→
+   101→const newPlayer = (id: PlayerId, name: string, order: OrderId): PlayerState => ({
+   102→  id, name, order,
+   103→  seals: CONFIG.seals.start,
+   104→  mistakes: 0,
+   105→  mistakesByUnit: {},
+   106→  augurRevealed: {},
+   107→  claimed: [],
+   108→  progress: 0,
+   109→  abilities: Object.fromEntries(
+   110→    ORDER_ABILITIES[order].map((a) => [a, { cdLeftMs: 0, usedOnce: false, usesLeft: a === 'tincture' ? CONFIG.abilityCdMs.tinctureUsesPerDuel : null }]),
+   111→  ),
+   112→  marginaliaUsed: false,
+   113→  bulwarkUsed: false,
+   114→  reckoningUntilMs: 0,
+   115→  wardUntilMs: 0,
+   116→  mirrorUntilMs: 0,
+   117→  flinchUntilMs: 0,
+   118→  cdSyncedAtMs: 0,
+   119→  board: new Uint8Array(81),
+   120→  statuses: [],
+   121→  immuneUntil: {},
+   122→});
+   123→
+   124→export interface CreateDuelOpts {
+   125→  seed: string;
+   126→  givens: Uint8Array;
+   127→  solution?: Uint8Array | null;
+   128→  names?: [string, string];
+   129→  orders?: [OrderId, OrderId];
+   130→  magistrateSeals?: [number, number];
+   131→}
+   132→
+   133→export function createDuel(opts: CreateDuelOpts): DuelState {
+   134→  const rng = new Rng(opts.seed);
+   135→  const st: DuelState = {
+   136→    seed: opts.seed,
+   137→    givens: opts.givens,
+   138→    solution: opts.solution ?? null,
+   139→    clockMs: 0,
+   140→    players: [
+   141→      newPlayer(0, opts.names?.[0] ?? 'You', opts.orders?.[0] ?? 'scholar'),
+   142→      newPlayer(1, opts.names?.[1] ?? 'Foe', opts.orders?.[1] ?? 'executioner'),
+   143→    ],
+   144→    unitOwner: {},
+   145→    phase: 'live',
+   146→    winner: null,
+   147→    winReason: null,
+   148→    rngState: rng.state,
+   149→    lastStatusAtMs: -CONFIG.duel.statusGlobalGapMs,
+   150→    statusUid: 1,
+   151→    events: [],
+   152→    eventSeq: 1,
+   153→    durationMs: CONFIG.duel.durationMs,
+   154→  };
+   155→  if (opts.magistrateSeals) {
+   156→    for (let i = 0; i < 2; i++) {
+   157→      const s = opts.magistrateSeals[i];
+   158→      if (!Number.isInteger(s) || s < 1 || s > CONFIG.seals.magistrate)
+   159→        throw new RangeError(`magistrateSeals[${i}] must be an integer in [1, ${CONFIG.seals.magistrate}], got ${s}`);
+   160→    }
+   161→    st.players[0].seals = opts.magistrateSeals[0];
+   162→    st.players[1].seals = opts.magistrateSeals[1];
+   163→  }
+   164→  for (const p of st.players) p.board.set(opts.givens);
+   165→  return st;
+   166→}
+   167→
+   168→const rngOf = (st: DuelState): Rng => {
+   169→  const r = new Rng(1);
+   170→  r.state = st.rngState;
+   171→  return r;
+   172→};
+   173→const commitRng = (st: DuelState, r: Rng) => { st.rngState = r.state; };
+   174→
+   175→export const pushEvent = (st: DuelState, kind: EventKind, data: Omit<DuelEvent, 'seq' | 'atMs' | 'kind'> = {}) => {
+   176→  st.events.push({ seq: st.eventSeq++, atMs: Math.round(st.clockMs), kind, ...data });
+   177→  if (st.events.length > 120) st.events.splice(0, st.events.length - 120);
+   178→};
+   179→
+   180→// ---------------------------------------------------------------- internal helpers
+   181→const findStatus = (p: PlayerState, type: StatusType) => p.statuses.find((s) => s.type === type);
+   182→const foeOf = (st: DuelState, p: PlayerId) => st.players[p === 0 ? 1 : 0];
+   183→
+   184→function endDuel(st: DuelState, winner: PlayerId | 'draw', reason: WinReason) {
+   185→  if (st.phase === 'ended') return;
+   186→  st.phase = 'ended';
+   187→  st.winner = winner;
+   188→  st.winReason = reason;
+   189→  pushEvent(st, 'end', { winner, reason });
+   190→}
+   191→
+   192→function checkSealDeath(st: DuelState, loser: PlayerId) {
+   193→  if (st.players[loser].seals <= 0) endDuel(st, loser === 0 ? 1 : 0, 'seals');
+   194→}
+   195→
+   196→function unitComplete(st: DuelState, p: PlayerState, unit: UnitId): boolean {
+   197→  return UNIT_CELLS[unit].every((c) => p.board[c] !== 0);
+   198→}
+   199→
+   200→// the most nearly complete unclaimed unit on p's board (ties broken by seeded rng)
+   201→function mostNearlyComplete(st: DuelState, p: PlayerState, r: Rng): UnitId | null {
+   202→  const all: UnitId[] = [];
+   203→  for (let i = 0; i < 9; i++) { all.push(`r${i}`, `c${i}`, `b${i}`); }
+   204→  let best: UnitId[] = [];
+   205→  let bestN = -1;
+   206→  for (const u of all) {
+   207→    if (st.unitOwner[u] !== undefined) continue;
+   208→    const cells = UNIT_CELLS[u];
+   209→    const n = cells.filter((c) => p.board[c] !== 0).length;
+   210→    if (n === 9) continue; // must still have an empty cell to target
+   211→    if (n > bestN) { bestN = n; best = [u]; }
+   212→    else if (n === bestN) best.push(u);
+   213→  }
+   214→  if (!best.length) return null;
+   215→  return best.length === 1 ? best[0] : r.pick(best);
+   216→}
+   217→
+   218→// ---------------------------------------------------------------- statuses
+   219→export interface ApplyStatusOpts {
+   220→  cell?: number;
+   221→  unit?: UnitId;
+   222→  cells?: number[];
+   223→}
+   224→
+   225→export function applyStatus(st: DuelState, source: PlayerId, type: StatusType, target: PlayerId, opts: ApplyStatusOpts = {}):
+   226→  { applied: boolean; reflected?: boolean; reason?: string } {
+   227→  if (st.phase !== 'live') return { applied: false, reason: 'ended' };
+   228→  // hostile-input hardening: unknown types used to push NaN-lived statuses, garbage
+   229→  // cells/units used to be stored verbatim (adversarial suite H16/H11)
+   230→  if (source !== 0 && source !== 1) return { applied: false, reason: 'invalid' };
+   231→  if (target !== 0 && target !== 1) return { applied: false, reason: 'invalid' };
+   232→  if (!VALID_STATUS.includes(type)) return { applied: false, reason: 'invalid' };
+   233→  if (opts.cell !== undefined && (!Number.isInteger(opts.cell) || opts.cell < 0 || opts.cell > 80)) return { applied: false, reason: 'invalid' };
+   234→  if (opts.cells && (!opts.cells.length || !opts.cells.every((c) => Number.isInteger(c) && c >= 0 && c <= 80))) return { applied: false, reason: 'invalid' };
+   235→  if (opts.unit !== undefined && !UNIT_CELLS[opts.unit]) return { applied: false, reason: 'invalid' };
+   236→  const dur = (CONFIG.statusDurationsMs as Record<string, number>)[type];
+   237→  // Apothecary Distiller: statuses you apply last +2s
+   238→  const bonus = st.players[source].order === 'apothecary' && (type === 'smudge' || type === 'miasma') ? 2000 : 0;
+   239→  const foe = foeOf(st, source);
+   240→  let tgt: PlayerId = target;
+   241→
+   242→  // Reflection (Warden Mirror) — reflect back within the armed window
+   243→  if (foe.mirrorUntilMs > st.clockMs) {
+   244→    foe.mirrorUntilMs = 0;
+   245→    tgt = source;
+   246→    pushEvent(st, 'mirrored', { player: target, abilitySource: source, status: type });
+   247→  }
+   248→
+   249→  const tp = st.players[tgt];
+   250→  // Warden Bulwark — the first incoming status each duel is negated
+   251→  if (tp.order === 'warden' && !tp.bulwarkUsed) {
+   252→    tp.bulwarkUsed = true;
+   253→    pushEvent(st, 'negated', { player: tgt, status: type, by: 'bulwark' });
+   254→    return { applied: false, reason: 'bulwark' };
+   255→  }
+   256→  // Ward — negate the next incoming status within 15s
+   257→  if (tp.wardUntilMs > st.clockMs) {
+   258→    tp.wardUntilMs = 0;
+   259→    pushEvent(st, 'negated', { player: tgt, status: type, by: 'ward' });
+   260→    return { applied: false, reason: 'ward' };
+   261→  }
+   262→  // Anti-frustration rules (spec §2)
+   263→  if (st.clockMs > st.durationMs - CONFIG.duel.finalStatusBanMs) return { applied: false, reason: 'finalBan' };
+   264→  if (st.clockMs - st.lastStatusAtMs < CONFIG.duel.statusGlobalGapMs) return { applied: false, reason: 'gap' };
+   265→  if (findStatus(tp, type)) return { applied: false, reason: 'active' };
+   266→  if ((tp.immuneUntil[type] ?? 0) > st.clockMs) return { applied: false, reason: 'immune' };
+   267→
+   268→  st.lastStatusAtMs = st.clockMs;
+   269→  const inst: StatusInst = { uid: st.statusUid++, type, target: tgt, endsAtMs: st.clockMs + dur + bonus };
+   270→  if (opts.cell !== undefined) inst.cell = opts.cell;
+   271→  if (opts.cells) inst.cells = opts.cells;
+   272→  if (opts.unit !== undefined) inst.unit = opts.unit;
+   273→  tp.statuses.push(inst);
+   274→  pushEvent(st, 'status', { player: tgt, from: source, status: type, ...opts });
+   275→  return { applied: true };
+   276→}
+   277→
+   278→// ---------------------------------------------------------------- placement
+   279→export function place(st: DuelState, player: PlayerId, cell: number, digit: Digit): PlaceResult {
+   280→  if (st.phase !== 'live') return { ok: false, reason: 'ended' };
+   281→  // hostile-input hardening: invalid seats used to crash (TypeError on p.board), and
+   282→  // NaN/2.5 digits passed the old range check and burned Seals as fake mistakes
+   283→  if (player !== 0 && player !== 1) return { ok: false, reason: 'invalidTarget' };
+   284→  const p = st.players[player];
+   285→  if (!Number.isInteger(cell) || cell < 0 || cell > 80) return { ok: false, reason: 'invalidTarget' };
+   286→  if (!Number.isInteger(digit) || digit < 1 || digit > 9) return { ok: false, reason: 'invalidTarget' };
+   287→  if (p.board[cell] !== 0) return { ok: false, reason: p.board[cell] === st.givens[cell] ? 'given' : 'filled' };
+   288→  if (findStatus(p, 'hush')) return { ok: false, reason: 'hushed' };
+   289→  if (findStatus(p, 'chain')?.cell === cell) return { ok: false, reason: 'chained' };
+   290→  if (!st.solution) return { ok: false, reason: 'noSolution' };
+   291→
+   292→  const correct = st.solution[cell] === digit;
+   293→  if (!correct) {
+   294→    p.mistakes++;
+   295→    for (const u of CELL_UNITS(cell)) p.mistakesByUnit[u] = (p.mistakesByUnit[u] ?? 0) + 1;
+   296→    const forgiven = p.order === 'scholar' && !p.marginaliaUsed;
+   297→    if (forgiven) p.marginaliaUsed = true;
+   298→    else p.seals = Math.max(0, p.seals - CONFIG.placement.wrongSealCost);
+   299→    p.flinchUntilMs = st.clockMs + CONFIG.placement.flinchMs; // "Flinch"
+   300→    pushEvent(st, 'mistake', { player, cell, digit, forgiven, sealsLeft: p.seals });
+   301→    checkSealDeath(st, player);
+   302→    return { ok: true, correct: false };
+   303→  }
+   304→
+   305→  p.board[cell] = digit;
+   306→  p.progress++;
+   307→  // Momentum: each correct placement reduces all your cooldowns by 0.5s
+   308→  for (const a of Object.values(p.abilities)) a.cdLeftMs = Math.max(0, a.cdLeftMs - CONFIG.placement.momentumReductionMs);
+   309→  pushEvent(st, 'placed', { player, cell, digit });
+   310→
+   311→  // Claims
+   312→  for (const u of CELL_UNITS(cell)) {
+   313→    if (st.unitOwner[u] !== undefined) continue;
+   314→    if (!unitComplete(st, p, u)) continue;
+   315→    const foe = foeOf(st, player);
+   316→    const quarantined = findStatus(p, 'quarantine')?.unit === u;
+   317→    if (quarantined) {
+   318→      // QUARANTINE: cannot be claimed by them while active — deferred until it ends
+   319→      const q = findStatus(p, 'quarantine')!;
+   320→      (q as StatusInst & { pendingClaim?: { player: PlayerId; unit: UnitId } }).pendingClaim = { player, unit: u };
+   321→      pushEvent(st, 'claim', { player, unit: u, deferred: true });
+   322→      continue;
+   323→    }
+   324→    resolveClaim(st, player, u);
+   325→  }
+   326→
+   327→  if (p.board.every((v) => v !== 0)) endDuel(st, player, 'reckoning');
+   328→  return { ok: true, correct: true };
+   329→}
+   330→
+   331→function resolveClaim(st: DuelState, player: PlayerId, unit: UnitId) {
+   332→  const p = st.players[player];
+   333→  const foe = foeOf(st, player);
+   334→  st.unitOwner[unit] = player;
+   335→  p.claimed.push(unit);
+   336→  let damage = CONFIG.claims.damage;
+   337→  const clean = (p.mistakesByUnit[unit] ?? 0) === 0 && !p.augurRevealed[unit];
+   338→  if (clean) damage += CONFIG.claims.cleanBonus;
+   339→  if (p.reckoningUntilMs > st.clockMs) { damage += 1; p.reckoningUntilMs = 0; }
+   340→  if (p.order === 'executioner' && foe.seals <= 3) damage += 1; // Last Rites
+   341→  foe.seals = Math.max(0, foe.seals - damage);
+   342→  pushEvent(st, 'claim', { player, unit, clean, damage });
+   343→  checkSealDeath(st, foe.id);
+   344→}
+   345→
+   346→// ---------------------------------------------------------------- abilities
+   347→export function useAbility(st: DuelState, player: PlayerId, abilityId: AbilityId, arg: { cell?: number; unit?: UnitId } = {}): AbilityResult {
+   348→  if (st.phase !== 'live') return { ok: false, reason: 'ended' };
+   349→  if (player !== 0 && player !== 1) return { ok: false, reason: 'invalidTarget' };
+   350→  const p = st.players[player];
+   351→  if (!ALL_ABILITIES.has(abilityId)) return { ok: false, reason: 'unknown' };
+   352→  const rt = p.abilities[abilityId];
+   353→  if (!rt || !ORDER_ABILITIES[p.order].includes(abilityId)) return { ok: false, reason: 'wrongOrder' };
+   354→  if (rt.cdLeftMs > 0) return { ok: false, reason: 'cooldown' };
+   355→  if (rt.usesLeft !== null && rt.usesLeft <= 0) return { ok: false, reason: 'noUses' };
+   356→  const foe = foeOf(st, player);
+   357→  const r = rngOf(st);
+   358→  let result: AbilityResult = { ok: true, applied: true };
+   359→
+   360→  const setCd = (id: AbilityId) => {
+   361→    const full = (CONFIG.abilityCdMs as Record<string, number>)[id] ?? 0;
+   362→    rt.cdLeftMs = rt.usedOnce ? full : full * CONFIG.abilities.firstUseCooldownFactor;
+   363→    rt.usedOnce = true;
+   364→    if (rt.usesLeft !== null) rt.usesLeft--;
+   365→  };
+   366→
+   367→  switch (abilityId) {
+   368→    case 'augur': {
+   369→      const cell = arg.cell;
+   370→      if (cell === undefined || !Number.isInteger(cell) || cell < 0 || cell > 80 || !st.solution || p.board[cell] !== 0) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
+   371→      for (const u of CELL_UNITS(cell)) p.augurRevealed[u] = true;
+   372→      pushEvent(st, 'ability', { player, ability: 'augur', cell, digit: st.solution[cell] });
+   373→      setCd(abilityId);
+   374→      break;
+   375→    }
+   376→    case 'unseal': {
+   377→      const cleared = p.statuses.length;
+   378→      p.statuses = [];
+   379→      for (const t of ['chain', 'smudge', 'hush', 'miasma', 'quarantine'] as StatusType[])
+   380→        p.immuneUntil[t] = st.clockMs + CONFIG.abilityCdMs.unsealImmunityMs;
+   381→      pushEvent(st, 'ability', { player, ability: 'unseal', cleared });
+   382→      setCd(abilityId);
+   383→      break;
+   384→    }
+   385→    case 'fairCopy': {
+   386→      const cell = arg.cell;
+   387→      if (cell === undefined || !Number.isInteger(cell) || cell < 0 || cell > 80 || p.board[cell] !== 0) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
+   388→      const box = CELL_UNITS(cell)[2];
+   389→      const cands: Record<number, number[]> = {};
+   390→      for (const c of UNIT_CELLS[box]) {
+   391→        if (p.board[c] !== 0) continue;
+   392→        const used = new Set<number>();
+   393→        for (const u of CELL_UNITS(c)) for (const cc of UNIT_CELLS[u]) if (p.board[cc]) used.add(p.board[cc]);
+   394→        cands[c] = ([1, 2, 3, 4, 5, 6, 7, 8, 9] as number[]).filter((d) => !used.has(d));
+   395→      }
+   396→      pushEvent(st, 'ability', { player, ability: 'fairCopy', box, candidates: cands });
+   397→      setCd(abilityId);
+   398→      break;
+   399→    }
+   400→    case 'sever': {
+   401→      const unit = mostNearlyComplete(st, foe, r);
+   402→      if (!unit) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
+   403→      const empty = UNIT_CELLS[unit].filter((c) => foe.board[c] === 0);
+   404→      const cell = empty.length ? r.pick(empty) : undefined;
+   405→      const res = applyStatus(st, player, 'chain', foe.id, cell !== undefined ? { cell } : {});
+   406→      result = { ok: true, applied: res.applied, statusNegated: !res.applied };
+   407→      pushEvent(st, 'ability', { player, ability: 'sever', unit, cell });
+   408→      setCd(abilityId);
+   409→      break;
+   410→    }
+   411→    case 'hush': {
+   412→      const res = applyStatus(st, player, 'hush', foe.id);
+   413→      result = { ok: true, applied: res.applied, statusNegated: !res.applied };
+   414→      pushEvent(st, 'ability', { player, ability: 'hush' });
+   415→      setCd(abilityId);
+   416→      break;
+   417→    }
+   418→    case 'reckoning': {
+   419→      p.reckoningUntilMs = st.clockMs + CONFIG.abilityCdMs.reckoningWindowMs;
+   420→      pushEvent(st, 'ability', { player, ability: 'reckoning', untilMs: p.reckoningUntilMs });
+   421→      setCd(abilityId);
+   422→      break;
+   423→    }
+   424→    case 'smudge': {
+   425→      const placed: number[] = [];
+   426→      for (let c = 0; c < 81; c++) if (foe.board[c] !== 0 && st.givens[c] === 0) placed.push(c);
+   427→      const cells = r.shuffle(placed).slice(0, CONFIG.statusDurationsMs.smudgeDigits);
+   428→      if (!cells.length) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
+   429→      const res = applyStatus(st, player, 'smudge', foe.id, { cells });
+   430→      result = { ok: true, applied: res.applied, statusNegated: !res.applied };
+   431→      pushEvent(st, 'ability', { player, ability: 'smudge', cells: res.applied ? cells : undefined });
+   432→      setCd(abilityId);
+   433→      break;
+   434→    }
+   435→    case 'tincture': {
+   436→      if (p.seals >= CONFIG.seals.tinctureCap) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
+   437→      p.seals = Math.min(CONFIG.seals.tinctureCap, p.seals + 1);
+   438→      pushEvent(st, 'ability', { player, ability: 'tincture', seals: p.seals });
+   439→      setCd(abilityId);
+   440→      break;
+   441→    }
+   442→    case 'miasma': {
+   443→      const res = applyStatus(st, player, 'miasma', foe.id);
+   444→      result = { ok: true, applied: res.applied, statusNegated: !res.applied };
+   445→      pushEvent(st, 'ability', { player, ability: 'miasma' });
+   446→      setCd(abilityId);
+   447→      break;
+   448→    }
+   449→    case 'ward': {
+   450→      p.wardUntilMs = st.clockMs + CONFIG.abilityCdMs.wardNegateWindowMs;
+   451→      pushEvent(st, 'ability', { player, ability: 'ward', untilMs: p.wardUntilMs });
+   452→      setCd(abilityId);
+   453→      break;
+   454→    }
+   455→    case 'mirror': {
+   456→      p.mirrorUntilMs = st.clockMs + CONFIG.abilityCdMs.mirrorReflectWindowMs;
+   457→      pushEvent(st, 'ability', { player, ability: 'mirror', untilMs: p.mirrorUntilMs });
+   458→      setCd(abilityId);
+   459→      break;
+   460→    }
+   461→    case 'quarantine': {
+   462→      const unit = arg.unit ?? mostNearlyComplete(st, foe, r) ?? undefined;
+   463→      if (!unit || (arg.unit !== undefined && !UNIT_CELLS[arg.unit])) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
+   464→      const res = applyStatus(st, player, 'quarantine', foe.id, { unit });
+   465→      result = { ok: true, applied: res.applied, statusNegated: !res.applied };
+   466→      pushEvent(st, 'ability', { player, ability: 'quarantine', unit: res.applied ? unit : undefined });
+   467→      setCd(abilityId);
+   468→      break;
+   469→    }
+   470→    default:
+   471→      commitRng(st, r);
+   472→      return { ok: false, reason: 'unknown' };
+   473→  }
+   474→  commitRng(st, r);
+   475→  return result;
+   476→}
+   477→
+   478→// ---------------------------------------------------------------- clock
+   479→export function tick(st: DuelState, dtMs: number) {
+   480→  if (st.phase !== 'live') return;
+   481→  // hostile-input hardening: NaN used to brick the duel permanently (clock stuck at
+   482→  // NaN, nothing ever expires), Infinity insta-ended it, negatives rewound time
+   483→  if (!Number.isFinite(dtMs) || dtMs < 0) return;
+   484→  st.clockMs += dtMs;
+   485→  for (const p of st.players) {
+   486→    // status expiry + per-type immunity
+   487→    for (const s of [...p.statuses]) {
+   488→      if (s.endsAtMs <= st.clockMs) {
+   489→        p.statuses = p.statuses.filter((x) => x.uid !== s.uid);
+   490→        p.immuneUntil[s.type] = st.clockMs + CONFIG.duel.statusImmunityMs;
+   491→        // deferred claim under an expired quarantine resolves now
+   492→        const pend = (s as StatusInst & { pendingClaim?: { player: PlayerId; unit: UnitId } }).pendingClaim;
+   493→        if (pend && s.type === 'quarantine' && st.unitOwner[pend.unit] === undefined && unitComplete(st, st.players[pend.player], pend.unit)) {
+   494→          resolveClaim(st, pend.player, pend.unit);
+   495→        }
+   496→        pushEvent(st, 'statusEnded', { player: p.id, status: s.type });
+   497→      }
+   498→    }
+   499→    // cooldowns (Flinch pauses them)
+   500→    if (st.clockMs >= p.flinchUntilMs) {
+   501→      const dt = st.clockMs - p.cdSyncedAtMs;
+   502→      if (dt > 0) for (const a of Object.values(p.abilities)) a.cdLeftMs = Math.max(0, a.cdLeftMs - dt);
+   503→    }
+   504→    p.cdSyncedAtMs = st.clockMs;
+   505→  }
+   506→  // Sudden Judgment (win condition 3)
+   507→  if (st.clockMs >= st.durationMs) {
+   508→    const [a, b] = st.players;
+   509→    if (a.seals !== b.seals) endDuel(st, a.seals > b.seals ? 0 : 1, 'suddenJudgment');
+   510→    else if (a.claimed.length !== b.claimed.length) endDuel(st, a.claimed.length > b.claimed.length ? 0 : 1, 'suddenJudgment');
+   511→    else if (a.mistakes !== b.mistakes) endDuel(st, a.mistakes < b.mistakes ? 0 : 1, 'suddenJudgment');
+   512→    else endDuel(st, 'draw', 'suddenJudgment');
+   513→  }
+   514→}
+   515→
+   516→export function resign(st: DuelState, player: PlayerId) {
+   517→  if (st.phase !== 'live') return;
+   518→  if (player !== 0 && player !== 1) return;
+   519→  pushEvent(st, 'forfeit', { player });
+   520→  endDuel(st, player === 0 ? 1 : 0, 'forfeit');
+   521→}
+   522→
+   523→// ---------------------------------------------------------------- order swap (T4)
+   524→// Orsolo's adaptive phase: one mid-duel Order swap. The new Order arrives fresh —
+   525→// ability runtimes rebuilt (first casts start at the 50% first-use factor), the new
+   526→// Order's passive flags reset — while everything earned or suffered so far (Seals,
+   527→// claims, board, statuses, immunity) is kept exactly as it was. Outgoing ability
+   528→// windows (Reckoning / Ward / Mirror) lapse: the rites that armed them are gone.
+   529→export function swapOrder(st: DuelState, player: PlayerId, newOrder: OrderId): boolean {
+   530→  if (st.phase !== 'live') return false;
+   531→  if (player !== 0 && player !== 1) return false;
+   532→  if (!(newOrder in ORDER_ABILITIES)) return false; // unknown ids used to crash on ORDER_ABILITIES[bad].map
+   533→  const p = st.players[player];
+   534→  if (p.order === newOrder) return false;
+   535→  const from = p.order;
+   536→  p.order = newOrder;
+   537→  p.abilities = Object.fromEntries(
+   538→    ORDER_ABILITIES[newOrder].map((a) => [a, { cdLeftMs: 0, usedOnce: false, usesLeft: a === 'tincture' ? CONFIG.abilityCdMs.tinctureUsesPerDuel : null }]),
+   539→  );
+   540→  p.marginaliaUsed = false; // Scholar's Marginalia returns unworn
+   541→  p.bulwarkUsed = false;    // Warden's Bulwark returns unworn
+   542→  p.reckoningUntilMs = 0;
+   543→  p.wardUntilMs = 0;
+   544→  p.mirrorUntilMs = 0;
+   545→  pushEvent(st, 'orderSwap', { player, from, to: newOrder });
+   546→  return true;
+   547→}
+   548→
+   549→// ---------------------------------------------------------------- serialization
+   550→export const serializeDuel = (st: DuelState): string => JSON.stringify({
+   551→  ...st,
+   552→  givens: Array.from(st.givens),
+   553→  solution: st.solution ? Array.from(st.solution) : null,
+   554→  players: st.players.map((p) => ({ ...p, board: Array.from(p.board) })),
+   555→} as unknown as Record<string, unknown>);
+   556→
+   557→// shape validation for snapshots coming off the wire — a hostile payload used to
+   558→// crash with raw TypeErrors or (worse) silently modulo bytes into Uint8Array
+   559→const byteGrid = (v: unknown, what: string): number[] => {
+   560→  if (!Array.isArray(v) || v.length !== 81 || !v.every((n) => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 255))
+   561→    throw new Error(`malformed duel snapshot: ${what}`);
+   562→  return v as number[];
+   563→};
+   564→
+   565→export const deserializeDuel = (json: string): DuelState => {
+   566→  let o: Record<string, unknown>;
+   567→  try { o = JSON.parse(json) as Record<string, unknown>; }
+   568→  catch { throw new Error('malformed duel snapshot: not JSON'); }
+   569→  if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('malformed duel snapshot: root');
+   570→  if (!Array.isArray(o.players) || o.players.length !== 2) throw new Error('malformed duel snapshot: players');
+   571→  if (!Array.isArray(o.events)) throw new Error('malformed duel snapshot: events');
+   572→  const givens = byteGrid(o.givens, 'givens');
+   573→  const sol = o.solution === null || o.solution === undefined ? null : byteGrid(o.solution, 'solution');
+   574→  const players = (o.players as Array<Record<string, unknown>>).map((p) => {
+   575→    if (!p || typeof p !== 'object' || Array.isArray(p)) throw new Error('malformed duel snapshot: player');
+   576→    return { ...(p as unknown as PlayerState), board: Uint8Array.from(byteGrid(p.board, 'player board')) };
+   577→  }) as unknown as [PlayerState, PlayerState];
+   578→  return {
+   579→    ...(o as unknown as DuelState),
+   580→    givens: Uint8Array.from(givens),
+   581→    solution: sol ? Uint8Array.from(sol) : null,
+   582→    players,
+   583→  };
+   584→};
+   585→
+   586→// helper for UI: cells currently unreadable (smudged) / uneditable (chained) / unclaimable
+   587→export function cellFlags(st: DuelState, player: PlayerId) {
+   588→  const chained = new Set<number>();
+   589→  const smudged = new Set<number>();
+   590→  if (player !== 0 && player !== 1) return { chained, smudged, hushed: false, miasma: false, quarantinedUnits: new Set<UnitId>() };
+   591→  const p = st.players[player];
+   592→  for (const s of p.statuses) {
+   593→    if (s.type === 'chain' && s.cell !== undefined) chained.add(s.cell);
+   594→    if (s.type === 'smudge' && s.cells) for (const c of s.cells) smudged.add(c);
+   595→  }
+   596→  const hushed = !!findStatus(p, 'hush');
+   597→  const miasma = !!findStatus(p, 'miasma');
+   598→  const quarantinedUnits = new Set(p.statuses.filter((s) => s.type === 'quarantine').map((s) => s.unit!));
+   599→  return { chained, smudged, hushed, miasma, quarantinedUnits };
+   600→}
+   601→

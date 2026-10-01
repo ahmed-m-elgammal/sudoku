@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+<rect width="128" height="128" fill="#CDB992"/>
+<defs>
+  <radialGradient id="vig-week" cx="50%" cy="46%" r="72%">
+    <stop offset="62%" stop-color="#000000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000000" stop-opacity="0.26"/>
+  </radialGradient>
+</defs>
+<path d="M64 8 L78 24 L100 20 L98 42 L114 56 L98 70 L100 92 L78 90 L64 108 L50 90 L28 92 L30 70 L14 56 L30 42 L28 20 L50 24 Z" fill="#CDB992" stroke="#1A1410" stroke-width="2.2"/>
+<circle cx="64" cy="58" r="24" fill="none" stroke="#1A1410" stroke-width="2.2"/>
+<circle cx="64" cy="58" r="19" fill="none" stroke="#1A1410" stroke-width="1.2" stroke-dasharray="3 3"/>
+<path d="M64 40 V46 M64 70 V76 M46 58 H52 M76 58 H82 M51 45 L55.5 49.5 M72.5 66.5 L77 71 M77 45 L72.5 49.5 M55.5 66.5 L51 71" stroke="#1A1410" stroke-width="2" stroke-linecap="round"/>
+<path d="M64 50 L67 55 L73 55.5 L68.5 59.5 L70 65.5 L64 62.5 L58 65.5 L59.5 59.5 L55 55.5 L61 55 Z" fill="#7B1A1F" stroke="#1A1410" stroke-width="1.2"/>
+<path d="M44 100 H84 M50 107 H78" stroke="#1A1410" stroke-width="2.2" stroke-linecap="round"/>
+<rect width="128" height="128" fill="url(#vig-week)"/>
+</svg>

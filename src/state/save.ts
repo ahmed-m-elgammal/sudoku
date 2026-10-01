@@ -34,6 +34,7 @@ export interface SaveStateV2 {
   };
   standing: number;
   endless: EndlessState;         // T18 — the Endless Assize ladder
+  weekly: { lastWeek: number | null }; // T21 — the Weekly Assize (one completion per week)
   settings: {
     music: number; fx: number; haptics: boolean; contrast: boolean; reducedMotion: boolean;
     text: 's' | 'm' | 'l'; autoNotes: boolean; highlights: boolean; leftHand: boolean; telemetry: boolean;
@@ -63,6 +64,7 @@ export const freshSave = (name: string): SaveStateV2 => ({
   },
   standing: 1000,
   endless: newEndlessState(newEndlessSalt()),
+  weekly: { lastWeek: null },
   settings: {
     music: 0.3, fx: 0.7, haptics: true, contrast: false, reducedMotion: false,
     text: 'm', autoNotes: true, highlights: true, leftHand: false, telemetry: true,
@@ -119,8 +121,15 @@ export const useSave = create<SaveStore>((set, get) => ({
 function migrate(s: SaveStateV2): SaveStateV2 {
   if (s.v === 2) {
     // T18 — hostile/legacy endless states are sanitized on every load, and a
-    // save from before this iteration gains a fresh (persisted) ladder
-    return { ...s, endless: sanitizeEndless(s.endless) };
+    // save from before this iteration gains a fresh (persisted) ladder.
+    // T21 — saves from before the Weekly Assize gain its ledger, hostile or not.
+    return {
+      ...s,
+      endless: sanitizeEndless(s.endless),
+      weekly: s.weekly && typeof s.weekly === 'object'
+        ? { lastWeek: typeof s.weekly.lastWeek === 'number' && Number.isFinite(s.weekly.lastWeek) ? Math.floor(s.weekly.lastWeek) : null }
+        : { lastWeek: null },
+    };
   }
   return { ...freshSave(s.name ?? 'the Clerk'), ...s, v: 2 };
 }

@@ -235,6 +235,8 @@
     "echoesSub": "Duel the ink of Clerks who came before",
     "endless": "Endless Assize",
     "endlessSub": "Rung {rung} · best {best}. The circuit never ends.",
+    "weekly": "Weekly Assize",
+    "weeklySub": "This week: {mods}. One sitting. Every Clerk.",
     "headerName": "the Clerk",
     "candle": "candle"
   },
@@ -249,6 +251,21 @@
     "queueLabel": "Then:",
     "ascend": "Ascend",
     "law": "A win sets you one rung higher. A loss returns you to the foot of the stair — what you climbed stays written.",
+    "back": "Back to the Antechamber"
+  },
+  "weekly": {
+    "title": "The Weekly Assize",
+    "sub": "The court sits under different law each week. Two writs, read aloud, bind both duelists — the same two, for every Clerk, until the bells mark the next Monday.",
+    "writsLabel": "THIS WEEK'S WRITS",
+    "foeLabel": "PRESIDING",
+    "tierLabel": "Tier",
+    "sealsLabel": "Seals",
+    "arcBadge": "carries an arc",
+    "sit": "Sit the Assize",
+    "satLine": "The seal of this week is set. Re-sit freely — the ledger is written.",
+    "openLine": "The week's verdict is unwritten.",
+    "endsLabel": "The writs turn over in {days} d {hours} h",
+    "law": "One completion per week. The first win mints {ink} Ink — the rule changes cut both ways.",
     "back": "Back to the Antechamber"
   },
   "matchmaking": {
@@ -706,6 +723,10 @@
     "endless-ten": {
       "title": "Tenth Rung",
       "desc": "Clear ten rungs of the Endless Assize."
+    },
+    "weekly-sat": {
+      "title": "Weekly Sitting",
+      "desc": "Win a Weekly Assize."
     }
   },
   "loading": [

@@ -305,8 +305,10 @@ describe('T17 · round-trip: the mined Shade plays at the mined cadence', () => 
       } else if (a.kind === 'ability') {
         useAbility(st, 1, a.id, { cell: a.cell, unit: a.unit });
         wake = st.clockMs + after;
-      } else {
+      } else if (a.kind === 'wait') {
         wake = st.clockMs + Math.max(400, a.untilMs - st.clockMs);
+      } else {
+        wake = st.clockMs + after; // T20: shadeAct never swaps; treat as a plain beat
       }
     }
     return gaps;

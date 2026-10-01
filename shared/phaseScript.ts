@@ -16,7 +16,16 @@
 //     · signature — one-shot rites at phase entry: dispatched on the first wake
 //                   where the rite is actually LEGAL (own Order, off cooldown,
 //                   uses left), so an entry cast is "as soon as the rite
-//                   recovers", never a fizzle and never a stall.
+//                   recovers", never a fizzle and never a stall;
+//     · swapTo    — T20 cross-Order phase: the boss SETS ASIDE their Order and
+//                   takes another (engine swapOrder — runtimes rebuilt at the 50%
+//                   first-use factor, passives unworn, windows lapsed, Seals and
+//                   suffered states preserved). The swap is dispatched BEFORE the
+//                   phase's signatures, which then resolve against the NEW Order's
+//                   rites. Honored only on phases ENTERED via the monotonic scan
+//                   (a swapTo on the entry phase is ignored — a Magistrate arrives
+//                   as announced), at most once per phase entry, and dropped if
+//                   the boss already wears the target Order.
 //
 // Pure module: no DOM, no timers, no clock. Determinism by construction: the
 // phase scan consumes no randomness (engine-observable facts only) and the
@@ -28,7 +37,7 @@
 // fail-closed — they degrade to the calibrated Shade acting on the phase-merged
 // profile, they never throw and never hand out illegal actions. The engine
 // remains the referee either way.
-import { UNIT_CELLS, type AbilityId, type PlayerId } from './config';
+import { ORDER_ABILITIES, UNIT_CELLS, type AbilityId, type OrderId, type PlayerId } from './config';
 import { clampProfile, shadeAct, mostCompleteUnit, type ShadeProfile } from './shade';
 import type { DuelState } from './engine';
 import type { ShadeAction } from './shade';
@@ -65,6 +74,7 @@ export interface PhaseRule {
   when: PhaseWhen;       // ignored for phases[0] (the entry phase)
   patch?: PhasePatch;
   signature?: PhaseSignature[];
+  swapTo?: OrderId;      // T20 — cross-Order phase; honored only when ENTERED
 }
 
 export interface BossScript {
@@ -76,11 +86,17 @@ export interface BossScript {
 export interface BossScriptState {
   phaseIdx: number;
   pendingSig: PhaseSignature[] | null; // signatures of the currently entered phase
+  pendingSwap?: OrderId | null;        // T20 — the cross-Order swap awaiting dispatch
 }
 
-export const newBossScriptState = (): BossScriptState => ({ phaseIdx: 0, pendingSig: null });
+export const newBossScriptState = (): BossScriptState => ({ phaseIdx: 0, pendingSig: null, pendingSwap: null });
 
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+
+// T20 — a swapTo is honored only if it names a REAL Order. Anything else (unknown
+// ids, non-strings, garbage from a hostile script) fail-closed to "no swap".
+const isOrder = (v: unknown): v is OrderId =>
+  typeof v === 'string' && v in ORDER_ABILITIES;
 
 // ---------------------------------------------------------------- conditions
 export const phaseMatches = (when: PhaseWhen | undefined, st: DuelState, me: PlayerId): boolean => {
@@ -118,6 +134,10 @@ export const advancePhase = (
     idx++;
     const sig = phases[idx]?.signature;
     sst.pendingSig = Array.isArray(sig) ? sig.filter((s) => s && typeof s.id === 'string') : null;
+    // T20 — a cross-Order entry arms the swap; it is DISPATCHED by bossAct (before
+    // the signatures, which resolve against the new Order). A hostile swapTo is
+    // dropped here — arm nothing, swap nothing.
+    sst.pendingSwap = isOrder(phases[idx]?.swapTo) ? phases[idx].swapTo! : null;
   }
   sst.phaseIdx = idx;
   return idx;
@@ -185,6 +205,17 @@ export function bossAct(
   const phases = Array.isArray(script?.phases) ? script.phases : [];
   const idx = phases.length ? advancePhase(script, sst, st, me) : -1;
 
+  // T20 — the cross-Order swap outranks everything else this wake: the boss sets
+  // one Order aside BEFORE casting anything, so the phase's signatures resolve
+  // against the NEW Order's rites on the following wakes. If the boss already
+  // wears the target Order (the T4 adaptive swap beat the script to it), the
+  // pending swap is DROPPED, never fizzled into a refused action.
+  if (sst.pendingSwap) {
+    const to = sst.pendingSwap;
+    sst.pendingSwap = null;
+    if (st.players[me]?.order !== to) return { kind: 'swap', to };
+  }
+
   // one-shot signature: dispatch the head when it is legal, then fall through
   // to normal play with the phase profile (so a pending rite never stalls the boss)
   if (sst.pendingSig && sst.pendingSig.length) {
@@ -211,11 +242,14 @@ export const BOSS_SCRIPTS: Record<string, BossScript> = {
     { when: { ownClaimsAtLeast: 2 }, patch: { aggressionAdd: 0.15 }, signature: [{ id: 'hush' }] },
     { when: { ownSealsBelow: 4 }, patch: { paceFactor: 0.82, mistakeAdd: -0.02 }, signature: [{ id: 'sever' }] },
   ] },
-  // Mother Vael: the drip — poison thickens as her ink spreads.
+  // Mother Vael: the drip — poison thickens as her ink spreads. And when the
+  // poison FAILS (her Seals crack below 3), the vial is set aside and the axe
+  // answers — the Apothecary's patience was never mercy. (T20 cross-Order arc.)
   'the-drip': { id: 'the-drip', phases: [
     { when: {} },
     { when: { ownInkAtLeast: 6 }, patch: { aggressionAdd: 0.18 }, signature: [{ id: 'smudge' }] },
     { when: { ownInkAtLeast: 14 }, patch: { aggressionAdd: 0.3 }, signature: [{ id: 'miasma' }] },
+    { when: { ownSealsBelow: 3 }, patch: { paceFactor: 0.9, aggressionAdd: 0.1 }, swapTo: 'executioner', signature: [{ id: 'sever' }] },
   ] },
   // Cantor Ilse: the peals — bursts of bell-fast ink that quicken by the clock.
   'the-peal': { id: 'the-peal', phases: [
@@ -235,17 +269,24 @@ export const BOSS_SCRIPTS: Record<string, BossScript> = {
     { when: { ownClaimsAtLeast: 3 }, patch: { aggressionAdd: 0.2 }, signature: [{ id: 'quarantine' }] },
     { when: { ownSealsBelow: 4 }, patch: { aggressionAdd: 0.15 }, signature: [{ id: 'mirror' }] },
   ] },
-  // Tobias Quill: the forgery — studies your hand, then copies it better.
+  // Tobias Quill: the forgery — studies your hand, then copies it better. And
+  // when his own Seals crack, the scholar's mask burns off: he sets aside the
+  // brush and DESTROYS the evidence — smudge and miasma over the page. (T20.)
   'the-forgery': { id: 'the-forgery', phases: [
     { when: {} },
     { when: { ownInkAtLeast: 10 }, patch: { skillAdd: 0.07 }, signature: [{ id: 'fairCopy' }] },
     { when: { ownSealsBelow: 4 }, patch: { skillAdd: 0.05, paceFactor: 0.9 }, signature: [{ id: 'augur' }] },
+    { when: { ownSealsBelow: 2 }, patch: { aggressionAdd: 0.2 }, swapTo: 'apothecary', signature: [{ id: 'smudge' }, { id: 'miasma' }] },
   ] },
   // Lord Marchetti: the ledger — hoards every rite, then spends it all at once.
+  // And when the ledger turns against him, the moneylender does what moneylenders
+  // do: BUYS PROTECTION — ward, mirror, quarantine — and makes you pay for the
+  // crossing. (T20 cross-Order arc: executioner → warden.)
   'the-ledger': { id: 'the-ledger', phases: [
     { when: {}, patch: { aggressionAdd: -0.12 } },
     { when: { ownSealsBelow: 5 }, patch: { aggressionAdd: 0.4 }, signature: [{ id: 'sever' }, { id: 'hush' }] },
     { when: { ownSealsBelow: 3 }, patch: { aggressionAdd: 0.15 } },
+    { when: { ownSealsBelow: 2 }, patch: { paceFactor: 0.92 }, swapTo: 'warden', signature: [{ id: 'ward' }] },
   ] },
   // Old Nox: the exhumation — buries the opening slow, digs the endgame fast.
   'the-exhumation': { id: 'the-exhumation', phases: [

@@ -22,6 +22,7 @@ import storyJson from '@/i18n/story.json';
 import type { Digit, OrderId } from '@shared/config';
 import { Rng } from '@shared/rng';
 import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
+import { weekIndexFor, weeklyInkBonus } from '@shared/weekly';
 
 export default function DuelScreen() {
   const ui = useUi();
@@ -152,7 +153,7 @@ export default function DuelScreen() {
     }
     // T7 — recordable human duels leave an echo behind (the ink-echo another Clerk
     // may duel later). Tutorial (scripted) and campaign (canon foes) stay unrecorded.
-    if (duel && 'toReplay' in duel && ['practice', 'daily', 'shade', 'replay', 'endless'].includes(ui.duelMode)) {
+    if (duel && 'toReplay' in duel && ['practice', 'daily', 'shade', 'replay', 'endless', 'weekly'].includes(ui.duelMode)) {
       const rec = duel.toReplay({ winner, reason: r.reason });
       if (rec) void import('@/game/echoes').then(({ saveEcho }) => saveEcho(rec));
     }
@@ -167,6 +168,19 @@ export default function DuelScreen() {
         economy: { ...cur.economy, ink: cur.economy.ink + (winner === 0 ? endlessInkBonus(foughtRung) : 0) },
       }));
       if (next.best >= 10) s.unlockAchievement('endless-ten');
+    }
+    // T21 — Weekly Assize law: one COMPLETION per week (any result) seals the week;
+    // the Ink bonus is minted only by the first WIN of the week. Re-sits are free
+    // but change nothing — the week's verdict is already written.
+    if (ui.duelMode === 'weekly') {
+      const week = weekIndexFor(Date.now());
+      const firstWin = winner === 0 && save?.weekly?.lastWeek !== week;
+      s.update((cur) => ({
+        ...cur,
+        weekly: { lastWeek: week },
+        economy: { ...cur.economy, ink: cur.economy.ink + (firstWin ? weeklyInkBonus : 0) },
+      }));
+      if (firstWin) s.unlockAchievement('weekly-sat');
     }
     // story beats replace the result screen on their first clear — the reveal plays
     // immediately after Folio IX (spec: before the ending choice), interludes close

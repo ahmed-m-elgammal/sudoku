@@ -75,7 +75,56 @@ export interface DuelState {
   events: DuelEvent[];
   eventSeq: number;
   durationMs: number;
+  rules?: RuleMods; // T21 — the Weekly Assize overlay; absent ≡ shipped rules exactly
 }
+
+// ---------------------------------------------------------------- T21 rule modifiers
+// The Weekly Assize rotates REAL rule changes, not profile tweaks. A RuleMods
+// overlay is baked into the duel state at createDuel and read at the few sites
+// that matter; everywhere it is absent (or fails sanitization) the shipped CONFIG
+// numbers apply byte-identically — PvP, tutorial and campaign never feel it.
+//   wrongSealCost  — Oxblood Ink: a wrong digit burns this many Seals
+//   claimDamage    — Iron Claims: every claim deals this many Seals
+//   cleanBonus     — Gilded Claims: added on top of claimDamage for a clean claim
+//   statusScale    — Thick Wax: multiplies every status duration
+//   cdScale        — Long Shadows: multiplies every ability cooldown
+//   statusGapScale — Vengeful Wax: scales the anti-frustration gap BETWEEN statuses
+//   durationMs     — Hasty Court: the duel's own length
+export interface RuleMods {
+  wrongSealCost?: number;
+  claimDamage?: number;
+  cleanBonus?: number;
+  statusScale?: number;
+  cdScale?: number;
+  statusGapScale?: number;
+  durationMs?: number;
+}
+
+// fail-closed normalization: unknown keys never survive, non-finite numbers never
+// survive, every survivor is clamped into a range that cannot produce an
+// unwinnable or instant duel. Runs on createDuel input AND on snapshots coming
+// off the wire (deserializeDuel) — a hostile payload cannot corrupt an engine read.
+export const sanitizeRuleMods = (v: unknown): RuleMods | undefined => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+  const o = v as Record<string, unknown>;
+  const num = (x: unknown, lo: number, hi: number): number | undefined => {
+    if (typeof x !== 'number' || !Number.isFinite(x)) return undefined;
+    return Math.min(hi, Math.max(lo, x));
+  };
+  const out: RuleMods = {};
+  const w = num(o.wrongSealCost, 1, 3); if (w !== undefined) out.wrongSealCost = w;
+  const dmg = num(o.claimDamage, 1, 3); if (dmg !== undefined) out.claimDamage = dmg;
+  const cb = num(o.cleanBonus, 0, 3); if (cb !== undefined) out.cleanBonus = cb;
+  const ss = num(o.statusScale, 0.5, 2); if (ss !== undefined) out.statusScale = ss;
+  const cs = num(o.cdScale, 0.5, 2); if (cs !== undefined) out.cdScale = cs;
+  const sg = num(o.statusGapScale, 0.25, 2); if (sg !== undefined) out.statusGapScale = sg;
+  const du = num(o.durationMs, 60_000, 1_200_000); if (du !== undefined) out.durationMs = Math.round(du);
+  return Object.keys(out).length ? out : undefined;
+};
+
+// the one read helper — engine code asks through this so an absent overlay and an
+// empty overlay behave identically
+export const rulesOf = (st: DuelState): RuleMods => st?.rules ?? {};
 
 export interface PlaceResult {
   ok: boolean;
@@ -128,6 +177,7 @@ export interface CreateDuelOpts {
   names?: [string, string];
   orders?: [OrderId, OrderId];
   magistrateSeals?: [number, number];
+  mods?: RuleMods; // T21 — the Weekly Assize overlay (sanitized before it touches state)
 }
 
 export function createDuel(opts: CreateDuelOpts): DuelState {
@@ -150,7 +200,8 @@ export function createDuel(opts: CreateDuelOpts): DuelState {
     statusUid: 1,
     events: [],
     eventSeq: 1,
-    durationMs: CONFIG.duel.durationMs,
+    durationMs: sanitizeRuleMods(opts.mods)?.durationMs ?? CONFIG.duel.durationMs,
+    rules: sanitizeRuleMods(opts.mods),
   };
   if (opts.magistrateSeals) {
     for (let i = 0; i < 2; i++) {
@@ -233,7 +284,7 @@ export function applyStatus(st: DuelState, source: PlayerId, type: StatusType, t
   if (opts.cell !== undefined && (!Number.isInteger(opts.cell) || opts.cell < 0 || opts.cell > 80)) return { applied: false, reason: 'invalid' };
   if (opts.cells && (!opts.cells.length || !opts.cells.every((c) => Number.isInteger(c) && c >= 0 && c <= 80))) return { applied: false, reason: 'invalid' };
   if (opts.unit !== undefined && !UNIT_CELLS[opts.unit]) return { applied: false, reason: 'invalid' };
-  const dur = (CONFIG.statusDurationsMs as Record<string, number>)[type];
+  const dur = (CONFIG.statusDurationsMs as Record<string, number>)[type] * (rulesOf(st).statusScale ?? 1); // T21 Thick Wax
   // Apothecary Distiller: statuses you apply last +2s
   const bonus = st.players[source].order === 'apothecary' && (type === 'smudge' || type === 'miasma') ? 2000 : 0;
   const foe = foeOf(st, source);
@@ -261,7 +312,7 @@ export function applyStatus(st: DuelState, source: PlayerId, type: StatusType, t
   }
   // Anti-frustration rules (spec §2)
   if (st.clockMs > st.durationMs - CONFIG.duel.finalStatusBanMs) return { applied: false, reason: 'finalBan' };
-  if (st.clockMs - st.lastStatusAtMs < CONFIG.duel.statusGlobalGapMs) return { applied: false, reason: 'gap' };
+  if (st.clockMs - st.lastStatusAtMs < CONFIG.duel.statusGlobalGapMs * (rulesOf(st).statusGapScale ?? 1)) return { applied: false, reason: 'gap' }; // T21 Vengeful Wax
   if (findStatus(tp, type)) return { applied: false, reason: 'active' };
   if ((tp.immuneUntil[type] ?? 0) > st.clockMs) return { applied: false, reason: 'immune' };
 
@@ -295,7 +346,7 @@ export function place(st: DuelState, player: PlayerId, cell: number, digit: Digi
     for (const u of CELL_UNITS(cell)) p.mistakesByUnit[u] = (p.mistakesByUnit[u] ?? 0) + 1;
     const forgiven = p.order === 'scholar' && !p.marginaliaUsed;
     if (forgiven) p.marginaliaUsed = true;
-    else p.seals = Math.max(0, p.seals - CONFIG.placement.wrongSealCost);
+    else p.seals = Math.max(0, p.seals - (rulesOf(st).wrongSealCost ?? CONFIG.placement.wrongSealCost)); // T21 Oxblood Ink
     p.flinchUntilMs = st.clockMs + CONFIG.placement.flinchMs; // "Flinch"
     pushEvent(st, 'mistake', { player, cell, digit, forgiven, sealsLeft: p.seals });
     checkSealDeath(st, player);
@@ -333,9 +384,9 @@ function resolveClaim(st: DuelState, player: PlayerId, unit: UnitId) {
   const foe = foeOf(st, player);
   st.unitOwner[unit] = player;
   p.claimed.push(unit);
-  let damage = CONFIG.claims.damage;
+  let damage = rulesOf(st).claimDamage ?? CONFIG.claims.damage; // T21 Iron Claims
   const clean = (p.mistakesByUnit[unit] ?? 0) === 0 && !p.augurRevealed[unit];
-  if (clean) damage += CONFIG.claims.cleanBonus;
+  if (clean) damage += rulesOf(st).cleanBonus ?? CONFIG.claims.cleanBonus; // T21 Gilded Claims
   if (p.reckoningUntilMs > st.clockMs) { damage += 1; p.reckoningUntilMs = 0; }
   if (p.order === 'executioner' && foe.seals <= 3) damage += 1; // Last Rites
   foe.seals = Math.max(0, foe.seals - damage);
@@ -358,7 +409,7 @@ export function useAbility(st: DuelState, player: PlayerId, abilityId: AbilityId
   let result: AbilityResult = { ok: true, applied: true };
 
   const setCd = (id: AbilityId) => {
-    const full = (CONFIG.abilityCdMs as Record<string, number>)[id] ?? 0;
+    const full = ((CONFIG.abilityCdMs as Record<string, number>)[id] ?? 0) * (rulesOf(st).cdScale ?? 1); // T21 Long Shadows
     rt.cdLeftMs = rt.usedOnce ? full : full * CONFIG.abilities.firstUseCooldownFactor;
     rt.usedOnce = true;
     if (rt.usesLeft !== null) rt.usesLeft--;
@@ -580,6 +631,7 @@ export const deserializeDuel = (json: string): DuelState => {
     givens: Uint8Array.from(givens),
     solution: sol ? Uint8Array.from(sol) : null,
     players,
+    rules: sanitizeRuleMods(o.rules), // T21 — a hostile snapshot cannot corrupt a rule read
   };
 };
 
