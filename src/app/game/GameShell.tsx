@@ -26,6 +26,7 @@ import StoryCard from './StoryCard';
 import EndingChoice from './EndingChoice';
 import PurseScreen from './PurseScreen';
 import FriendScreen from './FriendScreen';
+import EchoesScreen from './EchoesScreen';
 
 export default function GameShell() {
   const screen = useUi((s) => s.screen);
@@ -87,6 +88,7 @@ export default function GameShell() {
     case 'endingChoice': return <EndingChoice />;
     case 'purse': return <PurseScreen />;
     case 'friend': return <FriendScreen />;
+    case 'echoes': return <EchoesScreen />;
     default: return <BootScreen />;
   }
 }

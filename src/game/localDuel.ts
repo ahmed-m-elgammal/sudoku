@@ -8,6 +8,7 @@ import {
 import { shadeAct, profileForStanding, type ShadeProfile } from '@shared/shade';
 import { tutorialAct, newTutorialScript, type TutorialScriptState } from '@shared/tutorial';
 import { adaptiveSwapTarget } from '@shared/orders';
+import { validateReplay, ReplayDriver, newReplayRecorder, recordAction, buildReplay, type DuelReplay, type ReplayRecorder, type ReplayAction } from '@shared/replay';
 import { Rng } from '@shared/rng';
 import { CONFIG, type AbilityId, type Digit, type OrderId, type PlayerId, type Tier } from '@shared/config';
 import { generatePuzzle } from '@shared/sudoku';
@@ -20,8 +21,9 @@ export interface LocalDuelOpts {
   names: [string, string];
   seals?: [number, number];
   foeProfile?: ShadeProfile;
-  mode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade';
+  mode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'replay';
   adaptive?: boolean;             // T4: the Ninth swaps Orders when he falls to 4 Seals
+  replay?: DuelReplay;            // T7: the ink-echo this duel's foe replays (mode 'replay')
   settingsHaptics?: () => boolean;
   onEnd?: (r: { winner: PlayerId | 'draw'; reason: string }) => void;
   onEvent?: (e: DuelEvent) => void;
@@ -61,6 +63,12 @@ export class LocalDuel {
   bumpPublic() { this.bump(); }
   tutorialStep = 0;
   freeAugurGranted = false;
+  // T7 — replay Shades: the foe is driven by a stored human log instead of shadeAct.
+  // A replay that fails validation degrades VISIBLY (replayDegraded) to a normal Shade
+  // rather than crashing the duel screen.
+  private echo: ReplayDriver | null = null;
+  replayDegraded = false;
+  private recorder: ReplayRecorder = newReplayRecorder();
   // T4 state — the swap happens once, mid-duel, when the adaptive foe drops to
   // CONFIG.seals.adaptiveSwapAtSeals; the banner window is real-time (keeps running
   // while the engine clock is paused) so the callout never freezes mid-animation.
@@ -83,6 +91,11 @@ export class LocalDuel {
       magistrateSeals: opts.seals,
     });
     this.state.events = [];
+    if (opts.mode === 'replay' && opts.replay) {
+      const validated = validateReplay(opts.replay);
+      if (validated) this.echo = new ReplayDriver(validated, 1);
+      else this.replayDegraded = true;
+    }
   }
 
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
@@ -164,6 +177,7 @@ export class LocalDuel {
   private finish() {
     if (this.ended) return;
     this.ended = true;
+    this.recorder.sealed = true; // no posthumous ink in the echo
     const w = this.state.winner;
     if (w === 'draw') synth.draw();
     else if (w === 0) synth.victory();
@@ -171,11 +185,26 @@ export class LocalDuel {
     this.opts.onEnd?.({ winner: w ?? 'draw', reason: this.state.winReason ?? '' });
   }
 
+  // T7 — the recorded human log of THIS duel (validated; null if the recorder state
+  // is somehow illegal). The UI persists it as an echo after recordable modes.
+  toReplay(outcome: { winner: 0 | 1 | 'draw'; reason: string }): DuelReplay | null {
+    return buildReplay(this.recorder, {
+      seed: this.opts.seed,
+      tier: this.opts.tier,
+      orders: this.opts.orders,
+      names: this.opts.names,
+      seals: this.opts.seals,
+      durationMs: this.state.durationMs,
+      outcome,
+    });
+  }
+
   // ------------------------------------------------------------------ actions
   place(cell: number, digit: Digit): PlaceResult {
     if (this.ended) return { ok: false, reason: 'ended' };
-    const before = this.state.players[0].seals;
     const res = place(this.state, 0, cell, digit);
+    // t is rounded: the engine clock is continuous (rAF deltas), the replay contract is integer ms
+    if (res.ok) recordAction(this.recorder, { t: Math.round(this.state.clockMs), kind: 'place', cell, digit }); // echo: mistakes replay too
     if (!res.ok) { if (res.reason === 'hushed' || res.reason === 'chained') synth.error(); return res; }
     if (res.correct) {
       synth.place();
@@ -196,7 +225,6 @@ export class LocalDuel {
       this.lastWrongClearAt = this.state.clockMs + 1000; // digit clears after 1.0s
       if (this.opts.settingsHaptics?.() ?? true) navigator.vibrate?.(60);
     }
-    void before;
     this.opts.onEvent?.({ seq: -1, atMs: this.state.clockMs, kind: res.correct ? 'placed' : 'mistake', player: 0, cell, digit });
     // tutorial pacing hooks
     if (this.opts.mode === 'tutorial') this.advanceTutorial(!!res.correct);
@@ -235,6 +263,11 @@ export class LocalDuel {
     const a = arg.cell !== undefined ? arg : this.selected !== null ? { ...arg, cell: this.selected } : arg;
     const res = useAbility(this.state, 0, id, a);
     if (res.ok) {
+      recordAction(this.recorder, {
+        t: Math.round(this.state.clockMs), kind: 'ability', id,
+        ...(a.cell !== undefined ? { cell: a.cell } : {}),
+        ...(a.unit !== undefined ? { unit: a.unit } : {}),
+      });
       synth.cast(Object.keys(this.state.players[0].abilities).indexOf(id));
       this.opts.onEvent?.({ seq: -1, atMs: this.state.clockMs, kind: 'ability', player: 0, ability: id });
     } else synth.error();
@@ -242,7 +275,11 @@ export class LocalDuel {
     return res;
   }
 
-  concede() { resign(this.state, 0); this.finish(); }
+  concede() {
+    if (!this.ended) recordAction(this.recorder, { t: Math.round(this.state.clockMs), kind: 'resign' });
+    resign(this.state, 0);
+    this.finish();
+  }
   flags() { return cellFlags(this.state, 0); }
 
   // ------------------------------------------------------------------ shade
@@ -252,6 +289,20 @@ export class LocalDuel {
   }
   private shadeWake() {
     if (this.ended) return;
+    // T7: a replay duel's foe is the ink-echo — recorded human actions applied when
+    // the engine clock reaches them. An exhausted or degraded echo falls back to the
+    // calibrated Shade bot.
+    if (this.echo) {
+      for (const a of this.echo.due(this.state)) {
+        this.applyEchoAction(a);
+        if (this.state.phase === 'ended') break;
+      }
+      if (this.state.phase === 'ended') { this.finish(); return; }
+      const nextT = this.echo.nextT();
+      this.scheduleShade(nextT === null ? 1500 : Math.max(400, Math.min(nextT - this.state.clockMs, 10_000)));
+      this.bump();
+      return;
+    }
     const prof = this.opts.foeProfile ?? profileForStanding(1000);
     // T3: the tutorial Shade is fully scripted (deterministic hand-loses-the-race);
     // every other mode keeps the calibrated Shade bot.
@@ -268,6 +319,20 @@ export class LocalDuel {
     }
     this.scheduleShade(act.kind === 'wait' ? Math.max(400, act.untilMs - performance.now()) : 900);
     this.bump();
+  }
+
+  // T7 — one recorded action through the shared engine on the echo's own tablet.
+  // Refused actions (the live duel's statuses differ from the original's) simply fizzle:
+  // an ink-echo stutters where the ink was disturbed.
+  private applyEchoAction(a: ReplayAction) {
+    if (this.state.phase !== 'live') return;
+    if (a.kind === 'place') {
+      place(this.state, 1, a.cell, a.digit as Digit);
+    } else if (a.kind === 'ability') {
+      useAbility(this.state, 1, a.id, { cell: a.cell, unit: a.unit });
+    } else if (a.kind === 'resign') {
+      resign(this.state, 1);
+    }
   }
   // ------------------------------------------------------------------ tutorial
   private advanceTutorial(correct: boolean) {

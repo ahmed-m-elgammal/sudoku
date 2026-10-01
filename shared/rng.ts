@@ -28,7 +28,9 @@ export class Rng {
     }
     return arr;
   }
-  get state(): number { return this.s; }
+  // uint32 contract: the state is serialized with the duel (spec R6) and must stay
+  // in [0, 2^32) — the raw internal register is signed after `| 0` arithmetic
+  get state(): number { return this.s >>> 0; }
   set state(v: number) { this.s = v >>> 0; }
 }
 

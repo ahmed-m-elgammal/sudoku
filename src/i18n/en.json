@@ -231,6 +231,8 @@
     "friendSub": "Share a link, settle it between you",
     "practice": "Practice",
     "practiceSub": "Any difficulty. No witness, small reward.",
+    "echoes": "Shade Echoes",
+    "echoesSub": "Duel the ink of Clerks who came before",
     "headerName": "the Clerk",
     "candle": "candle"
   },
@@ -386,6 +388,15 @@
     "ink": "Ink is earned by every plea — win or lose.",
     "sigils": "Sigils are rare. They buy cosmetics, never advantage.",
     "reliquary": "Every third win, the Reliquary opens."
+  },
+  "echoes": {
+    "title": "Shade Echoes",
+    "sub": "A Shade is an ink-echo that duels on a Clerk's behalf. Each shelf below holds the recorded ink of a real duel — take it up and face it.",
+    "empty": "The shelf is bare. Duel, and your ink will echo here.",
+    "duel": "Face this echo",
+    "count": "{n} echoes on the shelf",
+    "degraded": "Some echoes failed to settle and rest as ordinary Shades.",
+    "back": "Back to the Antechamber"
   },
   "friend": {
     "title": "Friend Duel",

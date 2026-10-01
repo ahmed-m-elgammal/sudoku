@@ -24,6 +24,7 @@ A complete, playable, web-first implementation of the ASSIZE design document:
 - **M3 Daily Assize** — one seeded puzzle per UTC day (same for every soul), +10 s per mistake, global top-100 leaderboard, server-tracked "Unbroken Days" streaks, Offer-a-Candle retries.
 - **M4 Friend Duel** — create a code/link, both parties queue with it, unrated.
 - **M5 Practice** — any difficulty, hints allowed, small daily Ink cap.
+- **T7 Shade Echoes** — your human duels (practice, daily, Shade, echo duels) are recorded as compact, validated replay logs; the Antechamber's *Shade Echoes* shelf lets you duel the recorded ink of any past duel as an opponent. Echo validation is fail-closed; a corrupted echo degrades visibly to an ordinary Shade, never a crash.
 - **4 Orders / 12 abilities / 5 statuses** with the exact anti-frustration rules; Momentum, Clean claims, Flinch; all four win conditions in the specified order.
 - **Economy & meta** — Ink, Sigils, Reliquaries (every 3rd win), Season Ledger (30 tiers), Cabinet with 26 cosmetics across 6 tabs, Great Ledger profile with Standing graph, 24 achievements ("Marginalia"), Recovery Code, export/import.
 - **PWA** — installable, offline-capable (service worker precaches the shell; M0/M1/M5/Shade duels run entirely on the local engine).
@@ -79,11 +80,55 @@ The campaign now **ends the way the story bible always said it would**. First cl
 
 **Logic completion found while wiring this:** the achievement system existed but `unlockAchievement` was never called anywhere — *First Verdict*, *The First Folio*, *Halfway Hanged* and *The Ninth Seal Broken* are now actually awarded at the right moments (idempotently, so replays stay clean).
 
-### Also in this iteration
+---
 
-- **T15 — interludes auto-trigger:** first clears of Folio III and Folio VI now route through their interlude plates (`plate-interlude-1/2` + text) before the Folio map. Same first-clear guard as the reveal.
-- **T2 — disconnect countdown (shipped previously, documented here):** server emits `peer_disconnected` / 1 s `reconnect_grace` ticks / `peer_reconnected`; the S08 modal shows the peer's name, a draining oxblood ring and the live seconds; your own line-drop shows a reconnecting banner and auto-rejoins. Socket flow covered 6/6 by `scripts/pvp-disconnect-test.mjs`.
-- **T3 — scripted tutorial loss (shipped previously):** `shared/tutorial.ts` is a pure, seeded controller — the Shade holds its hand until your first true digit, races at 4.2–6.8 s/digit, slips after every third placement, takes at most ONE teaching claim, caps its correct ink at 22 (it can never win), and never casts. Deterministic on every seed; covered by 7 Vitest tests.
+## What landed in this iteration (T7 + the engine hardened under real adversarial testing)
+
+This iteration had two equal halves: the **T7 Replay Shades** feature, and a **testing pass with one rule — write the tests that break it, not the tests that pass.** The second half changed the engine as much as the first.
+
+### T7 — Replay Shades (the ink-echo shelf)
+
+Per spec §7, "a Shade is an ink-echo that duels on someone's behalf." Every recordable human duel now leaves one behind:
+
+- **Recording** (`shared/replay.ts` + `LocalDuel`): your placements (mistakes included — an echo must stutter like you did), abilities and resign are logged as `{t, kind, …}` with engine-clock timestamps. The log is capped at 4000 actions, sealed at duel end, and self-validated on assembly (`buildReplay` returns `null` rather than emit a poisoned echo).
+- **Validation is fail-closed**: `validateReplay()` never throws, never returns the payload by reference (fresh objects only — `__proto__` smuggling dies there), and rejects wrong versions, bad seeds/tiers/orders, out-of-range cells/digits/units/timestamps, decreasing timestamps, unknown ability ids, oversized logs and hostile outcome blocks. 24 rejection cases pinned in `shared/__tests__/replay.test.ts`.
+- **Playback** is clock-driven, not wall-clock driven: `ReplayDriver.due(state)` releases recorded actions when the *engine* clock reaches them, so pausing the duel pauses the echo with it. Replayed actions run through the same shared engine on the echo's own tablet — refused actions (the live duel's statuses differ from the original's) simply fizzle: *an ink-echo stutters where the ink was disturbed.*
+- **Degradation is visible**: a replay that fails validation sets `replayDegraded` and the foe falls back to the calibrated Shade — the duel always runs.
+- **The shelf** (`EchoesScreen`): the Antechamber card lists stored echoes ("Shade of ⟨name⟩ · Tier · N ink · won/lost/unfinished"); tapping one enters a replay duel. Storage is the (previously unused) `duels` IndexedDB store with a newest-12 ring buffer; every row is re-validated on read, and a corrupted row is skipped, not shown.
+- **Determinism proof**: the same echo against the same scripted opponent produces byte-identical final state (`serializeDuel` equality), and the echo's tablet carries exactly the recorded ink.
+
+### The adversarial pass — probes first, then tests that fail, then fixes
+
+A throwaway probe script (`scripts/probe-engine.ts`) attacked the engine like a hostile client would. **It found 4 crashes and 4 semantic holes in the shipping engine** — the exact "fake green" the previous suite could never reveal:
+
+| Attack | Old behaviour |
+|---|---|
+| `place(st, 2, …)` / `useAbility(st, -1, …)` / `cellFlags(st, 9)` | **TypeError crash** (no seat validation) |
+| `place(st, 0, cell, 2.5)` and `digit = NaN` | **accepted as a mistake, burned a Seal** (`NaN < 1` is false) |
+| `tick(st, NaN)` | **permanent soft-lock** — clock stuck at NaN, nothing ever expires |
+| `tick(st, -5000)` | **time travel** — statuses re-arm, immunity extends |
+| `fairCopy` with `cell = NaN` | **TypeError crash** on `UNIT_CELLS["bNaN"]` |
+| `swapOrder(st, 0, "blast")` | **TypeError crash** on `ORDER_ABILITIES[bad].map` |
+| `applyStatus(…, 'curse')` | **NaN-lived status** pushed into state |
+| `createDuel({ seals: [-5, 100] })` | silent duels with dead/immortal players |
+
+All sixteen entry points are now hardened (seat validation everywhere, integer digit/cell/unit/type validation, finite-and-positive clock deltas, RangeError on impossible Seals at construction, shape-validated snapshots with a precise `malformed duel snapshot: …` error, uint32 rng state in the serialization contract) — and every fix is pinned by a test that *used to fail*, so the hardening cannot silently regress.
+
+**The shipped suite also had a luck-pass**: "every ability casts from a fresh board" only passed because the foe's seeded placements happened to drop Seals below Tincture's cap first. The new A1 test builds every precondition explicitly — no test here passes for a reason it doesn't name.
+
+### The three test layers now in place (258 tests total)
+
+1. **Adversarial engine suite** (`shared/__tests__/adversarial.test.ts`, 168 tests): hostile-input rejection (H1–H16); a **fuzz harness** running 120 seeded random duels × 240 steps (valid + hostile placements, abilities, ticks, swaps, direct status applications) checking ~20 invariants after *every* step (boards ⊆ solution, givens immutable, progress bookkeeping, mistakes ledger, claims ↔ unitOwner bijection, seals bounds, cooldown floors, status well-formedness, event-seq integrity, phase/winner consistency) — and re-running every script twice to demand **byte-identical** serialization (determinism is asserted, not assumed); the full status interaction matrix (Bulwark/Ward/Mirror precedence, gap-only-on-success, per-type immunity from the expiry tick, final-10s ban, Distiller's exact +2 s); clock/boundary behaviour (Flinch freeze windows, Momentum floors, Sudden-Judgment precedence including seal-death-beats-reckoning on the same placement, idempotent endings); every ability's contract with explicit preconditions; swap invariants (passives return unworn — Marginalia forgives *again* after a swap cycle); serialization round-trips byte-identical on rich mid-duel states including a live quarantine deferred-claim.
+2. **Generator / RNG / AI fuzz** (`shared/__tests__/generators.test.ts`, 16 tests): 24+ puzzles across tiers re-verified for uniqueness, givens ⊆ solution, metadata honesty; `countSolutions` purity; grader termination on degenerate and contradictory grids; daily tier rotation pinned to a known calendar; malformed daily keys throw `RangeError` (a garbage key used to index `DAILY_TIERS[NaN]`); 50k-draw `Rng` bounds, permutation and mid-stream state-resume contracts; 30 seeded Shade runs asserting every placement lands legally; the tutorial script under a worst-case Clerk (never casts, never wins by its own hand — only by yours, which is the T3 contract).
+3. **Replay suite** (`shared/__tests__/replay.test.ts`, 23 tests): the full hostile-payload matrix, recorder cap/seal semantics, driver clock semantics, headless LocalDuel record → replay determinism, corrupt-echo degradation, echo resign, past-the-buzzer actions never landing — plus **R23**, a regression test for the one bug only the browser caught (see Verification status).
+
+**Every red test led to either an engine fix or a test fix, and the reason for each is recorded in the assertion message. Nothing was left artificially green.**
+
+### Shipped in earlier iterations (kept for the record)
+
+- **T4/T6/T15** — Orsolo's adaptive swap, the Balance/Burn ending choice, the auto-triggered interludes (detailed in the section above and in `docs/STORY.md`).
+- **T2 — disconnect countdown:** server emits `peer_disconnected` / 1 s `reconnect_grace` ticks / `peer_reconnected`; the S08 modal shows the peer's name, a draining oxblood ring and the live seconds; your own line-drop shows a reconnecting banner and auto-rejoins. Socket flow covered 6/6 by `scripts/pvp-disconnect-test.mjs`.
+- **T3 — scripted tutorial loss:** `shared/tutorial.ts` is a pure, seeded controller — the Shade holds its hand until your first true digit, races at 4.2–6.8 s/digit, slips after every third placement, takes at most ONE teaching claim, caps its correct ink at 22, and never casts. Deterministic on every seed; its "can only lose by your own hand" contract is now *also* fuzz-tested (G13) against a worst-case Clerk.
 
 ---
 
@@ -103,7 +148,7 @@ cd mini-services/assize-server && bun install && bun run dev   # REST + socket.i
 
 Then open the preview URL (port 3000). Fresh load lands on the tutorial duel within ~2 s.
 
-**Tests:** `bun run test` (Vitest, **51 tests** across three suites: 35 engine — puzzle uniqueness and tier bands, claims/damage/Clean, Momentum, all 12 abilities, all 5 statuses + anti-frustration, win-condition order, determinism, serialization, Shade legality, campaign structure; 7 tutorial scripting; 9 adaptive-swap).
+**Tests:** `bun run test` (Vitest, **258 tests** across six suites: 35 engine — puzzle uniqueness and tier bands, claims/damage/Clean, Momentum, all 12 abilities, all 5 statuses + anti-frustration, win-condition order, determinism, serialization, Shade legality, campaign structure; 7 tutorial scripting; 9 adaptive-swap; **168 adversarial engine**; **16 generator/RNG/AI fuzz**; **23 replay/T7**).
 
 ## Environment
 
@@ -114,18 +159,22 @@ No env vars are required. The SQLite database file is created at `db/assize.db` 
 ```
 shared/                 pure deterministic engine (spec R6) — used by BOTH client and server
   config.ts             every tunable number (mirrored in docs/BALANCE.md)
-  rng.ts                seeded mulberry32
+  rng.ts                seeded mulberry32 (uint32 state contract)
   sudoku.ts             generator + uniqueness counter + L1–L4 technique grader
   engine.ts             duel state machine: placement, claims, statuses, abilities,
-                        win order, swapOrder() (T4)
+                        win order, swapOrder() (T4), hostile-input hardening
   orders.ts             Orders, abilities, campaign definitions, ADAPTIVE_COUNTER (T4)
   shade.ts              Shade AI (placement skill, mistake rate, ability cadence by Standing)
   tutorial.ts           the scripted tutorial Shade (T3)
-  __tests__/            51 Vitest tests (engine / tutorial / adaptive)
+  replay.ts             T7: validated duel replays (recorder, fail-closed validator,
+                        clock-driven ReplayDriver, echo-storage helpers)
+  __tests__/            258 Vitest tests (engine / tutorial / adaptive / adversarial /
+                        generators / replay)
 src/                    the client (Next.js 16, React 19, Zustand, CSS Modules + design tokens)
-  app/game/             20 screens (S01–S19, incl. EndingChoice) + duel runtime wiring
-  game/localDuel.ts     local engine harness (tutorial/campaign/daily/practice/Shade)
-                        + checkAdaptive() trigger + swapBanner() (T4)
+  app/game/             21 screens (S01–S19 + EndingChoice + EchoesScreen) + duel runtime wiring
+  game/localDuel.ts     local engine harness (tutorial/campaign/daily/practice/Shade/replay)
+                        + checkAdaptive() trigger + swapBanner() (T4) + echo recorder/driver (T7)
+  game/echoes.ts        T7: IndexedDB echo storage (validate-on-write, ring buffer, corrupt-row skip)
   game/serverDuel.ts    client mirror for authoritative duels (predict + reconcile,
                         S08 disconnect state; swapBanner() parity stub)
   audio/synth.ts        every sound synthesized in WebAudio + generative drone/bowed/
@@ -167,12 +216,15 @@ Saves, identity, cosmetics and achievements live in **IndexedDB** (versioned, mi
 9. **The swap trigger lives in the runtime, not the engine** (T4): the engine's `swapOrder()` is pure and reusable; the *policy* (once per duel, at 4 Seals, never after end, only when `foe.adaptive`) stays in `LocalDuel` where the frame loop can watch for Seal loss from any source. The server never needs it — PvP has no adaptive foes — so `ServerDuel` carries only a `swapBanner()` parity stub.
 10. **The finale replaces the result screen, once** (T6/T15): story beats fire on *first clear only* (guard: the duel's stars were empty before this win). Replays get the normal result screen — no re-litigating an ending the Ledger already recorded. Rewards (Ink, Reliquary progress, stats) are written before the beat plays, so skipping the result screen loses nothing.
 11. **The ending is cosmetic, not mechanical** (T6): `campaign.ending` changes the epilogue, the reveal, and hub copy — never Standing, matchmaking, or rewards. The Endless Assize continues identically after either verdict; "Balance or Burn" is a moral record, not a meta buff. (Deliberately conservative: a mechanical split would need server authority over endings to stay honest.)
+12. **Echo validation is fail-closed, not fail-open** (T7): a stored replay is untrusted data coming back from IndexedDB. It is re-validated on write *and* on read; a bad echo degrades the duel visibly to an ordinary Shade instead of crashing or replaying nonsense. The validator rebuilds every object fresh so nothing from storage escapes by reference.
+13. **The replay clock is integer milliseconds at the recorder boundary** (T7): the engine clock is continuous (rAF deltas), but the replay contract is integer ms — `LocalDuel` rounds at record time, and `validateReplay` rejects fractions. The browser E2E caught what the integer-tick test harness could not; the regression test now drives fractional ticks on purpose.
 
 ## Verification status
 
-- **51/51 Vitest green** (`bun run test`): engine 35, tutorial scripting 7, adaptive swap 9.
+- **258/258 Vitest green** (`bun run test`): engine 35, tutorial scripting 7, adaptive swap 9, **adversarial 168, generators/RNG/AI 16, replay/T7 23**.
 - **`tsc --noEmit` clean** for `src/` and `shared/` (remaining project-level notes are sandbox scaffolding outside the app).
-- **Browser-verified end-to-end** (agent-browser, 390×844 + 1280×800): boot → tutorial → skip → hub; practice duel with forced adaptive trigger → swap banner + ticker line + portrait flip captured; seeded campaign at Folio IX duel III → won → **adaptive swap fired live mid-duel (Scholar 8→6→4 → Apothecary → 2 → 0)** → reveal plate → EndingChoice → **Burn** confirmed → ending plate → hub "The Ledger is Burned." → IDB shows `ending: "burn"` + `folio-ninth`; repeated end-to-end with **Balance** → `ending: "balance"`; replay of the final duel correctly returns to the normal result screen (first-clear guard). No console errors.
+- **Adversarial red → fix → green is on the record**: the probe script and the new suites failed 106 times against the unhardened engine (4 crash classes, 4 semantic holes, 1 luck-pass exposed); every failure was either fixed in the engine or corrected in the test with the reason named, and the suite now passes from a clean run.
+- **Browser-verified end-to-end** (agent-browser, 390×844): boot → tutorial → **won live** (race script) → result → hub → Practice → OrderSelect → duel → won → result. The browser pass caught a real bug the headless harness could not — the rAF clock is fractional and the replay validator (correctly) demands integer ms, so echoes silently failed to save; fixed at the recorder boundary and pinned by test R23, which now drives fractional ticks deliberately.
 - **Socket-level disconnect flow** 6/6 via `scripts/pvp-disconnect-test.mjs` (T2).
 
 ## Known limits
@@ -182,7 +234,9 @@ Saves, identity, cosmetics and achievements live in **IndexedDB** (versioned, mi
 - Payments and rewarded ads are stubbed (TODO T5). No real money moves.
 - Solver-app assistance cannot be fully prevented (honest, per spec §6): the server applies speed/uniformity sanity checks and shadow-queues, but a solver feeding moves at human pace is undetectable.
 - The adaptive swap exists only in local (campaign/Shade) duels; bringing it to server-authoritative duels would need the swap decision (and its counter map) mirrored server-side — deliberately out of scope while PvP has no magistrates.
-- See `TODO.md` for the full honest list (T1–T15, with T2/T3/T4/T6/T12/T15 marked DONE).
+- Echoes are local-only for now (your own duels on your own device); sharing echoes between Clerks (export codes, or server-side anonymous echo pools for the matchmaking Shade fallback) is the natural next step and needs a privacy pass on the recorded names first.
+- The browser session used for the echo-shelf walk went unreliable partway (stale hydration after HMR); the shelf's full happy path is covered by the headless replay suite instead, and the one bug the browser did surface is pinned by R23.
+- See `TODO.md` for the full honest list (T1–T15, with T2/T3/T4/T6/T7/T12/T15 marked DONE).
 
 ## Future work
 
@@ -190,9 +244,8 @@ Saves, identity, cosmetics and achievements live in **IndexedDB** (versioned, mi
 
 | ID | Area | What's missing | Effort |
 |---|---|---|---|
-| T1 | Tests | Playwright smoke suite (full tutorial + Shade duel) ported from the agent-browser drive script; CI parity | ~2 h |
+| T1 | Tests | Playwright smoke suite (full tutorial + Shade duel + echo shelf) ported from the agent-browser drive script; CI parity | ~2 h |
 | T5 | Monetization | Stripe Checkout + rewarded-ad SDK behind a `MonetizationProvider` (sell→own→equip loop already works; Patron's Pouch stubbed) | ~6 h |
-| T7 | Shades | Replay-Shades built from stored anonymized human duel logs (server already stores duels; needs a replay mode in `shade.ts`) | ~4 h |
 | T8 | Privacy | Server-side telemetry opt-out sync (`/api/auth` carries the flag; server drops rows) | ~1 h |
 | T9 | Performance | PNG compression + automatic WebP for brand/portrait/plate masters | ~0.5 h |
 | T10 | PWA | Lighthouse audit (≥ 90 target) in a Chrome-capable environment | ~1 h |
@@ -206,7 +259,7 @@ Saves, identity, cosmetics and achievements live in **IndexedDB** (versioned, mi
 - **An Order of your own to counter-pick:** expose an Order-swap token (one per duel, earned at 3 Seals down) so human duels get the same phase-2 drama the Ninth has.
 - **Ending echo:** thread `campaign.ending` into Duel-screen flavour (burned-ledger wax, balanced-ledger stamps) and into Shade taunts — the save field is already there.
 - **Weekly seeded "Assize of Nine":** a 9-duel gauntlet on one seed, leaderboard by total time+mistakes; reuses the daily pipeline.
-- **Replay viewer:** the `duels` IDB store and server duel rows already keep action logs; a scrubber over `DuelEvent[]` with the T12 stamp positions would make losses teach like the tutorial does.
+- **Replay viewer:** the T7 recorder already keeps the full action log; a scrubber over `DuelEvent[]` with the T12 stamp positions would make losses teach like the tutorial does. Echo *sharing* (export codes, anonymous server pools) builds directly on the same validated format.
 - **Full server-authoritative solo mode** if the Ink economy ever becomes competitive: the local engine already serializes/deserializes whole duel state, so moving campaign validation server-side is a protocol task, not a rewrite.
 
 ## Credits

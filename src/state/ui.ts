@@ -7,7 +7,8 @@ export type Screen =
   | 'boot' | 'duel' | 'tutorial' | 'antechamber' | 'orders' | 'matchmaking' | 'versus'
   | 'result' | 'reliquary' | 'folioMap' | 'folioDetail' | 'daily' | 'cabinet'
   | 'season' | 'ledger' | 'settings' | 'offline' | 'story' | 'purse' | 'friend'
-  | 'endingChoice'; // T6 — the Balance / Burn verdict after the Orsolo reveal
+  | 'endingChoice' // T6 — the Balance / Burn verdict after the Orsolo reveal
+  | 'echoes';      // T7 — the Shade Echoes shelf (duel a stored replay)
 
 export interface StoryPayload {
   lines: string[];
@@ -22,7 +23,8 @@ interface UiStore {
   prev: Screen | null;
   direction: number; // page turn variant
   story: StoryPayload | null;
-  duelMode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'ranked' | 'friend';
+  duelMode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'ranked' | 'friend' | 'replay';
+  pendingEcho: import('@shared/replay').DuelReplay | null; // T7 — the chosen echo for a replay duel
   campaignDuel: { folio: number; duel: number } | null;
   lastResult: {
     winner: PlayerSeat | 'draw'; reason: string; mode: string;
@@ -47,6 +49,7 @@ export const useUi = create<UiStore>((set, get) => ({
   campaignDuel: null,
   lastResult: null,
   pendingFoe: null,
+  pendingEcho: null,
   serverDuel: null,
   go: (s, payload) => {
     synth.pageTurn();

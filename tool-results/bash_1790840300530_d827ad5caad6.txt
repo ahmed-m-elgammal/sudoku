@@ -1,0 +1,783 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 106 ⎯⎯⎯⎯⎯⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H1 invalid seat index is refused by every mutation entry point (was: TypeError crash)
+TypeError: Cannot read properties of undefined (reading 'board')
+ ❯ place shared/engine.ts:266:9
+    264|   const p = st.players[player];
+    265|   if (!Number.isInteger(cell) || cell < 0 || cell > 80 || digit < 1 ||…
+    266|   if (p.board[cell] !== 0) return { ok: false, reason: p.board[cell] =…
+       |         ^
+    267|   if (findStatus(p, 'hush')) return { ok: false, reason: 'hushed' };
+    268|   if (findStatus(p, 'chain')?.cell === cell) return { ok: false, reaso…
+ ❯ shared/__tests__/adversarial.test.ts:60:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H2 cellFlags for an invalid seat returns empty flags, not a crash
+TypeError: Cannot read properties of undefined (reading 'statuses')
+ ❯ cellFlags shared/engine.ts:545:21
+    543|   const chained = new Set<number>();
+    544|   const smudged = new Set<number>();
+    545|   for (const s of p.statuses) {
+       |                     ^
+    546|     if (s.type === 'chain' && s.cell !== undefined) chained.add(s.cell…
+    547|     if (s.type === 'smudge' && s.cells) for (const c of s.cells) smudg…
+ ❯ shared/__tests__/adversarial.test.ts:73:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H3 fractional digits are refused without burning a Seal (was: accepted as a mistake)
+AssertionError: digit 2.5 must be refused: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ shared/__tests__/adversarial.test.ts:87:52
+     85|       const mistakesBefore = st.players[0].mistakes;
+     86|       const r = place(st, 0, c, bad as unknown as Digit);
+     87|       expect(r.ok, `digit ${bad} must be refused`).toBe(false);
+       |                                                    ^
+     88|       expect(r.reason).toBe('invalidTarget');
+     89|       expect(st.players[0].seals).toBe(sealsBefore);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H4 NaN / Infinity digits are refused (NaN < 1 and NaN > 9 are both false — the old hole)
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ shared/__tests__/adversarial.test.ts:101:20
+     99|       const c = firstEmpty(st);
+    100|       const r = place(st, 0, c, bad as unknown as Digit);
+    101|       expect(r.ok).toBe(false);
+       |                    ^
+    102|       expect(r.reason).toBe('invalidTarget');
+    103|       expect(st.players[0].mistakes).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H6 tick(NaN) cannot brick the duel (was: permanent soft-lock, clock stuck at NaN)
+AssertionError: expected NaN to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ NaN
+
+ ❯ shared/__tests__/adversarial.test.ts:121:24
+    119|     const st = mkDuel();
+    120|     tick(st, NaN);
+    121|     expect(st.clockMs).toBe(0);
+       |                        ^
+    122|     tick(st, undefined as unknown as number);
+    123|     expect(st.clockMs).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H7 tick(Infinity) cannot insta-end a duel through a transport bug
+AssertionError: expected 'ended' to be 'live' // Object.is equality
+
+Expected: "live"
+Received: "ended"
+
+ ❯ shared/__tests__/adversarial.test.ts:138:22
+    136|     const st = mkDuel();
+    137|     tick(st, Infinity);
+    138|     expect(st.phase).toBe('live');
+       |                      ^
+    139|     tick(st, 1000);
+    140|     expect(st.clockMs).toBe(1000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H8 tick(-1) cannot rewind the clock, re-arm statuses, or extend immunity
+AssertionError: expected -1000002500 to be 2500 // Object.is equality
+
+- Expected
++ Received
+
+- 2500
++ -1000002500
+
+ ❯ shared/__tests__/adversarial.test.ts:152:24
+    150|     tick(st, -5000);
+    151|     tick(st, -1e9);
+    152|     expect(st.clockMs).toBe(clock);
+       |                        ^
+    153|     expect(st.players[0].immuneUntil.hush).toBe(immune);
+    154|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H9 fairCopy with a hostile cell is refused and burns no cooldown (was: TypeError on UNIT_CELLS["bNaN"])
+TypeError: UNIT_CELLS[box] is not iterable
+ ❯ useAbility shared/engine.ts:367:23
+    365|       const box = CELL_UNITS(cell)[2];
+    366|       const cands: Record<number, number[]> = {};
+    367|       for (const c of UNIT_CELLS[box]) {
+       |                       ^
+    368|         if (p.board[c] !== 0) continue;
+    369|         const used = new Set<number>();
+ ❯ shared/__tests__/adversarial.test.ts:159:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H11 quarantine refuses unit ids that do not exist on the tablet (was: stored garbage silently)
+AssertionError: unit "r9": expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ shared/__tests__/adversarial.test.ts:191:37
+    189|     for (const bad of ['r9', 'c-1', 'x0', 'bNaN', '', 'r0.5']) {
+    190|       const r = useAbility(st, 0, 'quarantine', { unit: bad });
+    191|       expect(r.ok, `unit "${bad}"`).toBe(false);
+       |                                     ^
+    192|       expect(r.reason).toBe('invalidTarget');
+    193|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H12 abilities of a foreign Order are refused with wrongOrder; unknown ids report unknown
+AssertionError: expected 'wrongOrder' to be 'unknown' // Object.is equality
+
+Expected: "unknown"
+Received: "wrongOrder"
+
+ ❯ shared/__tests__/adversarial.test.ts:205:71
+    203|     expect(useAbility(st, 0, 'tincture').reason).toBe('wrongOrder');
+    204|     expect(useAbility(st, 0, 'ward').reason).toBe('wrongOrder');
+    205|     expect(useAbility(st, 0, 'blast' as unknown as AbilityId).reason).…
+       |                                                                       ^
+    206|     expect(useAbility(st, 0, 'blast' as unknown as AbilityId).ok).toBe…
+    207|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H13 createDuel fails fast on impossible Seals (was: duels began with dead or immortal players)
+AssertionError: seals [-5,100]
+ ❯ shared/__tests__/adversarial.test.ts:212:10
+    210|     for (const seals of [[-5, 100], [0, 7], [7, 0], [7.5, 7], [NaN, 7]…
+    211|       expect(() => mkDuel({ magistrateSeals: seals as [number, number]…
+    212|         .toThrow(RangeError);
+       |          ^
+    213|     }
+    214|     // legitimate campaign values still construct
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H14 swapOrder refuses unknown Order ids without emitting an event (was: TypeError on ORDER_ABILITIES[bad])
+TypeError: Cannot read properties of undefined (reading 'map')
+ ❯ swapOrder shared/engine.ts:509:31
+    507|   p.order = newOrder;
+    508|   p.abilities = Object.fromEntries(
+    509|     ORDER_ABILITIES[newOrder].map((a) => [a, { cdLeftMs: 0, usedOnce: …
+       |                               ^
+    510|   );
+    511|   p.marginaliaUsed = false; // Scholar's Marginalia returns unworn
+ ❯ shared/__tests__/adversarial.test.ts:221:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H15 malformed snapshots throw a precise error instead of silently corrupting
+AssertionError: {}: expected [Function] to throw error matching /malformed/i but got 'Cannot read properties of undefined (…'
+
+- Expected:
+/malformed/i
+
++ Received:
+"Cannot read properties of undefined (reading 'map')"
+
+ ❯ shared/__tests__/adversarial.test.ts:245:66
+    243|     ];
+    244|     for (const g of garbage) {
+    245|       expect(() => deserializeDuel(g as string), g.slice(0, 40)).toThr…
+       |                                                                  ^
+    246|     }
+    247|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > H · hostile inputs are rejected, never crash, never corrupt > H16 applyStatus primitive rejects unknown status types and garbage cells without corrupting
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ shared/__tests__/adversarial.test.ts:251:61
+    249|   it('H16 applyStatus primitive rejects unknown status types and garba…
+    250|     const st = mkDuel();
+    251|     expect(applyStatus(st, 0, 'curse' as never, 1).applied).toBe(false…
+       |                                                             ^
+    252|     expect(applyStatus(st, 0, 'chain', 1, { cell: 4.5 }).applied).toBe…
+    253|     expect(applyStatus(st, 0, 'chain', 1, { cell: 99 }).applied).toBe(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 0: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 8: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 10: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 12: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 18: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 21: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 27: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 29: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 30: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 34: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 39: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 44: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 47: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 48: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 57: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 58: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 64: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 65: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 66: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 72: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 73: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 74: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 82: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 85: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 88: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 101: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 110: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 118: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 119: invariants hold and two runs serialize identically
+TypeError: Cannot read properties of undefined (reading 'map')
+ ❯ swapOrder shared/engine.ts:509:31
+    507|   p.order = newOrder;
+    508|   p.abilities = Object.fromEntries(
+    509|     ORDER_ABILITIES[newOrder].map((a) => [a, { cdLeftMs: 0, usedOnce: …
+       |                               ^
+    510|   );
+    511|   p.marginaliaUsed = false; // Scholar's Marginalia returns unworn
+ ❯ execStep shared/__tests__/adversarial.test.ts:347:7
+ ❯ run shared/__tests__/adversarial.test.ts:466:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 1: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 19: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 28: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 31: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 55: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 56: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 59: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 62: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 67: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 69: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 80: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 81: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 86: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 102: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 109: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 111: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 112: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 113: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 116: invariants hold and two runs serialize identically
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:405:44
+    403|       expect(seen.has(s.type)).toBe(false);
+    404|       seen.add(s.type);
+    405|       expect(Number.isInteger(s.endsAtMs)).toBe(true);
+       |                                            ^
+    406|       expect(s.endsAtMs).toBeGreaterThan(0);
+    407|       expect(s.uid).toBeGreaterThanOrEqual(1);
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 2: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 37: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 77: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 83: invariants hold and two runs serialize identically
+AssertionError: unit r99: expected undefined to be defined
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:410:78
+    408|       expect(s.uid).toBeLessThan(st.statusUid);
+    409|       if (s.cells) for (const c of s.cells) { expect(c).toBeGreaterTha…
+    410|       if (s.unit !== undefined) expect(UNIT_CELLS[s.unit], `unit ${s.u…
+       |                                                                              ^
+    411|     }
+    412|     // immunity keys are status types, values finite
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 4: invariants hold and two runs serialize identically
+AssertionError: expected -2020029427 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 5: invariants hold and two runs serialize identically
+AssertionError: expected -1404971376 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 14: invariants hold and two runs serialize identically
+AssertionError: expected -201856601 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 15: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 16: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 22: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 33: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 40: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 42: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 54: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 63: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 89: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 93: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 94: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 106: invariants hold and two runs serialize identically
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 117: invariants hold and two runs serialize identically
+TypeError: UNIT_CELLS[box] is not iterable
+ ❯ useAbility shared/engine.ts:367:23
+    365|       const box = CELL_UNITS(cell)[2];
+    366|       const cands: Record<number, number[]> = {};
+    367|       for (const c of UNIT_CELLS[box]) {
+       |                       ^
+    368|         if (p.board[c] !== 0) continue;
+    369|         const used = new Set<number>();
+ ❯ execStep shared/__tests__/adversarial.test.ts:338:7
+ ❯ run shared/__tests__/adversarial.test.ts:466:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 25: invariants hold and two runs serialize identically
+AssertionError: expected -548619843 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 38: invariants hold and two runs serialize identically
+AssertionError: expected -67929839 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 43: invariants hold and two runs serialize identically
+AssertionError: expected -333713496 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 45: invariants hold and two runs serialize identically
+AssertionError: expected -2131724071 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 52: invariants hold and two runs serialize identically
+AssertionError: expected -484859162 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 68: invariants hold and two runs serialize identically
+AssertionError: expected -417895781 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 84: invariants hold and two runs serialize identically
+AssertionError: expected -281409163 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 87: invariants hold and two runs serialize identically
+AssertionError: expected -264631544 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 90: invariants hold and two runs serialize identically
+AssertionError: expected -2146677309 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 91: invariants hold and two runs serialize identically
+AssertionError: expected -2129899690 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 95: invariants hold and two runs serialize identically
+AssertionError: expected -2062789214 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 98: invariants hold and two runs serialize identically
+AssertionError: expected -513273645 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 100: invariants hold and two runs serialize identically
+AssertionError: expected -1426764713 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 104: invariants hold and two runs serialize identically
+AssertionError: expected -1493875189 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > I+D · seeded fuzz duels — invariants after every step, determinism across runs > fuzz duel 108: invariants hold and two runs serialize identically
+AssertionError: expected -1292543761 to be greater than or equal to 0
+ ❯ checkInvariants shared/__tests__/adversarial.test.ts:367:23
+    365|   expect(Number.isFinite(st.clockMs)).toBe(true);
+    366|   expect(Number.isInteger(st.rngState)).toBe(true);
+    367|   expect(st.rngState).toBeGreaterThanOrEqual(0);
+       |                       ^
+    368|   expect(st.rngState).toBeLessThanOrEqual(0xFFFFFFFF);
+    369|
+ ❯ run shared/__tests__/adversarial.test.ts:467:11
+ ❯ shared/__tests__/adversarial.test.ts:473:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[36/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > S · status interaction matrix — every negation path pinned > S1 Bulwark negates exactly the first incoming status, then never again
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ shared/__tests__/adversarial.test.ts:510:47
+    508|     st.players[1].abilities.hush.cdLeftMs = 0;
+    509|     tick(st, 4100); // gap + hush expiry + immunity 5s
+    510|     expect(useAbility(st, 1, 'hush').applied).toBe(true);
+       |                                               ^
+    511|     expect(st.players[0].statuses.some((s) => s.type === 'hush')).toBe…
+    512|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[37/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > S · status interaction matrix — every negation path pinned > S2 Ward eats one status inside its 15s window and expires cleanly
+AssertionError: expected 15000 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 15000
+
+ ❯ shared/__tests__/adversarial.test.ts:518:39
+    516|     useAbility(st, 0, 'ward');
+    517|     expect(useAbility(st, 1, 'hush').applied).toBe(false);
+    518|     expect(st.players[0].wardUntilMs).toBe(0); // window consumed
+       |                                       ^
+    519|     st.players[1].abilities.hush.cdLeftMs = 0;
+    520|     expect(useAbility(st, 1, 'hush').applied).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[38/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > S · status interaction matrix — every negation path pinned > S3 Mirror reflects inside 10s: the caster wears their own smudge, window consumed
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ shared/__tests__/adversarial.test.ts:536:69
+    534|     expect(r.statusReflected ?? true).toBe(true);
+    535|     expect(st.players[0].statuses.length).toBe(0);
+    536|     expect(st.players[1].statuses.some((s) => s.type === 'smudge')).to…
+       |                                                                     ^
+    537|     expect(st.players[0].mirrorUntilMs).toBe(0);
+    538|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > S · status interaction matrix — every negation path pinned > S4 reflected status is "incoming" for the caster too: their own Bulwark eats the reflection
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected:
+false
+
++ Received:
+undefined
+
+ ❯ shared/__tests__/adversarial.test.ts:545:23
+    543|     useAbility(st, 0, 'mirror');
+    544|     const r = useAbility(st, 1, 'smudge');
+    545|     expect(r.applied).toBe(false);
+       |                       ^
+    546|     expect(st.players[0].statuses.length).toBe(0);
+    547|     expect(st.players[1].statuses.length).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[40/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > S · status interaction matrix — every negation path pinned > S8 Distiller extends only smudge and miasma, by exactly 2s
+AssertionError: expected 16100 to be 15000 // Object.is equality
+
+- Expected
++ Received
+
+- 15000
++ 16100
+
+ ❯ shared/__tests__/adversarial.test.ts:599:79
+    597|     st.players[1].abilities.miasma.cdLeftMs = 0;
+    598|     useAbility(st, 1, 'miasma');
+    599|     expect(st.players[0].statuses.find((s) => s.type === 'miasma')!.en…
+       |                                                                               ^
+    600|     // chain gets NO bonus even from an apothecary caster
+    601|     const st2 = mkDuel({ orders: ['scholar', 'apothecary'] });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[41/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > C · clock, flinch, momentum, Sudden Judgment > C2 Momentum shaves exactly 500ms per correct placement and floors at 0
+AssertionError: expected 12500 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 12500
+
+ ❯ shared/__tests__/adversarial.test.ts:651:52
+    649|       place(st, 0, c, st.solution![c] as Digit);
+    650|     }
+    651|     expect(st.players[0].abilities.augur.cdLeftMs).toBe(0);
+       |                                                    ^
+    652|   });
+    653|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[42/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > A · ability contracts with explicitly-built preconditions > A3 Unseal clears every status and grants 6s per-type immunity; the count is logged
+AssertionError: expected 10100 to be 6100 // Object.is equality
+
+- Expected
++ Received
+
+- 6100
++ 10100
+
+ ❯ shared/__tests__/adversarial.test.ts:765:45
+    763|     expect(r.ok).toBe(true);
+    764|     expect(st.players[0].statuses.length).toBe(0);
+    765|     expect(st.players[0].immuneUntil.chain).toBe(6100);
+       |                                             ^
+    766|     expect(st.players[0].immuneUntil.hush).toBe(6100);
+    767|     const ev = st.events.find((e) => e.kind === 'ability' && e.ability…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[43/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > A · ability contracts with explicitly-built preconditions > A6 Sever chains a cell of the most complete unclaimed foe unit; only that cell is locked
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ shared/__tests__/adversarial.test.ts:804:43
+    802|   it('A6 Sever chains a cell of the most complete unclaimed foe unit; …
+    803|     const st = mkDuel({ orders: ['scholar', 'executioner'] });
+    804|     expect(useAbility(st, 0, 'sever').ok).toBe(true);
+       |                                           ^
+    805|     const chain = st.players[1].statuses.find((s) => s.type === 'chain…
+    806|     expect(chain).toBeTruthy();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[44/106]⎯
+
+ FAIL  shared/__tests__/adversarial.test.ts > X · serialization round-trips byte-identically on rich mid-duel states > X1 full-fidelity round trip: statuses, pendingClaim, immunity, swap, long event log
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ shared/__tests__/adversarial.test.ts:936:41
+    934|     applyStatus(st, 0, 'smudge', 1, { cells: [10, 11, 12, 13, 14] });
+    935|     useAbility(st, 0, 'reckoning');
+    936|     expect(swapOrder(st, 1, 'scholar')).toBe(true);
+       |                                         ^
+    937|     expect(st.events.length).toBeGreaterThan(60);
+    938|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[45/106]⎯

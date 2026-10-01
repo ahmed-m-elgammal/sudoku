@@ -94,6 +94,10 @@ export interface AbilityResult {
 }
 
 // ---------------------------------------------------------------- creation
+// Known-status / known-ability sets — hostile-input hardening (adversarial suite H/H16).
+const VALID_STATUS: readonly string[] = ['chain', 'smudge', 'hush', 'miasma', 'quarantine'];
+const ALL_ABILITIES = new Set<AbilityId>(Object.values(ORDER_ABILITIES).flat());
+
 const newPlayer = (id: PlayerId, name: string, order: OrderId): PlayerState => ({
   id, name, order,
   seals: CONFIG.seals.start,
@@ -149,6 +153,11 @@ export function createDuel(opts: CreateDuelOpts): DuelState {
     durationMs: CONFIG.duel.durationMs,
   };
   if (opts.magistrateSeals) {
+    for (let i = 0; i < 2; i++) {
+      const s = opts.magistrateSeals[i];
+      if (!Number.isInteger(s) || s < 1 || s > CONFIG.seals.magistrate)
+        throw new RangeError(`magistrateSeals[${i}] must be an integer in [1, ${CONFIG.seals.magistrate}], got ${s}`);
+    }
     st.players[0].seals = opts.magistrateSeals[0];
     st.players[1].seals = opts.magistrateSeals[1];
   }
@@ -216,6 +225,14 @@ export interface ApplyStatusOpts {
 export function applyStatus(st: DuelState, source: PlayerId, type: StatusType, target: PlayerId, opts: ApplyStatusOpts = {}):
   { applied: boolean; reflected?: boolean; reason?: string } {
   if (st.phase !== 'live') return { applied: false, reason: 'ended' };
+  // hostile-input hardening: unknown types used to push NaN-lived statuses, garbage
+  // cells/units used to be stored verbatim (adversarial suite H16/H11)
+  if (source !== 0 && source !== 1) return { applied: false, reason: 'invalid' };
+  if (target !== 0 && target !== 1) return { applied: false, reason: 'invalid' };
+  if (!VALID_STATUS.includes(type)) return { applied: false, reason: 'invalid' };
+  if (opts.cell !== undefined && (!Number.isInteger(opts.cell) || opts.cell < 0 || opts.cell > 80)) return { applied: false, reason: 'invalid' };
+  if (opts.cells && (!opts.cells.length || !opts.cells.every((c) => Number.isInteger(c) && c >= 0 && c <= 80))) return { applied: false, reason: 'invalid' };
+  if (opts.unit !== undefined && !UNIT_CELLS[opts.unit]) return { applied: false, reason: 'invalid' };
   const dur = (CONFIG.statusDurationsMs as Record<string, number>)[type];
   // Apothecary Distiller: statuses you apply last +2s
   const bonus = st.players[source].order === 'apothecary' && (type === 'smudge' || type === 'miasma') ? 2000 : 0;
@@ -261,8 +278,12 @@ export function applyStatus(st: DuelState, source: PlayerId, type: StatusType, t
 // ---------------------------------------------------------------- placement
 export function place(st: DuelState, player: PlayerId, cell: number, digit: Digit): PlaceResult {
   if (st.phase !== 'live') return { ok: false, reason: 'ended' };
+  // hostile-input hardening: invalid seats used to crash (TypeError on p.board), and
+  // NaN/2.5 digits passed the old range check and burned Seals as fake mistakes
+  if (player !== 0 && player !== 1) return { ok: false, reason: 'invalidTarget' };
   const p = st.players[player];
-  if (!Number.isInteger(cell) || cell < 0 || cell > 80 || digit < 1 || digit > 9) return { ok: false, reason: 'invalidTarget' };
+  if (!Number.isInteger(cell) || cell < 0 || cell > 80) return { ok: false, reason: 'invalidTarget' };
+  if (!Number.isInteger(digit) || digit < 1 || digit > 9) return { ok: false, reason: 'invalidTarget' };
   if (p.board[cell] !== 0) return { ok: false, reason: p.board[cell] === st.givens[cell] ? 'given' : 'filled' };
   if (findStatus(p, 'hush')) return { ok: false, reason: 'hushed' };
   if (findStatus(p, 'chain')?.cell === cell) return { ok: false, reason: 'chained' };
@@ -325,7 +346,9 @@ function resolveClaim(st: DuelState, player: PlayerId, unit: UnitId) {
 // ---------------------------------------------------------------- abilities
 export function useAbility(st: DuelState, player: PlayerId, abilityId: AbilityId, arg: { cell?: number; unit?: UnitId } = {}): AbilityResult {
   if (st.phase !== 'live') return { ok: false, reason: 'ended' };
+  if (player !== 0 && player !== 1) return { ok: false, reason: 'invalidTarget' };
   const p = st.players[player];
+  if (!ALL_ABILITIES.has(abilityId)) return { ok: false, reason: 'unknown' };
   const rt = p.abilities[abilityId];
   if (!rt || !ORDER_ABILITIES[p.order].includes(abilityId)) return { ok: false, reason: 'wrongOrder' };
   if (rt.cdLeftMs > 0) return { ok: false, reason: 'cooldown' };
@@ -344,7 +367,7 @@ export function useAbility(st: DuelState, player: PlayerId, abilityId: AbilityId
   switch (abilityId) {
     case 'augur': {
       const cell = arg.cell;
-      if (cell === undefined || !st.solution || p.board[cell] !== 0) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
+      if (cell === undefined || !Number.isInteger(cell) || cell < 0 || cell > 80 || !st.solution || p.board[cell] !== 0) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
       for (const u of CELL_UNITS(cell)) p.augurRevealed[u] = true;
       pushEvent(st, 'ability', { player, ability: 'augur', cell, digit: st.solution[cell] });
       setCd(abilityId);
@@ -361,7 +384,7 @@ export function useAbility(st: DuelState, player: PlayerId, abilityId: AbilityId
     }
     case 'fairCopy': {
       const cell = arg.cell;
-      if (cell === undefined) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
+      if (cell === undefined || !Number.isInteger(cell) || cell < 0 || cell > 80 || p.board[cell] !== 0) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
       const box = CELL_UNITS(cell)[2];
       const cands: Record<number, number[]> = {};
       for (const c of UNIT_CELLS[box]) {
@@ -437,7 +460,7 @@ export function useAbility(st: DuelState, player: PlayerId, abilityId: AbilityId
     }
     case 'quarantine': {
       const unit = arg.unit ?? mostNearlyComplete(st, foe, r) ?? undefined;
-      if (!unit) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
+      if (!unit || (arg.unit !== undefined && !UNIT_CELLS[arg.unit])) { commitRng(st, r); return { ok: false, reason: 'invalidTarget' }; }
       const res = applyStatus(st, player, 'quarantine', foe.id, { unit });
       result = { ok: true, applied: res.applied, statusNegated: !res.applied };
       pushEvent(st, 'ability', { player, ability: 'quarantine', unit: res.applied ? unit : undefined });
@@ -455,6 +478,9 @@ export function useAbility(st: DuelState, player: PlayerId, abilityId: AbilityId
 // ---------------------------------------------------------------- clock
 export function tick(st: DuelState, dtMs: number) {
   if (st.phase !== 'live') return;
+  // hostile-input hardening: NaN used to brick the duel permanently (clock stuck at
+  // NaN, nothing ever expires), Infinity insta-ended it, negatives rewound time
+  if (!Number.isFinite(dtMs) || dtMs < 0) return;
   st.clockMs += dtMs;
   for (const p of st.players) {
     // status expiry + per-type immunity
@@ -489,6 +515,7 @@ export function tick(st: DuelState, dtMs: number) {
 
 export function resign(st: DuelState, player: PlayerId) {
   if (st.phase !== 'live') return;
+  if (player !== 0 && player !== 1) return;
   pushEvent(st, 'forfeit', { player });
   endDuel(st, player === 0 ? 1 : 0, 'forfeit');
 }
@@ -501,6 +528,8 @@ export function resign(st: DuelState, player: PlayerId) {
 // windows (Reckoning / Ward / Mirror) lapse: the rites that armed them are gone.
 export function swapOrder(st: DuelState, player: PlayerId, newOrder: OrderId): boolean {
   if (st.phase !== 'live') return false;
+  if (player !== 0 && player !== 1) return false;
+  if (!(newOrder in ORDER_ABILITIES)) return false; // unknown ids used to crash on ORDER_ABILITIES[bad].map
   const p = st.players[player];
   if (p.order === newOrder) return false;
   const from = p.order;
@@ -525,23 +554,41 @@ export const serializeDuel = (st: DuelState): string => JSON.stringify({
   players: st.players.map((p) => ({ ...p, board: Array.from(p.board) })),
 } as unknown as Record<string, unknown>);
 
+// shape validation for snapshots coming off the wire — a hostile payload used to
+// crash with raw TypeErrors or (worse) silently modulo bytes into Uint8Array
+const byteGrid = (v: unknown, what: string): number[] => {
+  if (!Array.isArray(v) || v.length !== 81 || !v.every((n) => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 255))
+    throw new Error(`malformed duel snapshot: ${what}`);
+  return v as number[];
+};
+
 export const deserializeDuel = (json: string): DuelState => {
-  const o = JSON.parse(json) as Record<string, unknown>;
-  const rawPlayers = o.players as unknown as Array<Record<string, unknown> & { board: number[] }>;
-  const players = rawPlayers.map((p) => ({ ...(p as unknown as PlayerState), board: Uint8Array.from(p.board) })) as unknown as [PlayerState, PlayerState];
+  let o: Record<string, unknown>;
+  try { o = JSON.parse(json) as Record<string, unknown>; }
+  catch { throw new Error('malformed duel snapshot: not JSON'); }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('malformed duel snapshot: root');
+  if (!Array.isArray(o.players) || o.players.length !== 2) throw new Error('malformed duel snapshot: players');
+  if (!Array.isArray(o.events)) throw new Error('malformed duel snapshot: events');
+  const givens = byteGrid(o.givens, 'givens');
+  const sol = o.solution === null || o.solution === undefined ? null : byteGrid(o.solution, 'solution');
+  const players = (o.players as Array<Record<string, unknown>>).map((p) => {
+    if (!p || typeof p !== 'object' || Array.isArray(p)) throw new Error('malformed duel snapshot: player');
+    return { ...(p as unknown as PlayerState), board: Uint8Array.from(byteGrid(p.board, 'player board')) };
+  }) as unknown as [PlayerState, PlayerState];
   return {
     ...(o as unknown as DuelState),
-    givens: Uint8Array.from(o.givens as number[]),
-    solution: o.solution ? Uint8Array.from(o.solution as number[]) : null,
+    givens: Uint8Array.from(givens),
+    solution: sol ? Uint8Array.from(sol) : null,
     players,
   };
 };
 
 // helper for UI: cells currently unreadable (smudged) / uneditable (chained) / unclaimable
 export function cellFlags(st: DuelState, player: PlayerId) {
-  const p = st.players[player];
   const chained = new Set<number>();
   const smudged = new Set<number>();
+  if (player !== 0 && player !== 1) return { chained, smudged, hushed: false, miasma: false, quarantinedUnits: new Set<UnitId>() };
+  const p = st.players[player];
   for (const s of p.statuses) {
     if (s.type === 'chain' && s.cell !== undefined) chained.add(s.cell);
     if (s.type === 'smudge' && s.cells) for (const c of s.cells) smudged.add(c);

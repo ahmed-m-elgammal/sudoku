@@ -74,6 +74,12 @@ export default function Antechamber() {
           <h3>{i18n.hub.practice}</h3>
           <p>{i18n.hub.practiceSub}</p>
         </button>
+
+        {/* T7 — the shelf of stored ink-echoes; each one duels back */}
+        <button className="panel card" onClick={() => { synth.uiTap(); ui.go('echoes'); }}>
+          <h3>{i18n.hub.echoes}</h3>
+          <p>{i18n.hub.echoesSub}</p>
+        </button>
       </div>
       <Ribbon />
     </main>

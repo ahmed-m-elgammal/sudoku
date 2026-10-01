@@ -306,7 +306,11 @@ export function generatePuzzle(seed: string | number, tier: Tier): Puzzle {
 // Daily Assize: one puzzle per UTC day (spec M3). Tier rotates Mon..Sun.
 const DAILY_TIERS: Tier[] = ['Medium', 'Easy', 'Medium', 'Hard', 'Medium', 'Expert', 'Hard'];
 export const tierForDailyDate = (dateKey: string): Tier => {
+  // hostile-input hardening: a malformed key used to index DAILY_TIERS[NaN] and
+  // hand `undefined` straight into the generator, which then exploded far away
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) throw new RangeError(`dateKey must be YYYY-MM-DD, got "${dateKey}"`);
   const d = new Date(`${dateKey}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) throw new RangeError(`dateKey must be a real date, got "${dateKey}"`);
   return DAILY_TIERS[(d.getUTCDay() + 6) % 7];
 };
 export const dailySeed = (dateKey: string) => `assize-daily-${dateKey}`;

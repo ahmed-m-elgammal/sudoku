@@ -8,6 +8,7 @@ import { useUi, type PlayerSeat } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { synth } from '@/audio/synth';
 import { profileForStanding, type ShadeProfile } from '@shared/shade';
+import type { DuelReplay } from '@shared/replay';
 import { FOLIOS } from '@shared/orders';
 import type { DuelEvent } from '@shared/engine';
 
@@ -20,6 +21,7 @@ export interface DuelSessionSpec {
   seals?: [number, number];
   foeProfile?: ShadeProfile;
   adaptive?: boolean;   // T4: Magistrate Orsolo (Folio IX, duel III) swaps Orders at 4 Seals
+  replay?: DuelReplay;  // T7: duel against a stored human log (the ink-echo)
 }
 
 // both duel runtimes share one surface; screens render either identically
@@ -122,6 +124,13 @@ export function specFromUi(): DuelSessionSpec {
         mistakeRate: Math.max(0.02, prof.mistakeRate / shadeTierFactor),
         singlesSkill: Math.min(0.97, prof.singlesSkill * shadeTierFactor),
       },
+    };
+  }
+  if (mode === 'replay' && ui.pendingEcho) {
+    const echo = ui.pendingEcho;
+    return {
+      mode: 'replay', seed: echo.seed, tier: echo.tier, orders: echo.orders,
+      names: ['You', echo.names[0]], seals: echo.seals, replay: echo,
     };
   }
   if (mode === 'daily') {

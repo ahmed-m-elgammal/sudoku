@@ -61,12 +61,9 @@ Every unfinished or stubbed item, per spec R3. Sorted by priority. Each ID is ma
 ### T15 · area: interlude auto-trigger — ✅ DONE (this iteration)
 - **Shipped:** first clear of (folio 2, duel 2) routes to `story.interlude1` + `plate-interlude-1`, first clear of (folio 5, duel 2) to `story.interlude2` + `plate-interlude-2`, then continues to the Folio map at the next folio. First-clear guard: replays go straight to the result screen.
 
-### T7 · area: Shades (spec §7)
-- **Missing:** replay-Shades built from stored anonymized human duels (move log with timestamps).
-- **Why:** requires a replay corpus; the synthetic bot with human-like timing is shipped.
-- **Stands in for:** `shadeAct` bot calibrated to Standing; `TODO(T7)` in `shared/shade.ts`.
-- **Steps to finish:** persist finished duel action logs (server already stores duels), add a replay mode to `Shade` that paces stored placements.
-- **Effort:** ~4 h.
+### T7 · area: Shades (spec §7) — DONE
+- **Shipped:** full replay-Shades ("Shade Echoes"). `shared/replay.ts`: validated `DuelReplay` format (fail-closed `validateReplay` — never throws, never leaks by reference, rejects 24 hostile payload shapes), capped recorder (4000 actions, sealed at duel end, integer-ms engine-clock timestamps), clock-driven `ReplayDriver` (pause-safe). `LocalDuel` records human actions in practice/daily/Shade/replay modes and drives mode `'replay'` foes from a stored echo (refused actions fizzle — the ink-echo stutters where the ink was disturbed); invalid echoes degrade visibly (`replayDegraded`) to the calibrated Shade. `src/game/echoes.ts`: `duels` IDB store ring buffer (newest 12, validate-on-write, corrupt rows skipped on read). `EchoesScreen`: the Antechamber shelf — list, describe, and duel any echo. Determinism proven (byte-identical `serializeDuel` for identical echo + scripted opponent); 23 tests in `shared/__tests__/replay.test.ts` incl. the R23 fractional-clock regression the browser E2E caught.
+- **Left for later:** cross-Clerk echo sharing (export codes / anonymous server pools) — needs a privacy pass on recorded names; PvP replays are not recorded (server-authoritative states would need an action log too).
 
 ### T8 · area: privacy/telemetry
 - **Missing:** the Settings telemetry opt-out is honored client-side; the server-side telemetry endpoint does not yet receive/sync the preference.

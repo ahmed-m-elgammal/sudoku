@@ -149,6 +149,12 @@ export default function DuelScreen() {
       reliquaryWon = wins % 3 === 0;
       if (reliquaryWon) s.update((cur) => ({ ...cur, economy: { ...cur.economy, reliquaryProgress: 0 } }));
     }
+    // T7 — recordable human duels leave an echo behind (the ink-echo another Clerk
+    // may duel later). Tutorial (scripted) and campaign (canon foes) stay unrecorded.
+    if (duel && 'toReplay' in duel && ['practice', 'daily', 'shade', 'replay'].includes(ui.duelMode)) {
+      const rec = duel.toReplay({ winner, reason: r.reason });
+      if (rec) void import('@/game/echoes').then(({ saveEcho }) => saveEcho(rec));
+    }
     // story beats replace the result screen on their first clear — the reveal plays
     // immediately after Folio IX (spec: before the ending choice), interludes close
     // Folios III and VI. Rewards above were already written to the save.
