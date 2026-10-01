@@ -11,6 +11,7 @@ import {
 import { generatePuzzle, generateDaily, dailySeed } from '../../shared/sudoku';
 import { profileForStanding, shadeAct } from '../../shared/shade';
 import { Rng, todayUtcKey } from '../../shared/rng';
+import { sanitizeInkEntries, settleInkEntries, parseLedgerColumn, type InkEntry } from '../../shared/inkLedger';
 import type { AbilityId, Digit, OrderId, PlayerId, Tier } from '../../shared/config';
 import { q, hash, adjustRating, todayKey } from './db';
 
@@ -365,15 +366,15 @@ io.on('connection', (socket: Socket) => {
 await app.post('/api/auth', async (req, reply) => {
   const { id, secret, name, recoveryHash } = req.body as { id: string; secret: string; name?: string; recoveryHash?: string | null };
   if (!id || !secret) return reply.code(400).send({ ok: false });
-  const existing = q.getAccount.get(id) as { secret_hash: string; name: string; standing: number } | null;
+  const existing = q.getAccount.get(id) as { secret_hash: string; name: string; standing: number; ink: number } | null;
   if (existing) {
     if (existing.secret_hash !== hash(secret)) return reply.code(401).send({ ok: false });
     if (name && name !== existing.name) q.updateName.run(name.slice(0, 24), id);
-    const acc = q.getAccount.get(id) as { name: string; standing: number };
-    return { ok: true, name: acc.name, standing: acc.standing };
+    const acc = q.getAccount.get(id) as { name: string; standing: number; ink: number };
+    return { ok: true, name: acc.name, standing: acc.standing, ink: acc.ink };
   }
   q.insertAccount.run(id, hash(secret), (name ?? 'Unnamed Clerk').slice(0, 24), 1000, recoveryHash ?? null, '[]', Date.now());
-  return { ok: true, name: name ?? 'Unnamed Clerk', standing: 1000 };
+  return { ok: true, name: name ?? 'Unnamed Clerk', standing: 1000, ink: 0 };
 });
 
 await app.post('/api/queue', async (req, reply) => {
@@ -423,16 +424,50 @@ await app.post('/api/daily/result', async (req, reply) => {
 
 await app.post('/api/recovery', async (req, reply) => {
   const { code, id, secret } = req.body as { code: string; id: string; secret: string };
-  const acc = q.getAccount.get(id) as { recovery_hash: string | null; secret_hash: string } | null;
+  const acc = q.getAccount.get(id) as { recovery_hash: string | null; secret_hash: string; ink: number; ink_ledger: string } | null;
   if (!acc || acc.secret_hash !== hash(secret)) return reply.code(401).send({ ok: false });
   const h = hash(code.trim().toLowerCase());
-  const donor = q.byRecovery.get(h) as { id: string; standing: number; purchases: string } | null;
+  const donor = q.byRecovery.get(h) as { id: string; standing: number; purchases: string; ink: number } | null;
   if (!donor || donor.id === id) return { ok: false };
   q.updateStanding.run(donor.standing, id);
   q.updatePurchases.run(donor.purchases, id);
+  // T13 — Ink is now a server-known part: the donor's balance is restored to the
+  // recipient, and the recipient's ledger keeps the audit row.
+  const donorInk = typeof donor.ink === 'number' && Number.isFinite(donor.ink) && donor.ink > 0 ? donor.ink : 0;
+  const ledger = parseLedgerColumn(acc.ink_ledger);
+  ledger.push({ duelId: `recovery-${Date.now()}`, mode: 'recovery', d: donorInk - (typeof acc.ink === 'number' ? acc.ink : 0), v: 'verified', at: Date.now() });
+  q.updateInkLedger.run(JSON.stringify(ledger.slice(-200)), id);
+  q.updateInk.run(donorInk, id);
   // the donor slot is consumed: a code restores once
   q.updateRecovery.run(null, donor.id);
-  return { ok: true, standing: donor.standing, purchases: JSON.parse(donor.purchases) };
+  return { ok: true, standing: donor.standing, purchases: JSON.parse(donor.purchases), ink: donorInk };
+});
+
+// T13 — the Ink ledger: the client posts its award deltas with duel ids; the server
+// verifies against its own duel log, bounds what it cannot prove, drops replays, and
+// keeps the newest-200 audit trail plus the authoritative balance (floored at 0).
+await app.post('/api/ink', async (req, reply) => {
+  const { id, secret, entries } = (req.body ?? {}) as { id?: string; secret?: string; entries?: unknown };
+  const acc = auth(id ?? '', secret ?? '');
+  if (!acc) return reply.code(401).send({ ok: false });
+  const clean = sanitizeInkEntries(entries);
+  const cur = q.getAccount.get(acc.id) as { ink: number; ink_ledger: string };
+  const lookup = (e: InkEntry) => ({
+    duelRow: (e.mode === 'ranked' || e.mode === 'friend')
+      ? ((q.getDuel.get(e.duelId) as { p0: string | null; p1: string | null; winner: string | null } | null) ?? null)
+      : null,
+    dailyRowExists: e.mode === 'daily'
+      // the date key rides inside the duel id (parse is calendar-shaped; the settle law
+      // drops ids that do not carry one)
+      ? !!(e.duelId.match(/^daily-(\d{4}-\d{2}-\d{2})/)?.[1] && q.dailyBest.get(e.duelId.match(/^daily-(\d{4}-\d{2}-\d{2})/)![1]!, acc.id))
+      : false,
+  });
+  const out = settleInkEntries(clean, acc.id, lookup, cur.ink_ledger, cur.ink);
+  if (out.results.length) {
+    q.updateInkLedger.run(JSON.stringify(out.ledger), acc.id);
+    q.updateInk.run(out.balance, acc.id);
+  }
+  return { ok: true, ink: out.balance, results: out.results };
 });
 
 await app.post('/api/purchases', async (req, reply) => {

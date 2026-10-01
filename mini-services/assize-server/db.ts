@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS accounts (
   purchases TEXT NOT NULL DEFAULT '[]',
   flagged INTEGER NOT NULL DEFAULT 0,
   shadow INTEGER NOT NULL DEFAULT 0,
+  ink INTEGER NOT NULL DEFAULT 0,
+  ink_ledger TEXT NOT NULL DEFAULT '[]',
   created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS duels (
@@ -50,6 +52,12 @@ CREATE TABLE IF NOT EXISTS telemetry (
 CREATE INDEX IF NOT EXISTS idx_daily_time ON daily_results (date_key, time_ms);
 `);
 
+// T13 migration — databases created before the Ink ledger lack its columns.
+// (CREATE TABLE IF NOT EXISTS never amends an existing table.)
+const accountCols = (db.query('PRAGMA table_info(accounts)').all() as Array<{ name: string }>).map((c) => c.name);
+if (!accountCols.includes('ink')) db.exec("ALTER TABLE accounts ADD COLUMN ink INTEGER NOT NULL DEFAULT 0");
+if (!accountCols.includes('ink_ledger')) db.exec("ALTER TABLE accounts ADD COLUMN ink_ledger TEXT NOT NULL DEFAULT '[]'");
+
 export const q = {
   getAccount: db.query('SELECT * FROM accounts WHERE id = ?'),
   insertAccount: db.query('INSERT INTO accounts (id, secret_hash, name, standing, recovery_hash, purchases, flagged, shadow, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?)'),
@@ -61,6 +69,9 @@ export const q = {
   shadow: db.query('UPDATE accounts SET shadow = 1 WHERE id = ?'),
   byRecovery: db.query('SELECT * FROM accounts WHERE recovery_hash = ?'),
   insertDuel: db.query('INSERT INTO duels (id, mode, p0, p1, seed, tier, winner, reason, rating0, rating1, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+  getDuel: db.query('SELECT id, mode, p0, p1, winner FROM duels WHERE id = ?'),
+  updateInk: db.query('UPDATE accounts SET ink = ? WHERE id = ?'),
+  updateInkLedger: db.query('UPDATE accounts SET ink_ledger = ? WHERE id = ?'),
   dailyUpsert: db.query(`INSERT INTO daily_results (date_key, account_id, name, time_ms, mistakes, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT (date_key, account_id) DO UPDATE SET time_ms = MIN(time_ms, excluded.time_ms), mistakes = MIN(mistakes, excluded.mistakes)`),

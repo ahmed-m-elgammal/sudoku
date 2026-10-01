@@ -84,7 +84,7 @@ class NetClient {
   // REST helpers -------------------------------------------------------------
   async auth(body: { id: string; secret: string; name: string; recoveryHash?: string | null }) {
     const r = await rest('/api/auth', { method: 'POST', body: JSON.stringify(body) });
-    return r.ok ? ((await r.json()) as { standing: number; name: string; ok: true }) : null;
+    return r.ok ? ((await r.json()) as { standing: number; name: string; ok: true; ink?: number }) : null;
   }
   async joinQueue(body: { id: string; secret: string; order: OrderId; friendCode?: string }) {
     const r = await rest('/api/queue', { method: 'POST', body: JSON.stringify(body) });
@@ -104,7 +104,12 @@ class NetClient {
   }
   async recovery(body: { code: string; id: string; secret: string }) {
     const r = await rest('/api/recovery', { method: 'POST', body: JSON.stringify(body) });
-    return r.ok ? await r.json() : null;
+    return r.ok ? ((await r.json()) as { ok: boolean; standing?: number; purchases?: string[]; ink?: number }) : null;
+  }
+  // T13 — the Ink ledger: post award deltas with duel ids; the server verifies/bounds/drops.
+  async ink(body: { id: string; secret: string; entries: Array<{ duelId: string; mode: string; delta: number }> }) {
+    const r = await rest('/api/ink', { method: 'POST', body: JSON.stringify(body) });
+    return r.ok ? ((await r.json()) as { ok: true; ink: number; results: Array<{ duelId: string; verdict: string; applied: number }> }) : null;
   }
   async telemetry(event: string) {
     try { await rest('/api/telemetry', { method: 'POST', body: JSON.stringify({ event, t: Date.now() }) }); } catch { /* first-party, best effort */ }

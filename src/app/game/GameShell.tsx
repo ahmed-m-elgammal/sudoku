@@ -7,6 +7,7 @@ import { loadIdentity } from '@/state/identity';
 import { synth } from '@/audio/synth';
 
 import BootScreen from './BootScreen';
+import { flushInkLedger } from '@/state/inkLedger';
 import DuelScreen from './DuelScreen';
 import Antechamber from './Antechamber';
 import OrderSelect from './OrderSelect';
@@ -36,7 +37,7 @@ export default function GameShell() {
   const loaded = useSave((s) => s.loaded);
 
   useEffect(() => {
-    void useSave.getState().load();
+    void useSave.getState().load().then(() => flushInkLedger()); // T13 — catch up on any un-synced Ink awards
     // PWA registration (spec §6)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => { /* offline still works via engine-local modes */ });

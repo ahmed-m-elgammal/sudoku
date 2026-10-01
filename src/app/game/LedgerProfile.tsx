@@ -17,6 +17,7 @@ export default function LedgerProfile() {
   const [name, setName] = useState('');
   const [code, setCode] = useState<string | null>(null);
   const [importText, setImportText] = useState('');
+  const [serverInk, setServerInk] = useState<number | null>(null);
   if (!save) return null;
   const rank = rankOfStanding(save.standing);
   const hist = save.stats.standingHistory.slice(-20);
@@ -24,6 +25,19 @@ export default function LedgerProfile() {
   const achievements = Object.entries(i18n.achievements) as Array<[string, { title: string; desc: string }]>;
 
   useEffect(() => { setName(save.name); }, [save.name]);
+
+  // T13 — the server-known Ink balance: a quiet auth on mount, shown for auditability
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      try {
+        const id = await loadIdentity();
+        const res = await net.auth({ id: id.id, secret: id.secret, name: id.name });
+        if (live && res && res.ok && typeof res.ink === 'number' && Number.isFinite(res.ink)) setServerInk(res.ink);
+      } catch { /* offline: the line simply stays hidden */ }
+    })();
+    return () => { live = false; };
+  }, []);
 
   return (
     <main className="hub" style={{ minHeight: '100dvh', paddingBottom: 'calc(var(--ribbon-h) + var(--safe-bottom))' }}>
@@ -54,6 +68,11 @@ export default function LedgerProfile() {
           <img src={`/assets/ranks/rank-${rank.id}.svg`} alt="" width={28} height={28} />
           {rank.label}{rank.division ? ` · ${rank.division}` : ''} · {i18n.ledger.standing} {save.standing}
         </p>
+        {serverInk !== null && (
+          <p style={{ marginTop: 4, fontSize: 'var(--fs-sm)', color: 'var(--fg-dim)' }}>
+            {i18n.ledger.serverInk} <span className="digits">{serverInk}</span> ink
+          </p>
+        )}
       </header>
 
       <section className="panel" style={{ margin: '8px 16px', padding: 12 }}>
@@ -189,8 +208,16 @@ export default function LedgerProfile() {
             onClick={async () => {
               if (!validateRecoveryCode(importText)) { synth.error(); return; }
               const id = await loadIdentity();
-              void net.recovery({ code: importText, id: id.id, secret: id.secret });
-              synth.uiTap();
+              const res = await net.recovery({ code: importText, id: id.id, secret: id.secret });
+              // T13 — the response now carries the server-known Ink: apply it (max — the
+              // client may hold un-synced local ink the server never heard about).
+              if (res && res.ok && typeof res.ink === 'number') {
+                useSave.getState().update((cur) => ({
+                  ...cur,
+                  economy: { ...cur.economy, ink: Math.max(cur.economy.ink, res.ink ?? 0) },
+                }));
+                synth.reliquary();
+              } else synth.error();
             }}
           >
             {i18n.ledger.import}

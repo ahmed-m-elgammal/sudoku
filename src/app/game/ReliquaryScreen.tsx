@@ -5,6 +5,7 @@ import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import i18n from '@/i18n/en.json';
 import { synth } from '@/audio/synth';
+import { recordInk } from '@/state/inkLedger';
 
 const DROP_TABLE = [
   { id: 'wax-verdigris', name: 'Verdigris Wax', rarity: 'common', kind: 'seals' },
@@ -43,6 +44,7 @@ export default function ReliquaryScreen() {
       setDuplicate(owned.includes(it.id));
       if (duplicateGranted(it, owned)) {
         useSave.getState().update((s) => ({ ...s, economy: { ...s.economy, ink: s.economy.ink + 40 } }));
+        recordInk({ duelId: `reliquary-${it.id}-${Date.now().toString(36)}`, mode: 'reliquary', delta: 40 });
       } else {
         useSave.getState().update((s) => ({
           ...s,

@@ -5,6 +5,7 @@ import { useSave } from '@/state/save';
 import i18n from '@/i18n/en.json';
 import Ribbon from './Ribbon';
 import { synth } from '@/audio/synth';
+import { recordInk } from '@/state/inkLedger';
 
 const TIER_INK = 100; // escalating: tier n requires n * 100 cumulative Season Ink (docs/BALANCE.md)
 const tierCost = (n: number) => TIER_INK * n;
@@ -64,6 +65,7 @@ export default function SeasonLedger() {
                         ? { ...s.economy, sigils: s.economy.sigils + Math.ceil(n / 4) }
                         : s.economy,
                   }));
+                  if (t.type === 'ink') recordInk({ duelId: `season-f${n}`, mode: 'season', delta: n * 10 });
                 }}
               >
                 {claimedFree ? i18n.season.claimed : claimable ? i18n.season.claim : `${cumulative(n)} ink`}

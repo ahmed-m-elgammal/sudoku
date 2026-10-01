@@ -359,6 +359,7 @@
   "ledger": {
     "title": "The Great Ledger",
     "standing": "Standing",
+    "serverInk": "The server's ledger knows",
     "standingGraph": "Standing, last 20 duels",
     "winRate": "Win rate by Order",
     "streak": "Longest Unbroken streak",

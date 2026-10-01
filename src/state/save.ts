@@ -9,6 +9,8 @@ import { newEndlessState, sanitizeEndless, type EndlessState } from '@shared/end
 // per Clerk and persisted, so rung duels stay deterministic per save.
 const newEndlessSalt = (): string => Math.random().toString(36).slice(2, 10);
 
+export interface PendingInk { duelId: string; mode: string; delta: number; t: number }
+
 export interface SaveStateV2 {
   v: 2;
   tutorialDone: boolean;
@@ -16,7 +18,7 @@ export interface SaveStateV2 {
   campaign: { folioIdx: number; duelIdx: number; stars: Record<string, number>; ended: boolean; ending?: 'balance' | 'burn' };
   order: OrderId;
   unlockedOrders: OrderId[];
-  economy: { ink: number; sigils: number; reliquaryProgress: number };
+  economy: { ink: number; sigils: number; reliquaryProgress: number; pending: PendingInk[] };
   cosmetics: {
     owned: string[];
     equipped: { board: string; wax: string; frame: string; numerals: string; stamps: string; banner: string };
@@ -49,7 +51,7 @@ export const freshSave = (name: string): SaveStateV2 => ({
   campaign: { folioIdx: 0, duelIdx: 0, stars: {}, ended: false },
   order: 'scholar',
   unlockedOrders: ['scholar', 'executioner'],
-  economy: { ink: 0, sigils: 0, reliquaryProgress: 0 },
+  economy: { ink: 0, sigils: 0, reliquaryProgress: 0, pending: [] },
   cosmetics: {
     owned: ['board-aged-vellum', 'wax-oxblood', 'frame-bronze', 'numerals-linocut', 'stamp-fleur', 'banner-standard'],
     equipped: { board: 'board-aged-vellum', wax: 'wax-oxblood', frame: 'frame-bronze', numerals: 'numerals-linocut', stamps: 'stamp-fleur', banner: 'banner-standard' },
@@ -123,8 +125,21 @@ function migrate(s: SaveStateV2): SaveStateV2 {
     // T18 — hostile/legacy endless states are sanitized on every load, and a
     // save from before this iteration gains a fresh (persisted) ladder.
     // T21 — saves from before the Weekly Assize gain its ledger, hostile or not.
+    // T13 — saves from before the Ink ledger gain an empty pending queue (hostile-proofed).
+    const pending = Array.isArray(s.economy?.pending)
+      ? (s.economy.pending as unknown[])
+        .filter((p): p is PendingInk => !!p && typeof p === 'object'
+          && typeof (p as PendingInk).duelId === 'string'
+          && typeof (p as PendingInk).mode === 'string'
+          && typeof (p as PendingInk).delta === 'number'
+          && Number.isFinite((p as PendingInk).delta)
+          && (p as PendingInk).delta !== 0)
+        .slice(0, 200)
+        .map((p) => ({ duelId: p.duelId, mode: p.mode, delta: p.delta, t: typeof p.t === 'number' && Number.isFinite(p.t) ? p.t : 0 }))
+      : [];
     return {
       ...s,
+      economy: { ...s.economy, pending },
       endless: sanitizeEndless(s.endless),
       weekly: s.weekly && typeof s.weekly === 'object'
         ? { lastWeek: typeof s.weekly.lastWeek === 'number' && Number.isFinite(s.weekly.lastWeek) ? Math.floor(s.weekly.lastWeek) : null }

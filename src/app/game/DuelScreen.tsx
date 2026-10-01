@@ -18,6 +18,7 @@ import i18n from '@/i18n/en.json';
 import { synth } from '@/audio/synth';
 import { SLOW_INK_MS } from '@/game/fx';
 import { net } from '@/net/client';
+import { recordInk } from '@/state/inkLedger';
 import { orderMeta } from '@shared/orders';
 import storyJson from '@/i18n/story.json';
 import type { Digit, OrderId } from '@shared/config';
@@ -55,11 +56,16 @@ export default function DuelScreen() {
     const foe = st.players[1];
     const winner = r.winner as 0 | 1 | 'draw';
     const shadeDuel = ui.duelMode !== 'ranked' && ui.duelMode !== 'friend' && ui.duelMode !== 'daily';
-    // TODO(T13): economy is client-owned per spec §6; server-side ink ledger pending.
     // economy (spec §8): win 30 / loss 10 / draw 15, claims 3, clean +2; rating only vs humans
     let ink = 0;
     if (winner === 0) ink += 30; else if (winner === 'draw') ink += 15; else ink += 10;
     ink += me.claimed.length * 3;
+    // T13 — the ledger entry mirrors exactly what this finish writes: generic ink + any
+    // mode bonus minted below, as ONE entry per duel (per-attempt ids for re-sittable modes).
+    let ledgerDelta = ink;
+    let dailyKey: string | null = null;
+    let endlessRungFought: number | null = null;
+    let weekIdx: number | null = null;
     let ratingDelta: number | null = null;
     if (!shadeDuel && ui.duelMode === 'ranked') {
       // server-authoritative duels report their own Elo delta
@@ -95,6 +101,7 @@ export default function DuelScreen() {
     }));
     // tutorial completion
     if (ui.duelMode === 'tutorial' && winner === 0) {
+      ledgerDelta += 100;
       s.update((cur) => ({ ...cur, tutorialDone: true, antechamberUnlocked: true, economy: { ...cur.economy, ink: cur.economy.ink + 100, reliquaryProgress: cur.economy.reliquaryProgress + 1 } }));
     }
     // campaign progression
@@ -133,6 +140,7 @@ export default function DuelScreen() {
     // daily result recording (server-tracked streaks/leaderboard; spec M3)
     if (ui.duelMode === 'daily') {
       const key = new Date().toISOString().slice(0, 10);
+      dailyKey = key;
       const timeMs = st.clockMs + me.mistakes * 10000;
       const prevStreak = save?.daily.lastDate === key ? save.daily.streak : 0;
       s.update((cur) => ({
@@ -168,11 +176,14 @@ export default function DuelScreen() {
     // the Clerk to the foot of the stair; the rung win mints rung-scaled Ink.
     if (ui.duelMode === 'endless') {
       const foughtRung = ui.endlessRung ?? save?.endless?.current ?? 0;
+      endlessRungFought = foughtRung;
+      const rungBonus = winner === 0 ? endlessInkBonus(foughtRung) : 0;
+      ledgerDelta += rungBonus;
       const next = winner === 0 ? endlessOnWin(save?.endless) : endlessOnLoss(save?.endless);
       s.update((cur) => ({
         ...cur,
         endless: next,
-        economy: { ...cur.economy, ink: cur.economy.ink + (winner === 0 ? endlessInkBonus(foughtRung) : 0) },
+        economy: { ...cur.economy, ink: cur.economy.ink + rungBonus },
       }));
       if (next.best >= 10) s.unlockAchievement('endless-ten');
     }
@@ -181,13 +192,31 @@ export default function DuelScreen() {
     // but change nothing — the week's verdict is already written.
     if (ui.duelMode === 'weekly') {
       const week = weekIndexFor(Date.now());
+      weekIdx = week;
       const firstWin = winner === 0 && save?.weekly?.lastWeek !== week;
+      const wBonus = firstWin ? weeklyInkBonus : 0;
+      ledgerDelta += wBonus;
       s.update((cur) => ({
         ...cur,
         weekly: { lastWeek: week },
-        economy: { ...cur.economy, ink: cur.economy.ink + (firstWin ? weeklyInkBonus : 0) },
+        economy: { ...cur.economy, ink: cur.economy.ink + wBonus },
       }));
       if (firstWin) s.unlockAchievement('weekly-sat');
+    }
+    // T13 — one ledger entry per duel. Ranked/friend carry the server's duel id so the
+    // ledger joins the duel log; re-sittable modes mint per-attempt ids so legit re-sits
+    // stay bounded instead of swallowed; solo modes ride their mode cap. Best-effort.
+    {
+      const ts = Date.now().toString(36);
+      let lid = '';
+      if (ui.duelMode === 'ranked' || ui.duelMode === 'friend') {
+        const sd = duel as unknown as { opts?: { duelId?: unknown } };
+        if (sd.opts && typeof sd.opts.duelId === 'string' && sd.opts.duelId) lid = sd.opts.duelId;
+      } else if (ui.duelMode === 'daily' && dailyKey) lid = `daily-${dailyKey}-${ts}`;
+      else if (ui.duelMode === 'endless' && endlessRungFought !== null) lid = `endless-${endlessRungFought}-${ts}`;
+      else if (ui.duelMode === 'weekly' && weekIdx !== null) lid = `weekly-${weekIdx}-${ts}`;
+      else lid = `${ui.duelMode}-${ts}-${Math.floor(Math.random() * 46656).toString(36)}`;
+      if (lid && ledgerDelta > 0) recordInk({ duelId: lid, mode: ui.duelMode, delta: ledgerDelta });
     }
     // story beats replace the result screen on their first clear — the reveal plays
     // immediately after Folio IX (spec: before the ending choice), interludes close
@@ -333,6 +362,7 @@ export default function DuelScreen() {
         <>
           <button className={styles.skipTutorial} onClick={() => {
             useSave.getState().update((c) => ({ ...c, tutorialDone: true, antechamberUnlocked: true, economy: { ...c.economy, ink: c.economy.ink + 100 } }));
+            recordInk({ duelId: `tutorial-skip-${Date.now().toString(36)}-${Math.floor(Math.random() * 46656).toString(36)}`, mode: 'tutorial', delta: 100 });
             duel.concede();
           }}>
             {i18n.tutorial.skip}

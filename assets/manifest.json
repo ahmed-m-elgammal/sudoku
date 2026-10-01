@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-01T05:31:46.806Z",
+  "generated": "2026-10-01T15:32:11.785Z",
   "assets": [
     {
       "id": "order-scholar",
@@ -361,7 +361,7 @@
       "prompt": "Linocut and woodcut engraving, hand-inked cross-hatching, aged paper grain, restrained palette of charcoal black, parchment, muted brass and a single oxblood red accent, matte flat lighting, mature dark-fantasy, no glow, no gradients, no neon, no 3D render, no cartoon, no text or numerals in the image.. A dark engraved banner: a stone tablet with a nine by nine grid and nine broken wax seals around it, a quill laid across, no text, wide composition.",
       "width": 1200,
       "height": 630,
-      "bytes": 1700745,
+      "bytes": 478916,
       "generatedAt": "2026-10-01T05:31:46.804Z"
     },
     {
@@ -372,7 +372,7 @@
       "prompt": "Linocut and woodcut engraving, hand-inked cross-hatching, aged paper grain, restrained palette of charcoal black, parchment, muted brass and a single oxblood red accent, matte flat lighting, mature dark-fantasy, no glow, no gradients, no neon, no 3D render, no cartoon, no text or numerals in the image.. An oxblood wax seal stamped on parchment bearing a fleur-de-lis and a ring of nine small marks, centered, square composition, dark background.",
       "width": 1024,
       "height": 1024,
-      "bytes": 2301695,
+      "bytes": 650365,
       "generatedAt": "2026-10-01T05:24:40.040Z"
     },
     {
@@ -1905,5 +1905,197 @@
       "generatedAt": "2026-10-01T05:29:52.434Z"
     }
   ],
-  "note": "all assets present"
+  "note": "T9 png compression: 38 compressed, 35622596 bytes saved",
+  "pngCompression": {
+    "brand/app-icon-192.png": {
+      "orig": 91524,
+      "bytes": 27337,
+      "at": "2026-10-01T15:31:50.784Z"
+    },
+    "brand/app-icon-512.png": {
+      "orig": 635290,
+      "bytes": 184407,
+      "at": "2026-10-01T15:31:51.039Z"
+    },
+    "brand/app-icon-maskable.png": {
+      "orig": 424032,
+      "bytes": 122957,
+      "at": "2026-10-01T15:31:51.289Z"
+    },
+    "brand/app-icon-master.png": {
+      "orig": 2301695,
+      "bytes": 650365,
+      "at": "2026-10-01T15:31:51.948Z"
+    },
+    "brand/og-image.png": {
+      "orig": 1700745,
+      "bytes": 478916,
+      "at": "2026-10-01T15:31:52.434Z"
+    },
+    "brand/splash-828.png": {
+      "orig": 175190,
+      "bytes": 29561,
+      "at": "2026-10-01T15:31:52.652Z"
+    },
+    "portraits/clerk.png": {
+      "orig": 863639,
+      "bytes": 265553,
+      "at": "2026-10-01T15:31:53.122Z"
+    },
+    "portraits/mag-anselm.png": {
+      "orig": 855762,
+      "bytes": 279774,
+      "at": "2026-10-01T15:31:53.659Z"
+    },
+    "portraits/mag-corvane.png": {
+      "orig": 894661,
+      "bytes": 257359,
+      "at": "2026-10-01T15:31:54.436Z"
+    },
+    "portraits/mag-halbrecht.png": {
+      "orig": 734537,
+      "bytes": 219438,
+      "at": "2026-10-01T15:31:54.691Z"
+    },
+    "portraits/mag-ilse.png": {
+      "orig": 797848,
+      "bytes": 222464,
+      "at": "2026-10-01T15:31:54.970Z"
+    },
+    "portraits/mag-marchetti.png": {
+      "orig": 808381,
+      "bytes": 258036,
+      "at": "2026-10-01T15:31:55.496Z"
+    },
+    "portraits/mag-nox.png": {
+      "orig": 790317,
+      "bytes": 220891,
+      "at": "2026-10-01T15:31:55.761Z"
+    },
+    "portraits/mag-orsolo.png": {
+      "orig": 740627,
+      "bytes": 223918,
+      "at": "2026-10-01T15:31:56.077Z"
+    },
+    "portraits/mag-quill.png": {
+      "orig": 811306,
+      "bytes": 248787,
+      "at": "2026-10-01T15:31:56.608Z"
+    },
+    "portraits/mag-vael.png": {
+      "orig": 882119,
+      "bytes": 284329,
+      "at": "2026-10-01T15:31:57.258Z"
+    },
+    "portraits/order-apothecary.png": {
+      "orig": 774624,
+      "bytes": 247300,
+      "at": "2026-10-01T15:31:57.847Z"
+    },
+    "portraits/order-executioner.png": {
+      "orig": 818367,
+      "bytes": 257093,
+      "at": "2026-10-01T15:31:58.243Z"
+    },
+    "portraits/order-scholar.png": {
+      "orig": 822958,
+      "bytes": 237198,
+      "at": "2026-10-01T15:31:58.798Z"
+    },
+    "portraits/order-warden.png": {
+      "orig": 870649,
+      "bytes": 275250,
+      "at": "2026-10-01T15:31:59.204Z"
+    },
+    "portraits/shade-mark.png": {
+      "orig": 845207,
+      "bytes": 268886,
+      "at": "2026-10-01T15:31:59.628Z"
+    },
+    "portraits/shade-orsolo.png": {
+      "orig": 767967,
+      "bytes": 217040,
+      "at": "2026-10-01T15:31:59.865Z"
+    },
+    "plates/plate-ending-balance.png": {
+      "orig": 1803514,
+      "bytes": 434253,
+      "at": "2026-10-01T15:32:00.516Z"
+    },
+    "plates/plate-ending-burn.png": {
+      "orig": 1660439,
+      "bytes": 419013,
+      "at": "2026-10-01T15:32:01.696Z"
+    },
+    "plates/plate-folio-1.png": {
+      "orig": 2056560,
+      "bytes": 586851,
+      "at": "2026-10-01T15:32:02.317Z"
+    },
+    "plates/plate-folio-2.png": {
+      "orig": 1746975,
+      "bytes": 449365,
+      "at": "2026-10-01T15:32:03.489Z"
+    },
+    "plates/plate-folio-3.png": {
+      "orig": 1147488,
+      "bytes": 308180,
+      "at": "2026-10-01T15:32:03.637Z"
+    },
+    "plates/plate-folio-4.png": {
+      "orig": 1588567,
+      "bytes": 345918,
+      "at": "2026-10-01T15:32:04.004Z"
+    },
+    "plates/plate-folio-5.png": {
+      "orig": 1986042,
+      "bytes": 539427,
+      "at": "2026-10-01T15:32:04.821Z"
+    },
+    "plates/plate-folio-6.png": {
+      "orig": 1616484,
+      "bytes": 446282,
+      "at": "2026-10-01T15:32:05.840Z"
+    },
+    "plates/plate-folio-7.png": {
+      "orig": 1893290,
+      "bytes": 542710,
+      "at": "2026-10-01T15:32:06.759Z"
+    },
+    "plates/plate-folio-8.png": {
+      "orig": 1787480,
+      "bytes": 447778,
+      "at": "2026-10-01T15:32:07.220Z"
+    },
+    "plates/plate-folio-9.png": {
+      "orig": 1686777,
+      "bytes": 393153,
+      "at": "2026-10-01T15:32:07.440Z"
+    },
+    "plates/plate-interlude-1.png": {
+      "orig": 2074079,
+      "bytes": 607633,
+      "at": "2026-10-01T15:32:08.334Z"
+    },
+    "plates/plate-interlude-2.png": {
+      "orig": 1914994,
+      "bytes": 544440,
+      "at": "2026-10-01T15:32:09.450Z"
+    },
+    "plates/plate-orsolo-reveal.png": {
+      "orig": 1692085,
+      "bytes": 544924,
+      "at": "2026-10-01T15:32:10.197Z"
+    },
+    "plates/plate-prologue.png": {
+      "orig": 1706618,
+      "bytes": 474245,
+      "at": "2026-10-01T15:32:10.916Z"
+    },
+    "map/folio-map.png": {
+      "orig": 4588173,
+      "bytes": 1173383,
+      "at": "2026-10-01T15:32:11.784Z"
+    }
+  }
 }

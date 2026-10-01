@@ -1,7 +1,9 @@
 // ASSIZE service worker — precache shell + assets; offline-capable (spec §6).
 // Strategy: precache critical shell/fonts/brand; cache-first for /assets; network-first for /api;
 // the daily puzzle seed is served from cache when offline (M3 read-only), duels M0/M1/M5/Shade run local.
-const VERSION = 'assize-v2-t2t3';
+// T9: VERSION bumped — the PNG pass shrank every in-scope asset (og-image 1.7 MB → 468 KB,
+// folio-map 4.4 MB → 1.1 MB); cache-first /assets must not serve the old heavy bytes.
+const VERSION = 'assize-v2-t9t13';
 const SHELL = [
   '/', '/manifest.webmanifest',
   '/fonts/im-fell-english-sc.woff2', '/fonts/im-fell-dw-pica.woff2',

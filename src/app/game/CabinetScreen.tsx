@@ -7,6 +7,7 @@ import { useSave } from '@/state/save';
 import i18n from '@/i18n/en.json';
 import Ribbon from './Ribbon';
 import { synth } from '@/audio/synth';
+import { recordInk } from '@/state/inkLedger';
 
 type Tab = 'boards' | 'seals' | 'frames' | 'numerals' | 'stamps' | 'banners';
 interface CosmeticItem {
@@ -74,6 +75,8 @@ export default function CabinetScreen() {
         economy: { ...s.economy, ink: s.economy.ink - item.price },
         cosmetics: { ...s.cosmetics, owned: [...s.cosmetics.owned, item.id] },
       }));
+      // T13 — a spend is a negative ledger delta: the server-known balance tracks it
+      recordInk({ duelId: `spend-${item.id}-${Date.now().toString(36)}`, mode: 'spend', delta: -item.price });
       synth.reliquary();
     } else if (item.currency === 'sigil' && save.economy.sigils >= item.price) {
       useSave.getState().update((s) => ({

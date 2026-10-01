@@ -24,6 +24,7 @@ const nextConfig: NextConfig = {
       { source: '/api/daily', destination: `${duel}/api/daily` },
       { source: '/api/daily/:path*', destination: `${duel}/api/daily/:path*` },
       { source: '/api/recovery', destination: `${duel}/api/recovery` },
+      { source: '/api/ink', destination: `${duel}/api/ink` },
       { source: '/api/purchases', destination: `${duel}/api/purchases` },
       { source: '/api/telemetry', destination: `${duel}/api/telemetry` },
       { source: '/api/health', destination: `${duel}/api/health` },
