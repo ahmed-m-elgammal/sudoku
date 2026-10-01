@@ -200,3 +200,28 @@ Work Log:
 Stage Summary:
 - No code written; awaiting user greenlight on any subset, then TODO-first build per standing order
 - All juice pitches are presentation-layer only (shared/ engine untouched, replay determinism unaffected); guardrails: prefers-reduced-motion, particle budget + auto-degrade, transform/opacity-only (no layout shift), settings toggle reusing settingsHaptics pattern
+
+---
+Task ID: J1-J2
+Agent: Super Z (main)
+Task: Build the greenlit juice pair — J1 ink flood on claim resolution + J2 tiered screen shake (J3–J10 parked in TODO)
+
+Work Log:
+- TODO.md written FIRST per standing order: J1/J2 as P1 specs, then flipped to ✅ DONE with verification; J3–J10 recorded under a new "Parked — juice track (awaiting greenlight)" section
+- Recon grounded the design in shipped systems: claim events carry {player, unit, clean, damage}; Mirror strip owner law is you=oxblood / foe=ash (both wax stamps are oxblood); ServerDuel populates the same state.events; reduced motion is the save-driven :root[data-motion='reduced'] attribute; style bible forbids gradients/glow
+- NEW src/game/fx.ts — pure presentation law, shared/ untouched: floodFromEvent (fail-closed: deferred claims, hostile units/players/seqs flood nothing), cellsOfFlood (copy, cascade order), centroidOfUnit (fractions of the 9x9 cell area, gutters excluded), ownerOfCell (box > row > col precedence), tierForEvent (claim=2; orderSwap/end=3; deferred=0; garbage=0), Cue<T> (self-cleaning timed state: restart-on-set, timer is the only cleaner), FLOOD_*/SHAKE_MS constants
+- NEW tests/juice.test.ts (28 tests): hostile matrices, geometry pins, precedence pins, Cue contract + 1000-event fuzz (one honest test bug en route: asserted the seen-array length AFTER advancing past expiry — the Cue's 1001 entries were correct; assertion order fixed, implementation unchanged), constants law
+- useDuelSession: fx state fed by Cues; hookEvent extended (same deduped stream); fireShake sink; LocalDuel wired with onPhase → T3; cue dispose + state clear on unmount; FIXED a latent bug en route — lastSeqRef never reset between duels, so a rematch's first ~N events (sounds AND fx) were silently swallowed; now reset to -1 on every new duel
+- localDuel: LocalDuelOpts.onPhase (presentation-only); shadeWake diffs bossState.phaseIdx around bossAct and fires onPhase on advancement (no new engine events, event streams byte-identical)
+- Board: ownedYou/ownedFoe permanent tint from st.unitOwner; flood cascade classes + --flood-i/--flood-strong/--flood-settle inline vars; matte InkSplash SVG (droplet ellipses, currentColor, aria-hidden, pointer-events none) anchored via calc((100% - 20px) * cx); boardWrap shake class via nonce-parity A/B
+- Duel.module.css: inkFlood cascade (30ms stagger via --flood-i), inkBurst splash (matte, ends invisible), shakeT2/shakeT3 keyframes (--shake-amp 3px/6px, T3 with slow settle), reduced-motion kill-list extended + inkSplash display:none
+- Full suite 428/428 across 14 suites (was 400/13); tsc clean for shared/+src/ (two NEW errors found and fixed during the run: CSS custom props need the `as CSSProperties` cast; the test event helper needed a looser param; baseline errors in examples/mini-services/scripts/skills untouched)
+- Browser E2E (real duels, production path): forced-but-real placement through duel.place() → row claim → 9 cells flooding with --flood-i 0..8, splash at centroid, shakeT2 on boardWrap (screenshot j1-flood-mid.png); 1.3s later all self-cleaned, computed cell bg exactly rgba(123,26,31,0.09) (screenshot j1-flood-settled.png); reduced motion → flood classes present, computed animation-name none, splash display none, tint instant; the tutorial probe's second claim proved LETHAL (winner 0 → verdict → result — end path exercised incidentally); T3 observed live on the Weekly (Vael dropped to 1 Seal → arc advanced 0→1 → shakeT3 appeared and self-cleaned with ZERO orderSwap events, proving the onPhase path); console clean (only the pre-existing metadataBase dev warning)
+- Honest limits recorded in TODO: PvP fx parity is by construction (ServerDuel populates the same events; no second client in the sandbox), not driven live
+
+Stage Summary:
+- 428/428 vitest across 14 suites (+28); tsc clean for shared/+src/; J1+J2 shipped, J3–J10 parked in TODO for greenlight by ID
+- J1: the Tablet becomes territory — cascade + splash + permanent tint, oxblood/ash per the Mirror's law
+- J2: the room has weight — T2 on claims, T3 on He-adapts / phase entry / the verdict, self-cleaning, reduced-motion safe
+- One latent bug fixed (rematch event swallowing); zero shared/ changes — replays byte-true
+- Standing constraints honored: reset untouched; single-DOM responsive layouts untouched (background-color/transform/opacity only); no assertion weakened to pass

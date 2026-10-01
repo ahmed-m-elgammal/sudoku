@@ -30,6 +30,7 @@ export interface LocalDuelOpts {
   settingsHaptics?: () => boolean;
   onEnd?: (r: { winner: PlayerId | 'draw'; reason: string }) => void;
   onEvent?: (e: DuelEvent) => void;
+  onPhase?: (phaseIdx: number) => void; // J2 — boss phase ENTRY (presentation-only; shared/ and the event stream stay byte-identical)
 }
 
 export class LocalDuel {
@@ -316,11 +317,17 @@ export class LocalDuel {
     // T18: a PhaseScript boss advances its arc, casts signature rites, and otherwise
     // acts through the same calibrated Shade (phase-patched); every other mode keeps
     // the plain calibrated Shade bot.
+    const prevPhase = this.bossState ? this.bossState.phaseIdx : -1;
     const act = this.opts.mode === 'tutorial'
       ? tutorialAct(this.script, this.state, 1, this.state.players[0].progress, this.scriptRng, performance.now())
       : this.bossState && this.opts.foeScript
         ? bossAct(this.opts.foeScript, this.bossState, this.state, 1, prof, () => this.rng.next(), performance.now())
         : shadeAct(this.state, 1, prof, () => this.rng.next(), performance.now());
+    // J2 — the arc ADVANCED this wake: the court learns it before the rite lands.
+    // Fires once per advancing wake even if the monotonic scan crossed several rungs.
+    if (this.bossState && this.opts.onPhase && this.bossState.phaseIdx > prevPhase) {
+      this.opts.onPhase(this.bossState.phaseIdx);
+    }
     if (act.kind === 'place') {
       const res = place(this.state, 1, act.cell, act.digit);
       if (res.ok && res.correct) synth.pencil();

@@ -408,6 +408,63 @@
 .swapBody { color: var(--fg); font-size: var(--fs-sm); font-style: italic; max-width: 34ch; }
 .swapNote { color: var(--ash); font-size: var(--fs-xs); }
 
+/* ------------------------------------------------------------------ J1 — ink flood
+   A resolved claim floods its 9 cells with the owner's ink (Mirror-strip law:
+   you = oxblood, foe = ash), staggered 30 ms per cell via --flood-i, then settles
+   into the same faint tint the .ownedYou/.ownedFoe classes carry. Background-
+   color only — zero layout shift. The fx window self-clears (fx.ts) so the
+   animation's fill never locks a settled cell out of .selected/.sameDigit. */
+.ownedYou { background-color: rgba(123, 26, 31, 0.09); }
+.ownedFoe { background-color: rgba(141, 138, 130, 0.15); }
+.floodCellA,
+.floodCellB {
+  animation: inkFlood 460ms ease-out both;
+  animation-delay: calc(var(--flood-i, 0) * 30ms);
+}
+@keyframes inkFlood {
+  0% { background-color: var(--flood-strong, rgba(123, 26, 31, 0.34)); }
+  55% { background-color: var(--flood-strong, rgba(123, 26, 31, 0.34)); }
+  100% { background-color: var(--flood-settle, rgba(123, 26, 31, 0.09)); }
+}
+.inkSplash {
+  position: absolute; z-index: 4; width: 0; height: 0;
+  pointer-events: none;
+}
+.inkSplash svg {
+  position: absolute; left: -34px; top: -34px;
+  width: 68px; height: 68px;
+  fill: currentColor; overflow: visible;
+  animation: inkBurst 700ms ease-out both;
+}
+@keyframes inkBurst {
+  0% { transform: scale(0.35); opacity: 0; }
+  16% { opacity: 0.8; }
+  60% { transform: scale(1.05); opacity: 0.45; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+
+/* ------------------------------------------------------------------ J2 — tiered Tablet shake
+   T1 stays the per-cell brushShake. T2 (claims) rocks the Tablet 3 px;
+   T3 (He adapts. / boss phase entry / the verdict) 6 px with a slow settle.
+   Amplitude rides --shake-amp; A/B pairs retrigger consecutive shakes. */
+.shakeT2A, .shakeT2B { --shake-amp: 3px; animation: shakeT2 480ms ease-in-out both; }
+.shakeT3A, .shakeT3B { --shake-amp: 6px; animation: shakeT3 700ms ease-in-out both; }
+@keyframes shakeT2 {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(calc(var(--shake-amp) * -1), 1px); }
+  45% { transform: translate(var(--shake-amp), -1px); }
+  70% { transform: translate(calc(var(--shake-amp) * -0.6), 0); }
+  85% { transform: translate(calc(var(--shake-amp) * 0.4), 0); }
+}
+@keyframes shakeT3 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(calc(var(--shake-amp) * -1), 2px) rotate(-0.35deg); }
+  35% { transform: translate(var(--shake-amp), -2px) rotate(0.3deg); }
+  55% { transform: translate(calc(var(--shake-amp) * -0.7), 1px) rotate(-0.2deg); }
+  75% { transform: translate(calc(var(--shake-amp) * 0.45), -1px) rotate(0.12deg); }
+  90% { transform: translate(calc(var(--shake-amp) * -0.2), 0) rotate(0deg); }
+}
+
 /* coarse pointers keep 44px targets everywhere */
 @media (pointer: coarse) {
   .toolbar button { min-height: 44px; }
@@ -516,8 +573,17 @@
   .abilityBar { padding-left: clamp(20px, 8vw, 90px); padding-right: clamp(20px, 8vw, 90px); }
 }
 
-/* reduced motion: kill the S08 pulse, shake, and T4 glow */
+/* reduced motion: kill the S08 pulse, shake, and T4 glow — and the J1/J2 fx:
+   territory tints apply instantly (the .owned* classes), no cascade, no splash,
+   no Tablet shake */
 :root[data-motion='reduced'] .disconnectSigil,
 :root[data-motion='reduced'] .wrong,
 :root[data-motion='reduced'] .abilityReady,
+:root[data-motion='reduced'] .floodCellA,
+:root[data-motion='reduced'] .floodCellB,
+:root[data-motion='reduced'] .shakeT2A,
+:root[data-motion='reduced'] .shakeT2B,
+:root[data-motion='reduced'] .shakeT3A,
+:root[data-motion='reduced'] .shakeT3B,
 :root[data-motion='reduced'] .swapSigilNew { animation: none !important; }
+:root[data-motion='reduced'] .inkSplash { display: none; }

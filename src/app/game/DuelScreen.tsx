@@ -27,7 +27,7 @@ import { weekIndexFor, weeklyInkBonus } from '@shared/weekly';
 export default function DuelScreen() {
   const ui = useUi();
   const [spec, setSpec] = useState<DuelSessionSpec | null>(null);
-  const { duel } = useDuelSession(spec);
+  const { duel, flood, shake } = useDuelSession(spec);
   const [paused, setPaused] = useState(false);
   const [confirmConcede, setConfirmConcede] = useState(false);
   const [muted, setMuted] = useState(synth.muted);
@@ -271,7 +271,7 @@ export default function DuelScreen() {
           <Ticker duel={duel} />
         </div>
         <div className={styles.boardArea}>
-          <Board duel={duel} />
+          <Board duel={duel} flood={flood} shake={shake} />
         </div>
         <div className={styles.controls}>
           <div className={styles.toolbar}>

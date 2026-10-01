@@ -1,7 +1,9 @@
 // useDuelSession — creates and owns a LocalDuel for solo/Shade/tutorial duels,
 // wires engine events to synth/haptics and to the Result flow.
+// J1/J2 — the same event stream also drives the presentation fx (ink flood +
+// tiered Tablet shake) through the pure law in src/game/fx.ts; shared/ stays untouched.
 'use client';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { LocalDuel, type LocalDuelOpts } from '@/game/localDuel';
 import { ServerDuel, type ServerDuelInit } from '@/game/serverDuel';
 import { useUi, type PlayerSeat } from '@/state/ui';
@@ -14,6 +16,7 @@ import { BOSS_SCRIPTS, type BossScript } from '@shared/phaseScript';
 import type { DuelReplay } from '@shared/replay';
 import { FOLIOS } from '@shared/orders';
 import type { DuelEvent, RuleMods } from '@shared/engine';
+import { floodFromEvent, tierForEvent, Cue, SHAKE_MS, FLOOD_CLEAR_MS, type Flood, type Shake, type ShakeTier } from '@/game/fx';
 
 export interface DuelSessionSpec {
   mode: LocalDuelOpts['mode'];
@@ -37,27 +40,42 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
   const [, setTick] = useState(0);
   const lastSeqRef = useRef(0);
   const serverDuel = useUi((s) => s.serverDuel);
+  // J1/J2 fx state — fed by self-cleaning Cues (the timer is the only cleaner,
+  // so a stuck shake or a permanently-flooded cell is structurally impossible)
+  const [flood, setFlood] = useState<Flood | null>(null);
+  const [shake, setShake] = useState<Shake | null>(null);
+  const floodCue = useRef<Cue<Flood> | null>(null);
+  const shakeCue = useRef<Cue<Shake> | null>(null);
+  const fxNonce = useRef(1);
+  if (!floodCue.current) floodCue.current = new Cue<Flood>(() => FLOOD_CLEAR_MS, setFlood);
+  if (!shakeCue.current) shakeCue.current = new Cue<Shake>((s) => SHAKE_MS[s.tier], setShake);
+
+  const fireShake = useCallback((tier: ShakeTier) => {
+    shakeCue.current?.set({ tier, nonce: fxNonce.current++ });
+  }, []);
 
   useEffect(() => {
     // server-authoritative duel (ranked / friend): the socket 'matched' payload drives it
     if (serverDuel) {
       const sd = new ServerDuel(serverDuel);
       ref.current = sd;
+      lastSeqRef.current = -1; // a new duel's events restart at seq 0 (sound+fx parity bug: stale seqs swallowed a rematch's first claims)
       setTick((t) => t + 1);
       sd.start();
-      return () => { sd.destroy(); ref.current = null; };
+      return () => { sd.destroy(); ref.current = null; floodCue.current?.dispose(); shakeCue.current?.dispose(); setFlood(null); setShake(null); };
     }
     if (!spec) return;
     const save = useSave.getState().save;
     const profile = spec.foeProfile ?? profileForStanding(save?.standing ?? 1000);
-    const duel = new LocalDuel({ ...spec, foeProfile: profile });
+    const duel = new LocalDuel({ ...spec, foeProfile: profile, onPhase: () => fireShake(3) }); // J2 — boss phase ENTRY shakes T3
     ref.current = duel;
+    lastSeqRef.current = -1; // same parity law for solo duels
     setTick((t) => t + 1);
     duel.start();
     // test hook for browser verification (agent-browser eval); harmless in production
     (window as unknown as { __assizeDuel?: unknown }).__assizeDuel = duel;
-    return () => { duel.destroy(); ref.current = null; };
-  }, [spec, serverDuel]);
+    return () => { duel.destroy(); ref.current = null; floodCue.current?.dispose(); shakeCue.current?.dispose(); setFlood(null); setShake(null); };
+  }, [spec, serverDuel, fireShake]);
 
   const duel = ref.current;
   const version = useSyncExternalStore(
@@ -65,7 +83,8 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
     () => duel?.getSnapshot() ?? 0,
   );
 
-  // sound hooks for foe-side events
+  // sound + fx hooks for foe-side and duel-level events
+  // (hookEvent is hoisted and reads only refs + the stable fireShake — deps stay [version, duel])
   useEffect(() => {
     if (!duel) return;
     const events = duel.state.events;
@@ -74,25 +93,31 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
       lastSeqRef.current = e.seq;
       hookEvent(e);
     }
-  }, [version, duel]);
+  }, [version, duel, fireShake]);
 
-  return { duel, version };
-}
+  return { duel, version, flood, shake };
 
-function hookEvent(e: DuelEvent) {
-  switch (e.kind) {
-    case 'claim': {
-      const player = e.player as PlayerSeat;
-      if (player === 1) synth.claimLost(); else synth.claimWon();
-      synth.stamp();
-      if ((e as { clean?: boolean }).clean) navigator.vibrate?.(40);
-      break;
+  function hookEvent(e: DuelEvent) {
+    switch (e.kind) {
+      case 'claim': {
+        const player = e.player as PlayerSeat;
+        if (player === 1) synth.claimLost(); else synth.claimWon();
+        synth.stamp();
+        if ((e as { clean?: boolean }).clean) navigator.vibrate?.(40);
+        break;
+      }
+      case 'status': synth.statusApplied(); navigator.vibrate?.(30); break;
+      case 'statusEnded': synth.statusEnded(); break;
+      case 'negated': case 'mirrored': synth.padlock(); break;
+      case 'orderSwap': synth.orderSwap(); navigator.vibrate?.([30, 50, 90]); break; // T4 (server duels never adapt; kept for parity)
+      case 'end': break; // handled by finish()
     }
-    case 'status': synth.statusApplied(); navigator.vibrate?.(30); break;
-    case 'statusEnded': synth.statusEnded(); break;
-    case 'negated': case 'mirrored': synth.padlock(); break;
-    case 'orderSwap': synth.orderSwap(); navigator.vibrate?.([30, 50, 90]); break; // T4 (server duels never adapt; kept for parity)
-    case 'end': break; // handled by finish()
+    // J1/J2 — the fx law reads the SAME deduped stream (fx.ts is fail-closed;
+    // deferred claims and hostile events drive nothing)
+    const f = floodFromEvent(e);
+    if (f) floodCue.current?.set(f);
+    const tier = tierForEvent(e);
+    if (tier) fireShake(tier);
   }
 }
 

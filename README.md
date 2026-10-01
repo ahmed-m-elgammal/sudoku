@@ -205,7 +205,7 @@ cd mini-services/assize-server && bun install && bun run dev   # REST + socket.i
 
 Then open the preview URL (port 3000). Fresh load lands on the tutorial duel within ~2 s.
 
-**Tests:** `bun run test` (Vitest, **400 tests** across thirteen suites: 35 engine — puzzle uniqueness and tier bands, claims/damage/Clean, Momentum, all 12 abilities, all 5 statuses + anti-frustration, win-condition order, determinism, serialization, Shade legality, campaign structure; 7 tutorial scripting; 9 adaptive-swap; **168 adversarial engine**; **16 generator/RNG/AI fuzz**; **23 replay/T7**; **24 shade ladder/T16**; **18 echo mining/T17**; **25 phase-script bosses/T18**; **12 endless ladder/T18**; **27 sealed chits/T19**; **14 cross-Order boss phases/T20**; **22 weekly modifiers/T21**).
+**Tests:** `bun run test` (Vitest, **428 tests** across fourteen suites: 35 engine — puzzle uniqueness and tier bands, claims/damage/Clean, Momentum, all 12 abilities, all 5 statuses + anti-frustration, win-condition order, determinism, serialization, Shade legality, campaign structure; 7 tutorial scripting; 9 adaptive-swap; **168 adversarial engine**; **16 generator/RNG/AI fuzz**; **23 replay/T7**; **24 shade ladder/T16**; **18 echo mining/T17**; **25 phase-script bosses/T18**; **12 endless ladder/T18**; **27 sealed chits/T19**; **14 cross-Order boss phases/T20**; **22 weekly modifiers/T21**; **28 presentation fx — ink flood + tiered shake/J1+J2**).
 
 ## Environment
 
