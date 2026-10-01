@@ -1,0 +1,21 @@
+{
+  "name": "ASSIZE — the Ninefold Assize of Novem",
+  "short_name": "ASSIZE",
+  "description": "A 1v1 sudoku duel in a plague-walled medieval city where law is settled by solving.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e0e0f",
+  "theme_color": "#0e0e0f",
+  "categories": ["games", "puzzle"],
+  "icons": [
+    { "src": "/assets/brand/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/brand/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/brand/app-icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "/assets/brand/splash-828.png", "sizes": "828x1792", "type": "image/png", "form_factor": "narrow" }
+  ]
+}

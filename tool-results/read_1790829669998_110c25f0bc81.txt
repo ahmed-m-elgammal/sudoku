@@ -1,0 +1,276 @@
+     1→ROLE
+     2→You are a lead game developer, art director and narrative designer working alone. Build a complete, playable, web-first game called ASSIZE (working title, keep it in one constant) end to end in a single run. Do not ask me questions. Make decisions, note them briefly in README.md, and keep going until everything below is built, tested and runnable.
+     3→
+     4→PITCH
+     5→A 1v1 sudoku duel in a plague-walled medieval city where law is settled by solving. Both players race the same sealed puzzle, claim rows, columns and boxes to wound each other, and cast engraved "rites" to hinder one another. Adult, grim, restrained, like a woodcut grimoire. Not a kids' game. No neon, glow, lens flare, particles, glassmorphism, gradients, chibi or glossy buttons.
+     6→
+     7→======================================================================
+     8→0. NON-NEGOTIABLE RULES
+     9→======================================================================
+    10→R1 INSTANT PLAY: No login, signup, email, age gate, cookie wall or "Play" button between page load and playing. Within 2 seconds of load the player is looking at a live board in the tutorial duel. Identity is an anonymous guest (see section 7).
+    11→R2 NOTHING FAKE: Never stub silently, never fake a feature with a hardcoded result, never write "etc.", "and so on", "similar to above" or "left as an exercise". Write every list, line of copy, screen and asset out in full.
+    12→R3 TODO PROTOCOL: If any part is not fully done for any reason (missing image-generation ability, token or time limits, ambiguity, third-party integration, untestable), you MUST:
+    13→   a) add an entry to /TODO.md with: ID, area, what is missing, why, what currently stands in for it, exact steps to finish, priority (P0/P1/P2), effort estimate;
+    14→   b) mark the code with a comment `TODO(<ID>)`;
+    15→   c) list the TODO IDs in your final message.
+    16→   Never hide an unfinished part. An honest TODO is success; a silent gap is failure.
+    17→R4 ALL ASSETS ARE PRODUCED: Every image, icon, texture, ornament, portrait and sound in section 9 and 10 must exist in the build. Never ship an empty image slot, emoji, stock icon, icon font or "image coming soon". Follow the asset pipeline in section 9. Every asset gets a record in /assets/manifest.json with id, path, size, the exact generation prompt, and status: generated | procedural | placeholder. Every "placeholder" must also be in TODO.md.
+    18→R5 TEXT IS LIVE: Digits, names and UI copy are real DOM text, never baked into images.
+    19→R6 ONE ENGINE: A pure, deterministic, seeded TypeScript rules engine in /shared is used by both client and server. The server is authoritative.
+    20→R7 HONESTY: Computer-controlled opponents are labelled in-fiction as "Shades". Never present a Shade as a live human.
+    21→R8 FAIR MONETIZATION: Cosmetics only. No pay-to-win, no paid random loot boxes, no interstitial ads.
+    22→R9 BUILD ORDER = PRIORITY: Build in the order of section 14. If you run short on budget, cut from the bottom of that list and record TODOs. Never cut the top.
+    23→
+    24→======================================================================
+    25→1. STORY BIBLE (write all of this into the game as real content)
+    26→======================================================================
+    27→SETTING: The walled city of Novem, sealed against a plague. The Ninefold Assize, a court of nine Magistrates, settles every dispute by the Reckoning: two pleaders solve one sealed Tablet of nine by nine. The false hand errs, and the wax seals on the Tablet break. The Great Ledger of Novem records who owes what to whom, including who owes their life.
+    28→
+    29→PROTAGONIST: "The Clerk", an unnamed junior scribe. Their master, Magister Orsolo, was executed for forging the Great Ledger. The Clerk was spared and stripped of rank. The only way back into the Assize is to plead as a duelist and win a Folio (a page of the Ledger) from each Magistrate.
+    30→
+    31→TWIST: Orsolo is alive. He is the Ninth Magistrate. He forged the Ledger to erase the Clerk's name from the plague-debt rolls and save their life. The "Shade of Orsolo" who teaches the tutorial is his ink-echo, sent to prepare the Clerk. In fiction, a Shade is an ink-echo of a person that duels on their behalf. This is also how bots and ghost replays are explained.
+    32→
+    33→ENDINGS (both written, with a full-screen plate each): Balance the Ledger (truth restored, Orsolo condemned again, the plague-debt falls on the Clerk) or Burn the Ledger (the debts vanish, the Assize collapses, the city is lawless). After the ending the Endless Assize (ranked ladder) continues.
+    34→
+    35→THE NINE FOLIOS (3 duels each: a minor Shade, then a lieutenant, then the Magistrate. 27 duels total. Difficulty ramps Easy → Expert. Magistrates have 8 Seals instead of 7):
+    36→ I   Halbrecht the Headsman. Executioner loadout. Teaches claims, Chains.
+    37→ II  Mother Vael, the Apothecary. Apothecary loadout. Teaches Smudge and healing.
+    38→ III Cantor Ilse, the Bellringer. Executioner and Hush. Teaches input freeze.
+    39→ IV  Brother Anselm, Warden of the Lantern. Warden loadout. Teaches defense and reflection.
+    40→ V   Dame Corvane, the Cartographer. Warden with Quarantine. Teaches claim denial.
+    41→ VI  Tobias Quill, the Forger. Scholar plus Smudge. Fakes certainty.
+    42→ VII Lord Marchetti, the Moneylender. Executioner passive, hoards Reckoning. Punishes low Seals.
+    43→ VIII Old Nox, the Gravedigger. Apothecary with Miasma. Erases your notes.
+    44→ IX  Magistrate Orsolo, the Ninth Seal. Adaptive loadout, swaps Orders mid-duel at 4 Seals.
+    45→Write for each Magistrate: a 3-line pre-duel challenge, a 2-line defeat line, a 2-line victory taunt, and one Folio-completion story card (about 60 words). Write a prologue (about 90 words), an interlude card after Folios III and VI, and both endings (about 120 words each). Voice: terse, formal, dry, a little archaic, never jokey. Example: "The Tablet does not forgive. Neither, I find, do I."
+    46→
+    47→======================================================================
+    48→2. CORE MECHANICS (implement exactly; expose all numbers in /shared/config.ts)
+    49→======================================================================
+    50→PUZZLE: Standard 9x9 with a unique solution. Both duelists get the same seeded puzzle. Clients receive givens only; the solution lives on the server (and locally in solo and Shade modes). Include a generator and a technique-based grader.
+    51→ Difficulty tiers: Easy 36-40 givens (singles only), Medium 30-35, Hard 26-29 (pairs and pointing), Expert 22-25 (X-wing and chains).
+    52→
+    53→SEALS (HP): Each duelist has 7 wax Seals (8 for Magistrates).
+    54→
+    55→PLACING A DIGIT: Select a cell, tap a numeral. Validate against the solution.
+    56→ - Correct: digit is final (no undo). Tiny ink-settle animation.
+    57→ - Wrong: lose 1 Seal, red brush strike across the cell, shake, the digit clears after 1.0s. Cooldowns pause for 3s ("Flinch").
+    58→ - Pencil mode lets you note candidates (never costs Seals). Erase works only on notes and wrong digits.
+    59→
+    60→CLAIMS: The first duelist to complete a unit (row, column or box) claims it and deals damage to the opponent.
+    61→ - Damage: 1 Seal. 2 Seals if "Clean" (the claimer made zero mistakes in that unit this duel and used no Augur reveal in it).
+    62→ - A unit can be claimed only once per duel. Completing an already-claimed unit earns Ink only.
+    63→ - Show the claim as a wax stamp in the board margin: rows in the right gutter, columns in the bottom gutter, boxes at the box corner. Your stamp is oxblood wax with a fleur-de-lis. The opponent's is black wax with a tau cross. Different shapes, so it never depends on color alone.
+    64→
+    65→MOMENTUM: Each correct placement reduces all your ability cooldowns by 0.5s.
+    66→
+    67→WIN CONDITIONS (checked in this order):
+    68→ 1. Opponent reaches 0 Seals.
+    69→ 2. First to correctly complete the whole grid wins "by Reckoning".
+    70→ 3. Sudden Judgment at 10:00: more Seals wins; tie, more claimed units; tie, fewer mistakes; tie, Draw.
+    71→ 4. Opponent forfeits or is disconnected beyond the 20s grace.
+    72→
+    73→STATUS EFFECTS (apply to the target's board and only to cells that make sense):
+    74→ - CHAIN: an empty cell becomes uneditable for its duration. A brass padlock and chain overlay is shown. Cannot target givens or filled cells.
+    75→ - SMUDGE: N of the target's own placed (non-given) digits blur and cannot be read. They still count as placed.
+    76→ - HUSH: the number pad is unresponsive for its duration (cells can still be selected). A wax finger-seal overlays the pad.
+    77→ - MIASMA: pencil notes are erased and pencil mode is disabled for its duration.
+    78→ - QUARANTINE: a chosen unit on the target's board cannot be claimed by them for 12s. Shown as a hazard-marked gutter.
+    79→ Anti-frustration: one active status per type; 4s global gap between incoming statuses; 5s immunity to a status type after it ends; statuses never apply in the final 10s of a duel; every status has a visible timer ring.
+    80→
+    81→ABILITIES: 3 per Order, each with a cooldown ring and a label. The first use of each ability in a duel starts at 50% cooldown.
+    82→
+    83→ORDERS (4 portrait cards, all free via play):
+    84→ SCHOLAR (Order of the Quill). Passive Marginalia: your first mistake each duel costs no Seal.
+    85→   Eye / Augur: reveal the correct digit in the selected empty cell. CD 40s.
+    86→   Key / Unseal: clear all statuses on your board and become immune for 6s. CD 30s.
+    87→   Quill / Fair Copy: auto-fill correct pencil candidates for the selected box. CD 20s.
+    88→ EXECUTIONER (Order of the Axe). Passive Last Rites: your claims deal +1 when the opponent has 3 or fewer Seals.
+    89→   Dagger / Sever: Chain the empty cell in the opponent's most nearly complete unit for 8s. CD 25s.
+    90→   Hourglass / Hush: opponent's number pad is dead for 2.5s. CD 35s.
+    91→   Axe / Reckoning: your next claim within 20s deals +1. CD 45s.
+    92→ APOTHECARY (Order of the Vial). Passive Distiller: statuses you apply last 2s longer.
+    93→   Vial / Smudge: blur 5 of the opponent's placed digits for 7s. CD 24s.
+    94→   Cup / Tincture: restore 1 Seal (max 7). CD 60s, 2 uses per duel.
+    95→   Censer / Miasma: apply Miasma for 10s. CD 28s.
+    96→ WARDEN (Order of the Lantern). Passive Bulwark: the first incoming status each duel is negated.
+    97→   Shield / Ward: negate the next incoming status within 15s. CD 40s.
+    98→   Lantern / Mirror: reflect the next incoming status back within 10s. CD 45s.
+    99→   Bar / Quarantine: apply Quarantine to a unit you pick on the opponent's board. CD 35s.
+   100→ Unlocks: Scholar and Executioner at start. Apothecary after Folio II. Warden after Folio IV (or 40 Ink-Seals of Ledger score, whichever you design, but document it).
+   101→
+   102→RATING: Server-side Elo-style "Standing" (start 1000, K=32, K=20 above 1600). Bot and Shade duels give no rating. Ranks: Scrivener, Clerk, Notary, Advocate, Magistrate, High Magistrate, Justiciar, Lord of the Assize, each with 3 divisions except the last, each with its own engraved emblem.
+   103→
+   104→======================================================================
+   105→3. GAME MODES
+   106→======================================================================
+   107→M0 TUTORIAL DUEL (runs automatically on first load, about 2 minutes): vs the Shade of Orsolo, scripted to be slow. Contextual "margin note" tooltips teach: select and place, mistakes cost a Seal, pencil mode, claiming a row (the Shade is scripted to lose the race), using Augur (one free use is granted). End with the Prologue story plate, a first free Reliquary, and the Antechamber unlocking.
+   108→M1 CAMPAIGN: the nine Folios (section 1) with story cards, a map, and rewards.
+   109→M2 DUEL (ranked): matchmaking with fallback Shade (section 7).
+   110→M3 DAILY ASSIZE: one puzzle per UTC day for everyone, solo timed run, +10s per mistake, global top 100 and your rank, a streak counter ("Unbroken Days") with streak rewards.
+   111→M4 FRIEND DUEL: create a duel link (?duel=CODE), the guest opens it and plays immediately, both pick Orders. Unrated.
+   112→M5 PRACTICE: solo puzzle, any difficulty, notes and hints allowed. No rewards beyond a small daily Ink cap.
+   113→
+   114→======================================================================
+   115→4. SCREENS AND LAYOUTS (build every one; every screen needs empty, loading and error states)
+   116→======================================================================
+   117→GLOBAL LAYOUT: Mobile portrait first, reference 390x844, must also fit 360x740 with no scroll on the Duel screen. Minimum touch target 44x44 CSS px. On widths 481-1099 center a 480px column over an ornamental "desk" backdrop. At 1100 and wider and landscape use the three-column Duel layout (S05). Safe-area insets respected. Screen transitions are page turns, never fades or slides.
+   118→NAV: A bottom "tab ribbon" on hub screens: Duel (home), Folios, Cabinet, Ledger. A small gear for Settings in the hub header. No nav inside a duel.
+   119→
+   120→S01 BOOT / PROLOGUE CARD: black, one engraved line of text, the logo wordmark, auto-advances to the tutorial duel within 2s, tap to skip. Not a menu.
+   121→S02 TUTORIAL DUEL: Duel screen S05 with margin-note overlays, step markers, and a "Skip tutorial" text link.
+   122→S03 ANTECHAMBER (home hub): header with your portrait, name, rank emblem, Ink and Sigil counts. Hero card "Enter the Assize" (starts matchmaking with your last Order). Cards below: Daily Assize (with streak flame drawn as a candle), Folios progress (X of 27), Season Ledger progress, Friend Duel, Practice. Ribbon at the bottom.
+   123→S04 ORDER SELECT (Hall of Orders): horizontal snap carousel of four tarot cards. Each shows portrait, name, passive, and three ability sigils with one-line descriptions. Locked Orders show their unlock condition. Button: "Take this Order".
+   124→S05 DUEL (main screen), top to bottom on 390x844:
+   125→   - Header (~22%): your tarot portrait left, opponent right, a Roman-numeral medallion between (the round or the elapsed minutes), wax-seal pips under each portrait (filled vs empty rings), small status chips under the pips.
+   126→   - Mirror strip (~3%): the opponent's progress as a 9x9 dot matrix (about 54x54px) under their portrait. Tap expands it. It shows filled cells as ink dots and claimed units as stamps. This is the "feel your opponent" tension tool.
+   127→   - Board (~46%): square parchment sheet with ink grid, thick 3x3 lines, a margin gutter for claim stamps, selected-cell highlight (brass edge), same-digit highlight, conflict highlight, and the Chain, Smudge, Quarantine and Hush overlays.
+   128→   - Toolbar (~6%): Pencil toggle, Erase, Mute, Pause (solo) or Concede (PvP, with confirm).
+   129→   - Number pad (~14%): 5 columns by 2 rows, numerals 1-9 plus Erase, each tile at least 56 tall and 44 wide, with a count of remaining instances per digit that greys out the tile when the digit is complete.
+   130→   - Abilities (~12%): three engraved tiles with sigil, a one-word label, a cooldown ring and countdown, a ready pulse (a quiet brass edge flash, no glow). Long-press shows the full description.
+   131→   - Event log: a one-line diegetic ticker above the board ("Row IV claimed by Halbrecht").
+   132→S05b DESKTOP / LANDSCAPE (>=1100px): left column your portrait, Seals, abilities. Center the board and number pad. Right column opponent portrait, large Mirror matrix, and a scrolling "Clerk's Record" log. Keyboard: 1-9 place, arrows move, Backspace erase, N pencil, Q W E abilities, Esc pause.
+   133→S06 MATCHMAKING ("Summoning"): engraved hourglass animation, rotating flavour lines, Cancel. Maximum wait 4s before pairing with a Shade (configurable).
+   134→S07 VERSUS SPLASH: both tarot cards slam together, stakes (difficulty, rating change range), Orders shown, a 3-2-1 sealed-tablet reveal.
+   135→S08 PAUSE / CONCEDE / DISCONNECT MODALS: parchment sheets. Pause only in solo. Disconnect shows a 20s reconnect countdown.
+   136→S09 RESULT: Victory, Defeat or Draw as a full-width engraved banner. Below it, "The Ledger of this Duel": claims won, mistakes, abilities used, time, Seal timeline sparkline, rating change. Then rewards (Ink, Season progress, Reliquary progress). Buttons: Rematch, Antechamber. A "Share" button renders a result card image via canvas.
+   137→S10 RELIQUARY (loot opening): a 4-second ritual (chest unlatches, wax cracks, item revealed on a card). Item rarity shown by border style, never by glow. Free-reliquary drop rates are shown on a "?" panel.
+   138→S11 FOLIO MAP: an engraved plate map of Novem with nine nodes (Roman numerals), fog on locked ones, lines drawn in ink as you progress.
+   139→S12 FOLIO DETAIL: Magistrate portrait, challenge text, the three duels with stars (win, clean win, win without abilities), loadout hint, "Begin".
+   140→S13 STORY CARD: full-screen engraved plate, caption text revealed line by line, tap to advance, Skip. Used for prologue, interludes, Folio completions and endings.
+   141→S14 DAILY ASSIZE: today's puzzle card, countdown to the next, leaderboard top 100 with your row pinned, streak rewards, "Offer a Candle" rewarded-ad button for a second attempt.
+   142→S15 CABINET (collection and shop): tabs for Board Themes, Seals, Frames, Numerals, Stamps. A shop section with Ink-priced and Sigil-priced items, preview before buying, equip button, owned state. A "Patron's Pouch" Sigil pack purchase (payments stubbed, see section 11).
+   143→S16 SEASON LEDGER (battle pass): 30 tiers, free and Patron tracks, a progress bar, claim buttons, season timer, an 8-week season.
+   144→S17 LEDGER (profile and stats): name edit, rank emblem and division, Standing graph, win rate by Order, longest streak, "Marginalia" achievements (write 24, each with a title and an engraved icon), last 20 duels list with a Shade-or-human tag, and Recovery Code (section 7).
+   145→S18 SETTINGS: music, effects, haptics, colorblind-safe symbols always on (informational), high-contrast mode, reduced motion, text size (S/M/L), auto-remove notes on placement, highlight options, left-hand ability layout, language (EN, with an i18n structure ready), export and import save, delete my data, about and credits, privacy note.
+   146→S19 OFFLINE / ERROR / MAINTENANCE: engraved error plates with human copy. Offline mode still allows M0, M1, M5 and Shade duels.
+   147→S20 FIRST-REWARD "THE CLERK'S PURSE": shown after the tutorial, explains Ink, Sigils and Reliquaries in 3 lines.
+   148→
+   149→======================================================================
+   150→5. UI COPY AND VOICE
+   151→======================================================================
+   152→Write every string for all screens and states in /client/src/i18n/en.json. Include: button labels, tooltips, ability descriptions, status messages, log lines for every event type (claim, mistake, ability cast, status applied, status ended, reflected, negated, forfeit, win, loss), error texts, empty states, achievement names, rank names, shop item names and descriptions, and the 24 loading flavour lines. No lorem ipsum. No generic "Oops!".
+   153→
+   154→======================================================================
+   155→6. TECH STACK AND ARCHITECTURE
+   156→======================================================================
+   157→ - Monorepo with /client, /server, /shared, /assets, /tools. pnpm workspaces.
+   158→ - Client: Vite, React, TypeScript, Zustand, CSS Modules with design tokens. DOM and SVG for the board (accessibility); animations with CSS and the Web Animations API. No canvas particles.
+   159→ - Server: Node 20, TypeScript, Fastify, ws (WebSocket), SQLite (better-sqlite3), Dockerfile, .env.example.
+   160→ - PWA: manifest, service worker, installable, offline-capable (precache shell and assets, cache the daily puzzle).
+   161→ - Storage: IndexedDB for saves with a versioned schema and migrations.
+   162→ - Authoritative protocol: client sends {join_queue, place, ability, pencil, concede, reconnect}; server validates against the solution, applies cooldowns and statuses, and broadcasts {state_delta, claim, status, end}. Clients predict locally and reconcile.
+   163→ - Anti-cheat: server-side move validation, human-speed sanity checks (impossible placement intervals, perfectly uniform timing, zero mistakes with superhuman pace) flag accounts for a shadow queue; rate limiting; the solution is never sent to the client in PvP. Log these checks. Be honest in README.md that solver-app assistance cannot be fully prevented.
+   164→ - Tests: Vitest for the engine (puzzle uniqueness, generator difficulty, claim and damage rules, every ability and status, win-condition order); Playwright smoke test for a full tutorial duel and a Shade duel. CI script `pnpm test`.
+   165→ - Performance: Time to interactive under 2.5s on 4G; critical JS+CSS under 350KB gzip; 60fps on a mid-range phone; images served as WebP or AVIF with fallback and lazy loaded except the Duel screen's critical assets; Lighthouse PWA 90 or more.
+   166→ - Accessibility: every cell has an aria-label ("Row 3, column 4, empty, chained"); full keyboard play; focus rings; contrast AA or better for all gameplay text; no information carried by color alone; reduced-motion respected.
+   167→
+   168→======================================================================
+   169→7. IDENTITY, NETWORKING AND NO-ACCOUNT PLAY
+   170→======================================================================
+   171→ - On first load generate a random guest ID and secret token stored in IndexedDB. Generate a display name from word lists ("Gaunt Notary 4821"), editable in S17.
+   172→ - Recovery Code: a human-readable 4-word phrase plus checksum that restores rating and purchases on another device (the server stores a hash). Also offer JSON export and import.
+   173→ - Matchmaking: queue by Standing, widening the window every 2s. If no human is found within 4s, pair with a Shade. A Shade is either a replay of a stored anonymized human duel (move log with timestamps) or a synthetic bot with human-like timing, a mistake rate calibrated to the player's Standing, and a plausible ability cadence. Label it "Shade of <name>" with a small ink-echo mark on the portrait.
+   174→ - Disconnect: 20s reconnect grace using the token, then forfeit. A reconnecting player resumes the same duel.
+   175→ - Privacy: no email, no third-party trackers. Minimal first-party event telemetry (duel start, end, screen views) with an opt-out toggle in Settings. Write a short plain-language privacy page. Put the legal review in TODO.md.
+   176→
+   177→======================================================================
+   178→8. PROGRESSION AND ECONOMY
+   179→======================================================================
+   180→ - INK (soft currency): earned per duel (win 30, loss 10), per claim (3), clean claim bonus (+2), daily first win (+50), Folio stars, Daily Assize, achievements.
+   181→ - SIGILS (premium currency): purchasable, with a small amount earned from the Season Ledger and campaign milestones.
+   182→ - RELIQUARY: awarded every 3rd win and from the tutorial. Contains cosmetics (duplicates convert to Ink). Show drop rates.
+   183→ - SEASON LEDGER: 30 tiers with free and Patron rewards (cosmetics, Ink, Sigils), each tier requiring escalating Season Ink earned by playing.
+   184→ - COSMETICS (all with names and descriptions, no stat effects): 6 board themes (Aged Vellum, Bone, Slate, Plague Linen, Tallow, Cathedral Rubric), 5 seal waxes (Oxblood, Black, Verdigris, Gilt, Ash), 4 portrait frames, 3 numeral typefaces, 4 claim-stamp designs, 4 victory banners.
+   185→ - Reward ads: opt-in "Offer a Candle" for +20 Ink or a second Daily Assize attempt, max 3 per day, never during a duel.
+   186→
+   187→======================================================================
+   188→9. ART DIRECTION AND ASSET PIPELINE (FORCE-GENERATE EVERYTHING)
+   189→======================================================================
+   190→STYLE BIBLE: Engraved occult grimoire crossed with minimal precision UI. Matte, flat lighting. Palette tokens: ink-black #0E0E0F, charcoal #17171A, parchment #B8A27C, parchment-light #CDB992, ink #1A1410, brass #A58849, brass-dim #6F5B31, oxblood #7B1A1F (the single accent). Typography, self-hosted WOFF2 (OFL): headings IM Fell English SC, body IM Fell DW Pica, board digits Libre Caslon Text 600 with lining numerals, Roman numerals IM Fell English. The board is the hero, with generous negative space, so the UI reads as a precision instrument.
+   191→
+   192→STYLE_PREFIX (prepend to every image prompt, store it in /assets/style-prefix.txt):
+   193→"Linocut and woodcut engraving, hand-inked cross-hatching, aged paper grain, restrained palette of charcoal black, parchment, muted brass and a single oxblood red accent, matte flat lighting, mature dark-fantasy, no glow, no gradients, no neon, no 3D render, no cartoon, no text or numerals in the image."
+   194→
+   195→PIPELINE, in this order of preference; pick per asset and record the choice in manifest.json:
+   196→ A) If you have an image-generation tool: generate each raster asset with STYLE_PREFIX plus its asset prompt, at the stated size, and save to /client/public/assets/.
+   197→ B) Else, if an image API key exists in the environment: write /tools/generate-assets.mjs that reads manifest.json and generates every missing asset, run it, and commit the outputs.
+   198→ C) Else, produce each asset procedurally as SVG or canvas-baked PNG in the same engraved style (hatching patterns, stipple, feTurbulence paper grain, hand-wobble path jitter). Mark them "procedural" and add a TODO for replacing them with painted art, together with a ready-to-run prompt list in /assets/prompts.md.
+   199→Never ship an asset slot empty.
+   200→
+   201→ASSET MANIFEST (all required; write the individual prompt for each):
+   202→ PORTRAITS (tarot card, 512x640, woodcut): 4 Orders (hooded scholar reading, masked executioner with axe, plague-masked apothecary with vial, lantern-bearing warden in a bell-shaped helm); 9 Magistrates (section 1 descriptions); the Shade of Orsolo (ink-echo, half-dissolved lines); the generic Shade mark; the Clerk (your default avatar). Total 16.
+   203→ PORTRAIT FRAMES (4): bronze, iron, bone-inlay, black-lacquer.
+   204→ STORY PLATES (1080x720): Prologue, 9 Folio completions, 2 interludes, 2 endings, Orsolo reveal. Total 15.
+   205→ FOLIO MAP PLATE (1080x1600) with 9 marked node positions defined in the manifest.
+   206→ TEXTURES (seamless 1024): parchment (6 theme variants), charcoal paper, brass-plate, worn leather.
+   207→ BOARD PARTS: grid ink-line brush set, thick box-line brush set, corner ornaments (4), margin gutter strip.
+   208→ WAX SEALS (sprites at 3 states, intact, cracked, broken): oxblood, black, verdigris, gilt, ash. Claim stamps: fleur-de-lis (you), tau cross (opponent), plus 4 alternate stamp designs.
+   209→ STATE OVERLAYS: red brush strike (3 variants), chain and padlock, ink smudge blot, wax finger-seal (Hush), censer smoke hatching (Miasma), hazard gutter stripe (Quarantine), hush icon.
+   210→ ABILITY SIGILS (engraved, 128x128, 12 total): Eye, Key, Quill, Dagger, Hourglass, Axe, Vial, Cup, Censer, Shield, Lantern, Bar. Also 5 status icons.
+   211→ UI KIT: number tile (normal, pressed, disabled, complete), ability tile frame, primary and secondary button (normal, pressed, disabled), 9-slice parchment panel, 9-slice brass frame, 5 divider ornaments, 4 corner flourishes, Roman numeral medallion, tab ribbon, toggle, slider, modal sheet, toast.
+   212→ RANK EMBLEMS (8) and division pips. Currency icons (Ink drop, Sigil coin). Achievement icons (24). Reliquary chest (closed, opening frames x6, open). Candle (streak) 3 states.
+   213→ BRAND: wordmark logo (SVG), app icon 512 and 192 and maskable, favicon, Open Graph image 1200x630, PWA splash screens.
+   214→
+   215→======================================================================
+   216→10. AUDIO (synthesized in code with WebAudio; no external audio files, no licensing risk)
+   217→======================================================================
+   218→Build a small synth module. Implement every sound: pencil scratch, correct placement (soft ink tap), wrong placement (dry crack plus low thud), wax stamp (heavy press), seal break, chain drop and rattle, padlock click, ability ready (single bell tick), each ability cast (12 distinct), status applied and expired, claim won, claim lost, victory, defeat, draw, page turn, reliquary opening, UI tap, error. Music is generative: a low drone (detuned saws through a slow filter), sparse bowed-string tones, and a tension layer that fades in as either player drops to 3 Seals or below. Default music volume 30%, effects 70%. Unlock audio on the first tap. A visible mute toggle is on the Duel toolbar.
+   219→
+   220→======================================================================
+   221→11. MONETIZATION LAYER (cosmetics only)
+   222→======================================================================
+   223→Implement a MonetizationProvider interface with: purchase(sku), restore(), showRewardedAd(). Ship a working in-game flow (selling, owning, equipping) with a mock provider in dev. Real payment (Stripe Checkout) and an ad SDK integration are TODO(...) entries with full steps. SKUs: Patron's Pouch (small, medium, large Sigil packs), Season Ledger Patron track, three cosmetic bundles. Premium cosmetics are bought directly, never through randomized paid chests.
+   224→
+   225→======================================================================
+   226→12. QUALITY BAR
+   227→======================================================================
+   228→Every interaction has feedback within 100ms. Wrong, claim, status and win moments each have a distinct visual and sound. Never block the board with a modal during a duel except Concede. Never show a blank screen; use skeleton parchment while loading. Rewards are never hidden behind forced waits.
+   229→
+   230→======================================================================
+   231→13. DELIVERABLES
+   232→======================================================================
+   233→ /README.md: what it is, how to run (`pnpm i && pnpm dev` runs both client and server), env vars, architecture, decisions made, known limits.
+   234→ /TODO.md: every unfinished or stubbed item per R3, sorted by priority.
+   235→ /assets/manifest.json, /assets/style-prefix.txt, /assets/prompts.md.
+   236→ /docs/STORY.md: the full story bible and all narrative text for editors.
+   237→ /docs/BALANCE.md: every tunable number and its reasoning.
+   238→ Tests passing and the app running locally.
+   239→
+   240→======================================================================
+   241→14. BUILD ORDER (priority, top first)
+   242→======================================================================
+   243→ 1 shared engine + puzzle generator + tests
+   244→ 2 Duel screen S05 with local Shade opponent
+   245→ 3 tutorial duel M0 + story prologue
+   246→ 4 abilities, statuses and all four Orders
+   247→ 5 asset pipeline for everything on screens used so far
+   248→ 6 Antechamber, Order Select, Result, Reliquary
+   249→ 7 server, WebSocket duels, matchmaking, Shade fallback, guest identity, Recovery Code
+   250→ 8 Campaign: map, Folios, story cards, all nine Magistrates, both endings
+   251→ 9 Daily Assize, leaderboard, streaks
+   252→ 10 Cabinet, economy, Season Ledger, Ledger profile
+   253→ 11 audio, settings, accessibility, desktop layout
+   254→ 12 PWA and offline, Friend Duel, monetization provider, polish
+   255→
+   256→======================================================================
+   257→FINAL RESPONSE FORMAT
+   258→======================================================================
+   259→When finished, reply with: (1) what runs and how to start it, (2) a table of the acceptance checklist below with pass or fail, (3) the TODO IDs from TODO.md grouped by priority, and (4) the 3 biggest risks. Do not claim anything works unless you ran it.
+   260→
+   261→ACCEPTANCE CHECKLIST
+   262→[ ] Opening the URL fresh lands on a live tutorial board in under 2 seconds, with no login or button
+   263→[ ] Tutorial duel is completable and unlocks the Antechamber
+   264→[ ] Every screen S01-S20 exists with its states
+   265→[ ] All 4 Orders and 12 abilities work and are covered by tests
+   266→[ ] All 5 statuses apply, tick, expire and respect the anti-frustration rules
+   267→[ ] Claims, Clean claims, Momentum and all 4 win conditions behave as specified
+   268→[ ] A human-vs-human duel works over WebSocket; Shade fallback fires at 4s
+   269→[ ] Disconnect and reconnect work
+   270→[ ] Campaign playable from Folio I to the ending with all story text present
+   271→[ ] Daily Assize, streaks and leaderboard work
+   272→[ ] Every asset in the manifest exists, with its status recorded
+   273→[ ] All sounds are synthesized and no audio file is required
+   274→[ ] Offline mode works for M0, M1, M5 and Shade duels
+   275→[ ] Mobile 360x740 fits the Duel screen without scrolling; the desktop layout works
+   276→[ ] TODO.md exists and matches every TODO( ) marker in the code

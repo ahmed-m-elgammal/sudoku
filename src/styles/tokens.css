@@ -1,0 +1,71 @@
+/* ASSIZE design tokens (spec §9 style bible). Matte. No gradients, no glow, ever. */
+:root {
+  /* palette */
+  --ink-black: #0e0e0f;
+  --charcoal: #17171a;
+  --charcoal-2: #1d1d21;
+  --parchment: #b8a27c;
+  --parchment-light: #cdb992;
+  --parchment-dim: #9a8560;
+  --ink: #1a1410;
+  --brass: #a58849;
+  --brass-dim: #6f5b31;
+  --oxblood: #7b1a1f;
+  --oxblood-deep: #5c1216;
+  --bone: #d8d2c4;
+  --verdigris: #3e6b5a;
+  --gilt: #c9a962;
+  --ash: #8d8a82;
+
+  /* semantic */
+  --bg: var(--ink-black);
+  --bg-raised: var(--charcoal);
+  --fg: var(--parchment-light);
+  --fg-dim: var(--parchment-dim);
+  --fg-bright: var(--bone);
+  --accent: var(--oxblood);
+  --line: #3a352c;
+  --line-strong: #574e3d;
+  --focus: var(--brass);
+  --danger: var(--oxblood);
+  --ok: var(--verdigris);
+
+  /* type */
+  --font-display: 'IM Fell English SC', 'IM Fell DW Pica', Georgia, serif;
+  --font-body: 'IM Fell DW Pica', Georgia, 'Times New Roman', serif;
+  --font-digit: 'Libre Caslon Text', Georgia, serif;
+
+  --text-step: 1; /* user setting: 0=S, 1=M, 2=L */
+  --fs-xs: calc(11px * var(--text-scale, 1));
+  --fs-sm: calc(13px * var(--text-scale, 1));
+  --fs-md: calc(15px * var(--text-scale, 1));
+  --fs-lg: calc(19px * var(--text-scale, 1));
+  --fs-xl: calc(24px * var(--text-scale, 1));
+  --fs-2xl: calc(34px * var(--text-scale, 1));
+
+  /* layout */
+  --hub-max: 480px;
+  --ribbon-h: 64px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --radius: 4px;
+  --radius-lg: 8px;
+
+  /* motion (reduced-motion overrides) */
+  --t-fast: 120ms;
+  --t-med: 260ms;
+  --t-page: 340ms;
+  --ease-page: cubic-bezier(0.2, 0, 0.1, 1);
+}
+
+:root[data-text='s'] { --text-scale: 0.9; }
+:root[data-text='m'] { --text-scale: 1; }
+:root[data-text='l'] { --text-scale: 1.15; }
+
+:root[data-contrast='high'] {
+  --fg: #efe6d2;
+  --fg-dim: #cdbfa4;
+  --line: #6a5f49;
+  --bg: #000000;
+  --bg-raised: #101012;
+}

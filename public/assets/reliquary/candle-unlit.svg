@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+<rect width="128" height="128" fill="rgba(0,0,0,0)"/>
+
+  <defs>
+  <filter id="grain-cdunlit" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="370" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.06 0 0 0 0.09 0"/>
+    <feComposite operator="over" in2="SourceGraphic"/>
+  </filter>
+  <filter id="wobble-cdunlit" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="2" seed="877" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2.4"/>
+  </filter>
+  <pattern id="hatch-cdunlit" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+    <rect width="6" height="6" fill="none"/><line x1="0" y1="0" x2="0" y2="6" stroke="#1A1410" stroke-width="1"/>
+  </pattern>
+  <pattern id="cross-cdunlit" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <line x1="0" y1="0" x2="0" y2="7" stroke="#1A1410" stroke-width="0.9"/><line x1="0" y1="0" x2="7" y2="0" stroke="#1A1410" stroke-width="0.9"/>
+  </pattern>
+  <radialGradient id="vig-cdunlit" cx="50%" cy="46%" r="72%">
+    <stop offset="62%" stop-color="#000000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000000" stop-opacity="0.26"/>
+  </radialGradient>
+</defs>
+  <rect x="52" y="56" width="24" height="54" rx="3" fill="#CDB992" stroke="#1A1410" stroke-width="2.4"/>
+  <path d="M13.0 61.2 L13.9 72.1 L14.1 82.9" stroke="#000" stroke-width="0.5" fill="none" stroke-linecap="round"/><path d="M13.3 66.2 L13.6 77.3 L14.0 87.8" stroke="#000" stroke-width="0.5" fill="none" stroke-linecap="round"/><path d="M13.4 71.3 L13.9 82.2 L14.6 93.1" stroke="#000" stroke-width="0.5" fill="none" stroke-linecap="round"/><path d="M14.0 76.2 L14.4 87.2 L14.6 97.9" stroke="#000" stroke-width="0.5" fill="none" stroke-linecap="round"/><path d="M13.7 81.3 L14.2 92.1 L14.7 102.7" stroke="#000" stroke-width="0.5" fill="none" stroke-linecap="round"/>
+  <rect x="44" y="108" width="40" height="8" rx="2" fill="#6F5B31" stroke="#1A1410" stroke-width="2"/>
+  <path d="M64 48 v-8" stroke="#1A1410" stroke-width="2.4"/>
+  <g opacity="0.5"><circle cx="14.1" cy="19.7" r="0.42" fill="#1A1410" opacity="0.21"/><circle cx="37.8" cy="86.2" r="0.72" fill="#1A1410" opacity="0.18"/><circle cx="94.9" cy="112.4" r="0.92" fill="#1A1410" opacity="0.26"/><circle cx="50.4" cy="20.3" r="0.43" fill="#1A1410" opacity="0.26"/><circle cx="108.8" cy="30.0" r="0.86" fill="#1A1410" opacity="0.25"/><circle cx="36.1" cy="91.9" r="0.40" fill="#1A1410" opacity="0.28"/><circle cx="20.9" cy="81.0" r="0.81" fill="#1A1410" opacity="0.22"/><circle cx="123.0" cy="73.9" r="1.02" fill="#1A1410" opacity="0.14"/><circle cx="69.3" cy="31.4" r="0.75" fill="#1A1410" opacity="0.19"/><circle cx="77.9" cy="89.4" r="0.92" fill="#1A1410" opacity="0.11"/><circle cx="18.7" cy="4.9" r="0.80" fill="#1A1410" opacity="0.26"/><circle cx="120.9" cy="39.9" r="0.60" fill="#1A1410" opacity="0.23"/><circle cx="26.6" cy="126.8" r="0.87" fill="#1A1410" opacity="0.22"/><circle cx="50.3" cy="57.7" r="0.46" fill="#1A1410" opacity="0.14"/><circle cx="78.2" cy="87.9" r="1.04" fill="#1A1410" opacity="0.17"/><circle cx="56.8" cy="76.6" r="0.72" fill="#1A1410" opacity="0.16"/><circle cx="8.0" cy="18.4" r="0.62" fill="#1A1410" opacity="0.20"/><circle cx="87.0" cy="50.1" r="1.04" fill="#1A1410" opacity="0.17"/><circle cx="54.0" cy="85.2" r="0.63" fill="#1A1410" opacity="0.27"/><circle cx="19.1" cy="104.4" r="0.55" fill="#1A1410" opacity="0.12"/><circle cx="120.5" cy="34.8" r="0.52" fill="#1A1410" opacity="0.13"/><circle cx="48.4" cy="72.9" r="0.40" fill="#1A1410" opacity="0.14"/><circle cx="31.6" cy="55.5" r="0.37" fill="#1A1410" opacity="0.16"/><circle cx="102.0" cy="71.3" r="0.38" fill="#1A1410" opacity="0.26"/><circle cx="57.9" cy="22.7" r="1.03" fill="#1A1410" opacity="0.16"/><circle cx="30.8" cy="77.2" r="0.47" fill="#1A1410" opacity="0.27"/><circle cx="62.2" cy="78.5" r="0.74" fill="#1A1410" opacity="0.15"/><circle cx="1.4" cy="74.1" r="0.93" fill="#1A1410" opacity="0.11"/><circle cx="98.5" cy="2.8" r="0.49" fill="#1A1410" opacity="0.13"/><circle cx="49.5" cy="80.3" r="1.02" fill="#1A1410" opacity="0.20"/><circle cx="33.4" cy="55.4" r="0.85" fill="#1A1410" opacity="0.23"/><circle cx="36.2" cy="72.5" r="0.49" fill="#1A1410" opacity="0.12"/><circle cx="84.7" cy="3.0" r="1.00" fill="#1A1410" opacity="0.17"/><circle cx="79.7" cy="92.4" r="0.61" fill="#1A1410" opacity="0.15"/><circle cx="112.5" cy="8.0" r="0.88" fill="#1A1410" opacity="0.21"/><circle cx="121.1" cy="127.4" r="0.72" fill="#1A1410" opacity="0.17"/><circle cx="30.9" cy="118.4" r="0.60" fill="#1A1410" opacity="0.15"/><circle cx="90.1" cy="48.1" r="0.48" fill="#1A1410" opacity="0.26"/><circle cx="64.4" cy="101.1" r="0.83" fill="#1A1410" opacity="0.27"/><circle cx="14.6" cy="48.3" r="0.70" fill="#1A1410" opacity="0.16"/></g><rect width="128" height="128" fill="url(#vig-cdunlit)"/>
+</svg>

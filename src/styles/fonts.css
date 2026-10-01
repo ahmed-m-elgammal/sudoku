@@ -1,0 +1,39 @@
+/* ASSIZE self-hosted type (spec §9) — OFL licensed WOFF2, no CDN at runtime. */
+@font-face {
+  font-family: 'IM Fell English SC';
+  src: url('/fonts/im-fell-english-sc.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IM Fell DW Pica';
+  src: url('/fonts/im-fell-dw-pica.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IM Fell DW Pica';
+  src: url('/fonts/im-fell-dw-pica-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Libre Caslon Text';
+  src: url('/fonts/libre-caslon-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Libre Caslon Text';
+  src: url('/fonts/libre-caslon-700.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Libre Caslon Text';
+  src: url('/fonts/libre-caslon-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}

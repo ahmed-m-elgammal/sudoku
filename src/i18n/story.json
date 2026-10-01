@@ -1,0 +1,110 @@
+{
+  "prologue": [
+    "They say the plague came from the river, so the river-gates were chained, and after them every other gate, and then the mouths of gossips.",
+    "You were Magister Orsolo's clerk when they took him for forging the Great Ledger. You watched from the third row. Your name was struck from the rolls the same hour, and your rank with it.",
+    "The Ninefold Assize settled every quarrel in Novem by the Reckoning: two pleaders, one sealed Tablet, nine by nine. The false hand errs, and wax Seals break.",
+    "This morning an ink-echo wearing your master's voice stood at your door and said: «They hanged a lie, Clerk. Take up your pen and win the truth back, folio by folio.»"
+  ],
+  "tutorial": [
+    "So. The Assize did not keep you away long.",
+    "I am what ink remembers of Orsolo. Call me a Shade, and mind your Seals.",
+    "Place your digits truer than I place mine, and this Tablet is yours."
+  ],
+  "folios": {
+    "halbrecht": { "title": "Folio I — Halbrecht the Headsman", "sub": "The Axe teaches first, and explains after." },
+    "vael": { "title": "Folio II — Mother Vael, the Apothecary", "sub": "Her cures are legend. So are her debts." },
+    "ilse": { "title": "Folio III — Cantor Ilse, the Bellringer", "sub": "She counts in knells." },
+    "anselm": { "title": "Folio IV — Brother Anselm, Warden of the Lantern", "sub": "Nothing enters his light uncounted." },
+    "corvane": { "title": "Folio V — Dame Corvane, the Cartographer", "sub": "She has measured every road out of Novem but never used one." },
+    "quill": { "title": "Folio VI — Tobias Quill, the Forger", "sub": "His certainty is beautifully made." },
+    "marchetti": { "title": "Folio VII — Lord Marchetti, the Moneylender", "sub": "Everything is owed. Especially you." },
+    "nox": { "title": "Folio VIII — Old Nox, the Gravedigger", "sub": "He buries what the Ledger no longer wants." },
+    "orsolo": { "title": "Folio IX — Magistrate Orsolo, the Ninth Seal", "sub": "The seat is empty until you sit in it." }
+  },
+  "mag": {
+    "halbrecht": {
+      "challenge": ["The block is sanded smooth, Clerk. I sanded it.", "Solve badly and you will learn how smooth.", "Take your Order. I have taken heavier heads than yours."],
+      "defeat": ["A clean cut. I have not felt one in years.", "The folio is yours. My arm remembers it."],
+      "taunt": ["You hold that pen like a knife you fear.", "The row is mine. Your Seals crack so politely."],
+      "folio": "The Headsman's yard is quiet at dawn. Halbrecht signs the folio with the flat of his axe and tells you the count of every neck it has served, except the ones he has forgotten, which he says are few. Your page of the Great Ledger smells of iron filings and straw. It is, he says, the only signature he trusts himself to make."
+    },
+    "vael": {
+      "challenge": ["Mind the smudge, dear. It ruins a whole page.", "I have cured half of Novem and billed the other half.", "Sit. The vial is already measured."],
+      "defeat": ["Cured, in a manner of speaking.", "Take the folio. Mind the stains, they are mostly mine."],
+      "taunt": ["Your numbers blur like tears on a hot slate.", "Drink something, dear. Losing thins the blood."],
+      "folio": "Mother Vael's shop smells of clove and cold iron. She presses the folio into your hands with the same thumb she uses to test a fever, and tells you that Orsolo once paid her in prophecy: a boy would come to rewrite the rolls, and she should charge him double. She laughs until she coughs. «He overpaid me,» she says. «Tell him so.»"
+    },
+    "ilse": {
+      "challenge": ["I ring the hours. I do not wait for them.", "When I hush the pad, even your hand forgets its letters.", "Count with me. You will lose track first."],
+      "defeat": ["The knell is yours. Ring it yourself.", "Nine strokes. I heard them all."],
+      "taunt": ["Tick. The pad is dead. So are your plans.", "The bells lie for no one, least of all you."],
+      "folio": "Ilse signs the folio at the top of the tower, where the bells live and birds do not. She rings nine soft notes, one for each of your Seals still whole, and says she has rung for executions, weddings, and plague-carts, and that your folio is the first page she has ever been glad to mark. The rope leaves a burn across her palm. She does not feel it anymore."
+    },
+    "anselm": {
+      "challenge": ["Every lock in Novem answers to my keys, and my keys answer to the Ledger.", "I ward what is mine. Test the light.", "Come in. The door locks behind us both."],
+      "defeat": ["The lantern dims. Take the page.", "A ward that fails was still a ward. Go."],
+      "taunt": ["Your first rite came to me and died there.", "The light does not flatter your position, Clerk."],
+      "folio": "Anselm's cell holds one chair, one lantern, and a ledger of every soul who ever begged at the gate. He writes your name in it — your true name, the one the rolls forgot — and below it writes «spared». The folio he gives you is dry as bone and twice as heavy. «The Ninth has walked these wards at night,» he says. «He checks the locks. He checks them all.»"
+    },
+    "corvane": {
+      "challenge": ["I have mapped the city down to its rats' nests.", "Your claims will go where I say they cannot.", "Choose your Order. I have chosen the ground."],
+      "defeat": ["Unmapped territory, then. Refreshing.", "The folio is drawn. My roads close behind you."],
+      "taunt": ["I have quarantined better pleaders than you into corners.", "Every road you take, I drew first."],
+      "folio": "Dame Corvane's map room is the size of a chapel and the shape of the city. She rolls the folio inside a chart of Novem's walls and marks the exact spot where you stood to receive it, in oxblood, one small x among thousands. «Now you are on the map,» she says. «Nothing in this city escapes the map.» She does not smile. Cartographers cannot afford to."
+    },
+    "quill": {
+      "challenge": ["Everything I write becomes true. Even your ruin.", "My mistakes are all forgeries of someone else's.", "Watch my hand, not my eyes."],
+      "defeat": ["Unmade. It stings more than making did.", "The folio is genuine. I checked it twice."],
+      "taunt": ["Your certainty is smudged at the edges.", "I could forge your win more convincingly than you could earn it."],
+      "folio": "Tobias Quill signs the folio with a flourish that takes too long and is perfect. He confesses — as a craftsman, not a penitent — that he forged the arrest warrant for Orsolo, from memory, in eleven minutes, and has hated the quality of his own work ever since. «Tell the Ninth his forgery was better,» he says. «It saved a life. Mine only spent them.»"
+    },
+    "marchetti": {
+      "challenge": ["Everything in Novem is owed, Clerk. Everything.", "You are three Seals from ruin and I have not yet begun to lend.", "Let us discuss the terms of your defeat."],
+      "defeat": ["A debt collected against me. Remarkable.", "The folio is yours. I have already charged you the ink."],
+      "taunt": ["Low Seals, high interest. You understand.", "Every claim is a loan. You have none left to give."],
+      "folio": "Marchetti's counting house has no chairs. Debtors do not stay long. He weighs the folio on a little brass scale against seven coins — one for each of your remaining Seals — and finds it heavier, which pleases him in a way his face refuses to confirm. «The Ninth borrowed once,» he says. «He has never paid. I keep the ledger open. Perhaps you will settle him.»"
+    },
+    "nox": {
+      "challenge": ["I dig for the Ledger now. The dead mind the noise less.", "Your notes will blow away like earth on earth.", "No hurry. Everyone comes down here eventually."],
+      "defeat": ["Rest now, in the manner of pages.", "Your name stays up there a while yet."],
+      "taunt": ["Miasma takes the pencil. Earth takes the rest.", "Your notes are gone. The dead have them now."],
+      "folio": "Old Nox signs the folio with a stump of charcoal that has signed more graves than the parish keeps records for. He digs a small hole beside the tablet, buries nothing in it, and pats the earth flat. «For the Smudges,» he explains. «Everything erased deserves a grave.» The folio is warm from his coat. It is the only warm thing in the yard."
+    },
+    "orsolo": {
+      "challenge": ["Clerk. You came. Sit — no. Plead.", "I have worn nine Orders waiting for you.", "Take my Seals. I forged the Ledger; I can spare them."],
+      "defeat": ["The Ninth Seal cracks. Truth is heavier than ink.", "You unmade me properly. Do it again at the trial."],
+      "taunt": ["You solve like a man reading his own sentence.", "I taught your hand everything but mercy."],
+      "folio": "The Ninth's court is swept, lit, and empty but for two chairs. Orsolo signs the final folio with the seal-ring he once used to erase you, and sets it on the Tablet where the whole court must see it. «Twenty-seven pleads,» he says. «The Ledger knows your name again. Now they will come for both of us, Clerk, and the city will watch. Write the truth. Even if it hangs me twice.»"
+    }
+  },
+  "interlude1": [
+    "Three folios are yours. The Assize pretends not to notice, and notices.",
+    "On the gate, a fresh plague-cross is painted over an old one. Beneath the lime, someone has chalked nine small marks in a ring.",
+    "The Shade of Orsolo walks beside you, thinner each day, like a page worn by thumbs. «The Ledger is starting to read you, Clerk. Mind what it finds.»"
+  ],
+  "interlude2": [
+    "Six folios. Half the court calls you Clerk still; the other half has begun to bow, slightly, badly, while pretending not to.",
+    "Marchetti's runners watch your door. Quill's handwriting has started appearing on walls you did not know had walls.",
+    "The Shade has stopped walking. It stands where the light is worst. «Almost,» it says. «When the ninth Seal cracks, remember that I lied to you exactly once.»"
+  ],
+  "orsoloReveal": [
+    "The Ninth Seal lifts its mask. Your master's eyes are older, and dead in a way that has nothing to do with the grave they say he has.",
+    "«They hanged a body shaped like me,» says Magistrate Orsolo, Ninth of the Nine. «I forged the Ledger to strike your name from the plague-debt rolls. Erased men do not hang. You were the only thing in Novem worth being a liar for.»",
+    "«The remaining folios are the truth, Clerk, written small. Win them, and choose: balance the Ledger, or burn it.»"
+  ],
+  "endings": {
+    "balance": [
+      "The Ledger is balanced. The truth is read aloud in the Assize hall, in a voice that carries to the river-gates: the debts were forged, the plague-debt rolls were emptied by one man's hand, and the man they hanged has been sitting among the Nine for years.",
+      "Orsolo is condemned again — properly this time, in his own presence — and walks to the scaffold with his seal-ring left on the bench. The plague-debt, erased by forgery, falls back upon the one name it was taken from: yours.",
+      "You write it in yourself, at the bottom of the last folio, in your own hand. The city leaves the gates chained. The Assize endures. On quiet mornings the Clerk of the Rolls unlocks the hall, and the Nine solve what the Nine must solve.",
+      "THE LEDGER IS BALANCED."
+    ],
+    "burn": [
+      "You burn the Ledger. It takes less time than you expected; forgery-dried vellum lights like a lie.",
+      "Debts vanish. Weights lift. Doors that were chained open, and for one evening Novem is a city of people with nothing owed and nothing owed to them.",
+      "Then the assumptions follow: no debt, no bond; no bond, no trust; no trust, no Assize. The Ninefold Court empties. The bells ring whatever hours anyone likes, which is to say none.",
+      "Orsolo watches the fire and does not stop you. «You were worth one lie,» he says. «The truth was worth a hundred. It seems they spend the same.» The gates stand open. The river takes the ash. The city governs itself, which is to say it does not.",
+      "THE LEDGER IS BURNED."
+    ]
+  }
+}
