@@ -186,3 +186,17 @@ Stage Summary:
 - Five honest catches this iteration: two test bugs (ladder rung-skip, prototype-chain constructor), one import-root-cause test batch, Marginalia eating the probe's mistake, and the writs' symmetric lethality (behavior kept — it is the design working)
 - Standing constraints honored: reset untouched; layouts stay single-DOM responsive; no assertion weakened to pass
 - Next candidates: T1 Playwright smoke suite, anonymous server echo pool (rides T19 primitives), Sudden Judgment overtime, puzzle variants
+
+---
+Task ID: J0
+Agent: Super Z (main)
+Task: Brainstorm juice (game-feel) ideas — user request, no build yet
+
+Work Log:
+- Inventoried existing juice: ~20 synth SFX (synth.ts) + drone/tension music, haptics (useDuelSession/localDuel), CSS anims (ink-settle, brush-shake, brass-edge-flash, readyFlash, severPulse, swapGlow, versus slams), claim stamps in gutters/box corners (Board.tsx unitOwner), strike-1..3 wrong variants, status overlays (chain/smudge/miasma/quarantine), Reliquary chest frames, story plates
+- Confirmed gaps via grep: no particle/VFX layer, no global screen shake, no on-board ink flood for claimed units, no hit-stop/slow-mo, no streak/heat visual escalation (music has tension layer; visuals do not), no replay theater treatment
+- Pitched ranked J1-J10 juice track in chat: J1 ink flood on claim, J2 tiered screen shake, J3 hit-stop + verdict slow-mo, J4 heat escalation via --heat CSS var, J5 digit-entry tactility, J6 ambient courtroom particles, J7 boss phase court-reacts stinger, J8 replay theater (follow-spot + scrubber markers), J9 ceremony bookends (verdict scroll / ink drain), J10 per-status signature VFX + Hush audio ducking
+
+Stage Summary:
+- No code written; awaiting user greenlight on any subset, then TODO-first build per standing order
+- All juice pitches are presentation-layer only (shared/ engine untouched, replay determinism unaffected); guardrails: prefers-reduced-motion, particle budget + auto-degrade, transform/opacity-only (no layout shift), settings toggle reusing settingsHaptics pattern
