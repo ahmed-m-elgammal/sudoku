@@ -4,7 +4,7 @@
 // in portrait and become side columns on landscape phones and desktop — one DOM tree that
 // fits every device (see Duel.module.css).
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { useDuelSession, specFromUi, type DuelSessionSpec, type AnyDuel } from './useDuelSession';
@@ -16,6 +16,7 @@ import { MirrorStrip, Ticker } from './HudBits';
 import styles from './Duel.module.css';
 import i18n from '@/i18n/en.json';
 import { synth } from '@/audio/synth';
+import { SLOW_INK_MS } from '@/game/fx';
 import { net } from '@/net/client';
 import { orderMeta } from '@shared/orders';
 import storyJson from '@/i18n/story.json';
@@ -27,13 +28,19 @@ import { weekIndexFor, weeklyInkBonus } from '@shared/weekly';
 export default function DuelScreen() {
   const ui = useUi();
   const [spec, setSpec] = useState<DuelSessionSpec | null>(null);
-  const { duel, flood, shake } = useDuelSession(spec);
+  const { duel, flood, shake, hitStop, slowInk, heat } = useDuelSession(spec);
   const [paused, setPaused] = useState(false);
   const [confirmConcede, setConfirmConcede] = useState(false);
   const [muted, setMuted] = useState(synth.muted);
   const endedRef = useRef(false);
   const augurRef = useRef(false);
+  const slowTimerRef = useRef<number | null>(null); // J3 — the verdict's 300 ms slow-ink hold
   const save = useSave((s) => s.save);
+  // J3 — the freeze gates the three placement surfaces (Board, NumPad, keyboard);
+  // toolbar/abilities/pause stay live. The ref mirrors it for the key listener.
+  const frozen = hitStop !== null || slowInk;
+  const frozenRef = useRef(frozen);
+  frozenRef.current = frozen;
 
   useEffect(() => { setSpec(specFromUi()); }, []);
 
@@ -207,9 +214,25 @@ export default function DuelScreen() {
     });
   }, [duel, ui, save]);
 
+  // J3 — the verdict waits 300 ms of slow ink. onEnd fires synchronously inside
+  // LocalDuel.finish(), one frame BEFORE the events effect paints the beat, so this
+  // delay is the only honest place to hold the verdict banner back. The timer is
+  // cleanup-tracked (an unmount mid-beat never fires a late finish); endedRef —
+  // checked inside finish — still guards a double onEnd from double-firing.
   useEffect(() => {
     if (!duel) return;
-    duel.opts.onEnd = (r) => finish(r);
+    duel.opts.onEnd = (r) => {
+      slowTimerRef.current = window.setTimeout(() => {
+        slowTimerRef.current = null;
+        finish(r);
+      }, SLOW_INK_MS);
+    };
+    return () => {
+      if (slowTimerRef.current !== null) {
+        window.clearTimeout(slowTimerRef.current);
+        slowTimerRef.current = null;
+      }
+    };
   }, [duel, finish]);
 
   const tutorialNote = duel && ui.duelMode === 'tutorial' ? duel.tutorialNote() : null;
@@ -226,6 +249,7 @@ export default function DuelScreen() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!duel || endedRef.current) return;
+      if (frozenRef.current && e.key !== 'Escape') return; // J3 — the world holds (pause stays live)
       const sel = duel.selected;
       if (e.key >= '1' && e.key <= '9' && sel !== null) {
         const d = Number(e.key) as Digit;
@@ -263,7 +287,17 @@ export default function DuelScreen() {
   const swap = duel.swapBanner(); // T4 — truthy for ~4.2s after Orsolo adapts
 
   return (
-    <main className={styles.duelRoot}>
+    <main
+      className={styles.duelRoot}
+      data-cold={heat?.cold ? 'y' : undefined}
+      style={{ '--heat': heat ? heat.heat : 0 } as CSSProperties}
+    >
+      {/* J4 — the room's stakes ride one var: vignette depth, brass warmth, pad warmth, murmur */}
+      <div className={styles.heatVignette} aria-hidden />
+      {/* J3 — the world holds while a Seal breaks; deeper while the verdict waits */}
+      {(hitStop || slowInk) && (
+        <div className={`${styles.worldDim} ${slowInk ? styles.worldDimDeep : ''}`} aria-hidden />
+      )}
       <HudHeader duel={duel} />
       <div className={styles.duelMain}>
         <div className={styles.duelLeft}>
@@ -271,7 +305,7 @@ export default function DuelScreen() {
           <Ticker duel={duel} />
         </div>
         <div className={styles.boardArea}>
-          <Board duel={duel} flood={flood} shake={shake} />
+          <Board duel={duel} flood={flood} shake={shake} hitStop={hitStop} frozen={frozen} cold={heat?.cold ?? false} slowInk={slowInk} />
         </div>
         <div className={styles.controls}>
           <div className={styles.toolbar}>
@@ -290,7 +324,7 @@ export default function DuelScreen() {
               <button onClick={() => setPaused(true)}>{i18n.duel.toolbar.pause}</button>
             )}
           </div>
-          <NumPad duel={duel} />
+          <NumPad duel={duel} frozen={frozen} />
           <AbilityBar duel={duel} />
         </div>
       </div>

@@ -3,13 +3,17 @@
 // J1 — owned units tint as territory, a resolved claim floods its 9 cells in a
 // 30 ms-per-cell cascade and bursts a matte ink splash at the unit's centroid.
 // J2 — the whole Tablet shakes in tiers (claim = T2, phase/swap/verdict = T3).
+// J3 — a seal-crossing claim holds the world: input freezes ~100 ms, the claimed
+// unit pushes ~4% toward the viewer around its centroid, and the duel-ending claim
+// gets 300 ms of slow ink before the verdict (--flood-slow stretches the cascade).
+// J4 — behind by 3 Seals your ink desaturates (cold flood colors + data-cold tint).
 // All presentation law lives in src/game/fx.ts; this file only applies it.
 'use client';
 import { useMemo, type CSSProperties } from 'react';
 import type { LocalDuel } from '@/game/localDuel';
 import styles from './Duel.module.css';
 import { UNIT_CELLS, ROW_OF, COL_OF, BOX_OF } from '@shared/config';
-import { cellsOfFlood, centroidOfUnit, ownerOfCell, type Flood, type Shake } from '@/game/fx';
+import { cellsOfFlood, centroidOfUnit, ownerOfCell, FLOOD_SLOW, type Flood, type Shake, type HitStop } from '@/game/fx';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
 
@@ -36,7 +40,15 @@ function shakeClass(shake: Shake | null): string {
   return shake.tier === 3 ? styles[`shakeT3${alt}`] : styles[`shakeT2${alt}`];
 }
 
-export default function Board({ duel, flood, shake }: { duel: LocalDuel | import('@/game/serverDuel').ServerDuel; flood: Flood | null; shake: Shake | null }) {
+export default function Board({ duel, flood, shake, hitStop, frozen, cold, slowInk }: {
+  duel: LocalDuel | import('@/game/serverDuel').ServerDuel;
+  flood: Flood | null;
+  shake: Shake | null;
+  hitStop: HitStop | null; // J3 — the current hit-stop (null = the world moves)
+  frozen: boolean;         // J3 — placement surfaces are gated during hit-stop/slow-ink
+  cold: boolean;           // J4 — the viewer is behind by ≥ COLD_GAP Seals: their ink desaturates
+  slowInk: boolean;        // J3 — the duel-ending beat: the final cascade stretches
+}) {
   const st = duel.state;
   const me = st.players[0];
   const flags = duel.flags();
@@ -54,6 +66,10 @@ export default function Board({ duel, flood, shake }: { duel: LocalDuel | import
   // J1 — the current flood's cells and splash anchor (fail-closed helpers; null floods nothing)
   const floodCells = useMemo(() => (flood ? cellsOfFlood(flood.unit) : null), [flood]);
   const splash = useMemo(() => (flood ? centroidOfUnit(flood.unit) : null), [flood]);
+  // J3 — the hit-stop's push targets the same 9 cells as the flood (one acceptance
+  // law in fx.ts), scaled around the unit's centroid via per-cell transform-origin.
+  const pushCells = useMemo(() => (hitStop ? cellsOfFlood(hitStop.unit) : null), [hitStop]);
+  const pushCentroid = useMemo(() => (hitStop ? centroidOfUnit(hitStop.unit) : null), [hitStop]);
 
   const stampFor = (unit: string) => {
     const owner = st.unitOwner[unit];
@@ -63,7 +79,12 @@ export default function Board({ duel, flood, shake }: { duel: LocalDuel | import
   const quarantinedByFoe = flags.quarantinedUnits;
 
   return (
-    <div className={`${styles.boardWrap} ${shakeClass(shake)}`} role="grid" aria-label="The sealed Tablet, nine by nine">
+    <div
+      className={`${styles.boardWrap} ${shakeClass(shake)}`}
+      role="grid"
+      aria-label="The sealed Tablet, nine by nine"
+      style={slowInk ? ({ '--flood-slow': String(FLOOD_SLOW) } as CSSProperties) : undefined}
+    >
       {/* J1 — one matte ink splash per resolved claim, anchored at the unit's centroid */}
       {flood && splash && (
         <span
@@ -114,9 +135,21 @@ export default function Board({ duel, flood, shake }: { duel: LocalDuel | import
         const floodStyle: CSSProperties | undefined = fi >= 0 && flood
           ? ({
               '--flood-i': fi,
-              '--flood-strong': flood.player === 0 ? 'rgba(123, 26, 31, 0.34)' : 'rgba(141, 138, 130, 0.40)',
-              '--flood-settle': flood.player === 0 ? 'rgba(123, 26, 31, 0.09)' : 'rgba(141, 138, 130, 0.15)',
+              // J4 — cold ink: the viewer's oxblood desaturates when behind by ≥ 3 Seals
+              '--flood-strong': flood.player === 0
+                ? (cold ? 'rgba(97, 78, 76, 0.34)' : 'rgba(123, 26, 31, 0.34)')
+                : 'rgba(141, 138, 130, 0.40)',
+              '--flood-settle': flood.player === 0
+                ? (cold ? 'rgba(97, 78, 76, 0.10)' : 'rgba(123, 26, 31, 0.09)')
+                : 'rgba(141, 138, 130, 0.15)',
             } as CSSProperties)
+          : undefined;
+        // J3 — the hit-stop push: transform only, origin at the unit's centroid (a cell
+        // at column/row ninths of the cell area gets origin (cx·9 − col, cy·9 − row) in %)
+        const pi = pushCells ? pushCells.indexOf(c) : -1;
+        const pushCls = pi >= 0 && hitStop ? (hitStop.nonce % 2 === 0 ? styles.pushCellB : styles.pushCellA) : '';
+        const pushStyle: CSSProperties | undefined = pi >= 0 && pushCentroid
+          ? { transformOrigin: `${(pushCentroid.cx * 9 - col) * 100}% ${(pushCentroid.cy * 9 - r) * 100}%` }
           : undefined;
         return (
           <button
@@ -134,6 +167,7 @@ export default function Board({ duel, flood, shake }: { duel: LocalDuel | import
               wrongNow ? styles.wrong : '',
               owned === 0 ? styles.ownedYou : owned === 1 ? styles.ownedFoe : '',
               floodCls,
+              pushCls,
               (r % 3 === 2 && r < 8) ? styles.thickBottom : '',
               (col % 3 === 2 && col < 8) ? styles.thickRight : '',
               BOX_OF(c) % 2 === 0 ? styles.boxEven : '',
@@ -143,8 +177,9 @@ export default function Board({ duel, flood, shake }: { duel: LocalDuel | import
               gridColumn: col + 1,
               ...(wrongNow ? { backgroundImage: `url(/assets/overlays/strike-${wrongVariant}.svg)` } : {}),
               ...floodStyle,
+              ...(pushStyle ?? {}),
             }}
-            onClick={() => { duel.select(c); }}
+            onClick={() => { if (!frozen) duel.select(c); }} // J3 — the freeze swallows taps for ~100 ms; the engine never waits
             data-cell={c}
           >
             {v !== 0 && !smudged && <span className={`digits ${styles.digit} ${isGiven ? styles.givenDigit : ''}`}>{v}</span>}

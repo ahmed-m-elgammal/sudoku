@@ -16,7 +16,11 @@ import { BOSS_SCRIPTS, type BossScript } from '@shared/phaseScript';
 import type { DuelReplay } from '@shared/replay';
 import { FOLIOS } from '@shared/orders';
 import type { DuelEvent, RuleMods } from '@shared/engine';
-import { floodFromEvent, tierForEvent, Cue, SHAKE_MS, FLOOD_CLEAR_MS, type Flood, type Shake, type ShakeTier } from '@/game/fx';
+import {
+  floodFromEvent, tierForEvent, hitStopFromEvent, heatFromState, advanceRuns, Cue,
+  SHAKE_MS, FLOOD_CLEAR_MS, HIT_STOP_MS, SLOW_INK_MS,
+  type Flood, type Shake, type ShakeTier, type HitStop, type Heat,
+} from '@/game/fx';
 
 export interface DuelSessionSpec {
   mode: LocalDuelOpts['mode'];
@@ -49,6 +53,17 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
   const fxNonce = useRef(1);
   if (!floodCue.current) floodCue.current = new Cue<Flood>(() => FLOOD_CLEAR_MS, setFlood);
   if (!shakeCue.current) shakeCue.current = new Cue<Shake>((s) => SHAKE_MS[s.tier], setShake);
+  // J3 — hit-stop (seal-crossing claims) + the verdict slow-ink beat; J4 — heat.
+  const [hitStop, setHitStop] = useState<HitStop | null>(null);
+  const [slowInk, setSlowInk] = useState(false);
+  const [heat, setHeat] = useState<Heat | null>(null);
+  const hitStopCue = useRef<Cue<HitStop> | null>(null);
+  const slowInkCue = useRef<Cue<true> | null>(null);
+  const heatRef = useRef<Heat | null>(null);
+  const runsRef = useRef<[number, number]>([0, 0]);
+  const lastClaimerRef = useRef(-1);
+  if (!hitStopCue.current) hitStopCue.current = new Cue<HitStop>(() => HIT_STOP_MS, setHitStop);
+  if (!slowInkCue.current) slowInkCue.current = new Cue<true>(() => SLOW_INK_MS, (v) => setSlowInk(v !== null));
 
   const fireShake = useCallback((tier: ShakeTier) => {
     shakeCue.current?.set({ tier, nonce: fxNonce.current++ });
@@ -60,9 +75,10 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
       const sd = new ServerDuel(serverDuel);
       ref.current = sd;
       lastSeqRef.current = -1; // a new duel's events restart at seq 0 (sound+fx parity bug: stale seqs swallowed a rematch's first claims)
+      runsRef.current = [0, 0]; lastClaimerRef.current = -1; heatRef.current = null; setHeat(null); // J4 — heat restarts with the duel
       setTick((t) => t + 1);
       sd.start();
-      return () => { sd.destroy(); ref.current = null; floodCue.current?.dispose(); shakeCue.current?.dispose(); setFlood(null); setShake(null); };
+      return () => { sd.destroy(); ref.current = null; floodCue.current?.dispose(); shakeCue.current?.dispose(); hitStopCue.current?.dispose(); slowInkCue.current?.dispose(); setFlood(null); setShake(null); setHitStop(null); setSlowInk(false); };
     }
     if (!spec) return;
     const save = useSave.getState().save;
@@ -70,11 +86,12 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
     const duel = new LocalDuel({ ...spec, foeProfile: profile, onPhase: () => fireShake(3) }); // J2 — boss phase ENTRY shakes T3
     ref.current = duel;
     lastSeqRef.current = -1; // same parity law for solo duels
+    runsRef.current = [0, 0]; lastClaimerRef.current = -1; heatRef.current = null; setHeat(null); // J4 — heat restarts with the duel
     setTick((t) => t + 1);
     duel.start();
     // test hook for browser verification (agent-browser eval); harmless in production
     (window as unknown as { __assizeDuel?: unknown }).__assizeDuel = duel;
-    return () => { duel.destroy(); ref.current = null; floodCue.current?.dispose(); shakeCue.current?.dispose(); setFlood(null); setShake(null); };
+    return () => { duel.destroy(); ref.current = null; floodCue.current?.dispose(); shakeCue.current?.dispose(); hitStopCue.current?.dispose(); slowInkCue.current?.dispose(); setFlood(null); setShake(null); setHitStop(null); setSlowInk(false); };
   }, [spec, serverDuel, fireShake]);
 
   const duel = ref.current;
@@ -93,9 +110,19 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
       lastSeqRef.current = e.seq;
       hookEvent(e);
     }
+    // J4 — heat re-derives from PUBLIC state on every push (Seals only move via events);
+    // compare-and-set so clock ticks that add no events never re-render the room.
+    const st = duel.state;
+    const next = heatFromState([st.players[0]?.seals, st.players[1]?.seals], runsRef.current);
+    const prev = heatRef.current;
+    if (!prev || prev.heat !== next.heat || prev.cold !== next.cold) {
+      heatRef.current = next;
+      setHeat(next);
+      synth.setHeat(next.heat); // the gallery murmur follows the same law
+    }
   }, [version, duel, fireShake]);
 
-  return { duel, version, flood, shake };
+  return { duel, version, flood, shake, hitStop, slowInk, heat };
 
   function hookEvent(e: DuelEvent) {
     switch (e.kind) {
@@ -110,12 +137,20 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
       case 'statusEnded': synth.statusEnded(); break;
       case 'negated': case 'mirrored': synth.padlock(); break;
       case 'orderSwap': synth.orderSwap(); navigator.vibrate?.([30, 50, 90]); break; // T4 (server duels never adapt; kept for parity)
-      case 'end': break; // handled by finish()
+      case 'end': slowInkCue.current?.set(true); break; // J3 — 300 ms of slow ink before the verdict (DuelScreen delays finish())
     }
     // J1/J2 — the fx law reads the SAME deduped stream (fx.ts is fail-closed;
     // deferred claims and hostile events drive nothing)
     const f = floodFromEvent(e);
-    if (f) floodCue.current?.set(f);
+    if (f) {
+      floodCue.current?.set(f);
+      // J4 — the run law rides the same validated claims (a hostile event feeds neither)
+      const adv = advanceRuns(runsRef.current, lastClaimerRef.current, f.player);
+      runsRef.current = adv.runs;
+      lastClaimerRef.current = adv.lastClaimer;
+    }
+    const hs = hitStopFromEvent(e); // J3 — the world holds while the Seal breaks
+    if (hs) hitStopCue.current?.set({ ...hs, nonce: fxNonce.current++ });
     const tier = tierForEvent(e);
     if (tier) fireShake(tier);
   }

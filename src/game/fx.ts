@@ -82,6 +82,72 @@ export function tierForEvent(e: DuelEvent | null | undefined): 0 | ShakeTier {
   return 0;
 }
 
+// ------------------------------------------------------------------ J3 — hit-stop + verdict slow-mo
+export const HIT_STOP_MS = 100; // input freeze + world dim + unit push, per seal-crossing claim
+export const SLOW_INK_MS = 300; // the duel-ending beat before the verdict banner
+export const FLOOD_SLOW = 2.5;  // the final claim's cascade stretch while the verdict waits
+
+export interface HitStop { unit: string; player: 0 | 1; nonce: number }
+
+// A seal-crossing claim: every RESOLVED claim breaks at least one Seal (damage 1,
+// Clean 2) — that is the hit. The acceptance law is the flood's law PLUS damage > 0,
+// so a hit-stop can never fire without its flood (the push rides the flood's cells)
+// and the two can never diverge. Deferred claims hit nothing (their wax breaks
+// later, and the resolution event stops the world THEN); a claim without a real
+// positive damage stops nothing; hostile events never throw.
+export function hitStopFromEvent(e: DuelEvent | null | undefined): { unit: string; player: 0 | 1 } | null {
+  if (!e || typeof e !== 'object') return null;
+  if (e.kind !== 'claim' || e.deferred) return null;
+  if (!isUnitId(e.unit)) return null;
+  if (e.player !== 0 && e.player !== 1) return null;
+  if (!Number.isInteger(e.seq)) return null;
+  const d = (e as { damage?: unknown }).damage;
+  if (typeof d !== 'number' || !Number.isFinite(d) || d <= 0) return null;
+  return { unit: e.unit, player: e.player };
+}
+
+// ------------------------------------------------------------------ J4 — heat escalation
+export const HEAT_GAP_STEP = 0.15;   // heat per Seal of |gap| between the duelists
+export const HEAT_GAP_CAP = 5;       // Seals of gap that can contribute
+export const HEAT_RUN_STEP = 0.0625; // heat per claim of the longest current run
+export const HEAT_RUN_CAP = 4;       // claims of run that can contribute
+export const COLD_GAP = 3;           // behind by this many Seals, the viewer's ink desaturates
+
+export interface Heat { heat: number; cold: boolean }
+
+const sealOf = (v: unknown): number | null =>
+  typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.min(v, 99) : null;
+
+const runOf = (v: unknown): number =>
+  typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+
+// PUBLIC state only: the two Seals counts and the two current claim runs. No clocks,
+// no randomness, no perspective except the seat-0 viewer — the same public inputs
+// always produce the same heat, so replay/PvP parity is by construction. Fail-closed:
+// hostile seals yield heat 0 and never throw.
+export function heatFromState(seals: [unknown, unknown], runs: [unknown, unknown]): Heat {
+  const mine = sealOf(seals[0]);
+  const foe = sealOf(seals[1]);
+  if (mine === null || foe === null) return { heat: 0, cold: false };
+  const gap = Math.min(Math.abs(mine - foe), HEAT_GAP_CAP);
+  const run = Math.min(Math.max(runOf(runs[0]), runOf(runs[1])), HEAT_RUN_CAP);
+  return {
+    heat: Math.min(1, gap * HEAT_GAP_STEP + run * HEAT_RUN_STEP),
+    cold: foe - mine >= COLD_GAP, // the viewer is seat 0: behind by ≥ 3 Seals goes cold
+  };
+}
+
+// The claim-run law: a seat's run extends while IT keeps claiming; ANY other seat's
+// claim resets it to zero and starts their own at 1. Only flood-validated claims
+// reach here, but a hostile prev never poisons the next run.
+export function advanceRuns(
+  prev: [number, number], lastClaimer: number, player: 0 | 1,
+): { runs: [number, number]; lastClaimer: number } {
+  const cur = runOf(prev[player]);
+  const next = player === lastClaimer ? cur + 1 : 1;
+  return { runs: player === 0 ? [next, 0] : [0, next], lastClaimer: player };
+}
+
 // ------------------------------------------------------------------ self-cleaning cues
 // One generic timed cue: set() restarts the expiry window (a later, bigger shake
 // always wins), the timer is the ONLY cleaner, dispose() cancels everything.

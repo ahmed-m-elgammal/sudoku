@@ -11,6 +11,9 @@ class Synth {
   private fxBus!: GainNode;
   private droneNodes: { osc: OscillatorNode[]; filter: BiquadFilterNode; gain: GainNode; lfo: OscillatorNode } | null = null;
   private tensionGain!: GainNode;
+  private murmurGain: GainNode | null = null; // J4 — the gallery murmur bed
+  private murmurStarted = false;
+  private pendingHeat = 0;
   private nextBowAt = 0;
   musicVol = 0.3;
   fxVol = 0.7;
@@ -112,6 +115,55 @@ class Synth {
     lfo.start();
     this.droneNodes = { osc: oscs, filter, gain, lfo };
     this.nextBowAt = ctx.currentTime + 2;
+    this.startMurmur();
+  }
+
+  // J4 — the gallery murmur: a looping pinkish-noise bed whose gain follows the
+  // duel's --heat law (synth.setHeat, same public-state derivation as the CSS var).
+  // It rides musicBus, so mute and musicVol are inherited. A slow LFO breathes on
+  // a series wobble gain — the BED moves, never the target, so heat 0 is silent.
+  private startMurmur() {
+    if (this.murmurStarted || !this.ctx) return;
+    this.murmurStarted = true;
+    const ctx = this.ctx;
+    const len = Math.floor(ctx.sampleRate * 2);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < len; i++) {
+      last = last * 0.97 + (Math.random() * 2 - 1) * 0.03; // leaky-integrated white → pinkish
+      data[i] = last * 3.2;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 480; lp.Q.value = 0.4;
+    const wobble = ctx.createGain();
+    wobble.gain.value = 1;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.13;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 0.22;
+    lfo.connect(lfoGain);
+    lfoGain.connect(wobble.gain);
+    this.murmurGain = ctx.createGain();
+    this.murmurGain.gain.value = 0;
+    src.connect(lp);
+    lp.connect(wobble);
+    wobble.connect(this.murmurGain);
+    this.murmurGain.connect(this.musicBus);
+    src.start();
+    lfo.start();
+    this.setHeat(this.pendingHeat); // a heat set before unlock applies now
+  }
+
+  // J4 — heat 0..1 from fx.ts's public-state law. Clamped, buffered pre-unlock,
+  // smoothed ~0.9 s so claims swell the gallery rather than jump it.
+  setHeat(h: number) {
+    const v = Number.isFinite(h) ? Math.min(1, Math.max(0, h)) : 0;
+    if (!this.ctx || !this.murmurGain) { this.pendingHeat = v; return; }
+    this.murmurGain.gain.setTargetAtTime(v * 0.07, this.ctx.currentTime, 0.9);
   }
 
   // call each frame-ish: schedules sparse bowed tones + tension

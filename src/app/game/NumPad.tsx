@@ -1,10 +1,13 @@
 // NumPad.tsx — 5x2 numerals + Erase, remaining counts, Hush overlay (S05).
+// J3 — the pad is one of the three gated placement surfaces: during the ~100 ms
+// hit-stop (and the 300 ms verdict beat) taps are swallowed, never queued.
+// J4 — a warm wash rides the pad, opacity driven by the duel root's --heat var.
 'use client';
 import type { AnyDuel } from './useDuelSession';
 import styles from './Duel.module.css';
 import type { Digit } from '@shared/config';
 
-export default function NumPad({ duel }: { duel: AnyDuel }) {
+export default function NumPad({ duel, frozen }: { duel: AnyDuel; frozen: boolean }) {
   const st = duel.state;
   const me = st.players[0];
   const flags = duel.flags();
@@ -25,6 +28,7 @@ export default function NumPad({ duel }: { duel: AnyDuel }) {
             disabled={complete}
             aria-label={`${d}, ${complete ? 'complete' : `${remaining} remaining`}${pencil ? ', pencil mode' : ''}`}
             onClick={() => {
+              if (frozen) return; // J3 — the freeze swallows taps; the engine never waits
               if (duel.selected === null) return;
               if (pencil && !flags.miasma) duel.toggleNote(duel.selected, d);
               else duel.place(duel.selected, d);
@@ -41,6 +45,7 @@ export default function NumPad({ duel }: { duel: AnyDuel }) {
         className={styles.numTile}
         aria-label="Erase notes"
         onClick={() => {
+          if (frozen) return; // J3
           if (duel.selected === null) return;
           duel.setNotes(duel.selected, []);
           duel.select(duel.selected);
@@ -49,6 +54,8 @@ export default function NumPad({ duel }: { duel: AnyDuel }) {
         <span style={{ backgroundImage: 'url(/assets/ui/num-tile-normal.svg)' }} className={styles.numTileBg} aria-hidden />
         <b className={styles.eraseGlyph}>⌫</b>
       </button>
+      {/* J4 — the pad warms with the room; the var is set on the duel root */}
+      <div className={styles.numPadWarm} aria-hidden />
       {flags.hushed && (
         <div className={styles.hushOverlay} style={{ backgroundImage: 'url(/assets/overlays/hush.svg)' }} aria-label="Hushed: the pad is dead">
           <span>Hushed</span>
