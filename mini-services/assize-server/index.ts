@@ -6,12 +6,12 @@ import { Server as IoServer, type Socket } from 'socket.io';
 import { createServer } from 'node:http';
 import {
   createDuel, place, useAbility, tick, resign, serializeDuel,
-  type DuelState, type AbilityId, type Digit, type PlayerId,
+  type DuelState,
 } from '../../shared/engine';
 import { generatePuzzle, generateDaily, dailySeed } from '../../shared/sudoku';
 import { profileForStanding, shadeAct } from '../../shared/shade';
 import { Rng, todayUtcKey } from '../../shared/rng';
-import type { OrderId, Tier } from '../../shared/config';
+import type { AbilityId, Digit, OrderId, PlayerId, Tier } from '../../shared/config';
 import { q, hash, adjustRating, todayKey } from './db';
 
 const PORT = 3030; // fixed port per sandbox gateway contract (XTransformPort)
@@ -41,6 +41,7 @@ interface Room {
   lastPlaceAt: [number, number];
   intervals: number[];
   disconnectAt: [number | null, number | null];
+  lastGraceEmitAt: [number, number];  // reconnect_grace is re-emitted at 1s cadence
   shadeSeat?: PlayerId;
   tier: Tier;
   startedAt: number;
@@ -49,6 +50,21 @@ interface Room {
 
 const rooms = new Map<string, Room>();
 const queue: Array<{ socketId: string; accountId: string; name: string; standing: number; order: OrderId; joinedAt: number; friendCode?: string }> = [];
+
+const GRACE_S = GRACE_MS / 1000;
+
+// S08 (TODO T2): tell the remaining seat that its peer dropped, and re-emit the
+// remaining grace every second while the room is live.
+function emitGrace(r: Room, goneSeat: PlayerId, now: number) {
+  const left = Math.max(0, Math.ceil((GRACE_MS - (now - (r.disconnectAt[goneSeat] ?? now))) / 1000));
+  for (const [sid, seat] of r.seats) {
+    if (seat === goneSeat) continue;
+    if (now - r.lastGraceEmitAt[goneSeat] >= 1000) {
+      io.to(sid).emit('reconnect_grace', { s: left, seat: goneSeat });
+    }
+  }
+  if (now - r.lastGraceEmitAt[goneSeat] >= 1000) r.lastGraceEmitAt[goneSeat] = now;
+}
 
 const publicState = (r: Room, seat: PlayerId) => {
   // spec: solution never sent to the client in PvP; boards are per-seat
@@ -82,7 +98,7 @@ const broadcast = (r: Room, event: string, payload: unknown) => {
 
 function finishRoom(r: Room, winner: PlayerId | 'draw', reason: string) {
   if ((r.state as { phase: string }).phase === 'ended') return;
-  resign(r.state, winner === 0 ? 1 : winner === 1 ? 0 : winner as PlayerId);
+  resign(r.state, winner === 0 ? 1 : winner === 1 ? 0 : (winner as unknown as PlayerId));
   if (winner === 'draw') {
     // sudden judgment draw already handled by tick; force draw end
     (r.state as { phase: string; winner: unknown; winReason: string }).phase = 'ended';
@@ -111,6 +127,7 @@ function finishRoom(r: Room, winner: PlayerId | 'draw', reason: string) {
 
 // ------------------------------------------------------------------ tick loop
 setInterval(() => {
+  try {
   for (const r of rooms.values()) {
     if ((r.state as { phase: string }).phase !== 'live') continue;
     tick(r.state, 250);
@@ -123,11 +140,12 @@ setInterval(() => {
       if (act.kind === 'place') place(st, me, act.cell, act.digit);
       else if (act.kind === 'ability') useAbility(st, me, act.id, { cell: act.cell, unit: act.unit });
     }
-    // disconnect grace
+    // disconnect grace (S08): forfeit at 20s, ticking countdown to the seat that stayed
     const now = Date.now();
     for (const seat of [0, 1] as PlayerId[]) {
       const dAt = r.disconnectAt[seat];
       if (dAt && now - dAt > GRACE_MS) { finishRoom(r, seat === 0 ? 1 : 0, 'forfeit'); break; }
+      if (dAt) emitGrace(r, seat, now);
     }
     if ((r.state as { phase: string }).phase === 'ended') {
       finishRoom(r, (r.state as { winner: unknown }).winner as PlayerId, (r.state as { winReason: string }).winReason ?? 'suddenJudgment');
@@ -136,13 +154,16 @@ setInterval(() => {
     broadcast(r, 'state_delta', { seq: r.state.eventSeq, state: null });
     for (const [sid, seat] of r.seats) io.to(sid).emit('you', publicState(r, seat));
   }
+  } catch (e) { console.error('[assize-server] tick error', e); }
 }, 250);
 
 // ------------------------------------------------------------------ matchmaking
 setInterval(() => {
+  try {
   const now = Date.now();
   for (let i = queue.length - 1; i >= 0; i--) {
     const p = queue[i];
+    if (!p) continue; // stale index after a double splice below
     const waited = now - p.joinedAt;
     // widen window every 2s (spec §7)
     const window = 50 + Math.floor(waited / 2000) * 75;
@@ -150,11 +171,20 @@ setInterval(() => {
     for (let j = 0; j < queue.length; j++) {
       if (j === i) continue;
       const o = queue[j];
+      if (!o) continue;
       if (p.friendCode && o.friendCode && p.friendCode === o.friendCode && o.socketId !== p.socketId) { opponentIdx = j; break; }
       if (!p.friendCode && !o.friendCode && Math.abs(o.standing - p.standing) <= window) { opponentIdx = j; break; }
     }
     if (opponentIdx >= 0) {
       const o = queue[opponentIdx];
+      // never pair a socket that has already gone away (ghost entries)
+      const alive = (e: typeof queue[number]) => io.sockets.sockets.has(e.socketId);
+      if (!alive(p) || !alive(o)) {
+        if (!alive(p)) queue.splice(i, 1);
+        if (!alive(o)) queue.splice(Math.max(0, queue.indexOf(o)), 1);
+        continue;
+      }
+      // remove both entries — higher index first so the lower one stays valid
       queue.splice(Math.max(i, opponentIdx), 1);
       queue.splice(Math.min(i, opponentIdx), 1);
       startHumanDuel(p, o);
@@ -165,6 +195,7 @@ setInterval(() => {
       startShadeDuel(p);
     }
   }
+  } catch (e) { console.error('[assize-server] matchmaking error', e); }
 }, 500);
 
 function startHumanDuel(a: typeof queue[number], b: typeof queue[number]) {
@@ -180,7 +211,7 @@ function startHumanDuel(a: typeof queue[number], b: typeof queue[number]) {
   const room: Room = {
     id, mode: a.friendCode ? 'friend' : 'ranked', state, solution: Uint8Array.from(puz.solution),
     seats: new Map(), accounts: [a.accountId, b.accountId], names: [a.name, b.name],
-    lastPlaceAt: [0, 0], intervals: [], disconnectAt: [null, null], tier, startedAt: Date.now(), lastBroadcastSeq: 0,
+    lastPlaceAt: [0, 0], intervals: [], disconnectAt: [null, null], lastGraceEmitAt: [0, 0], tier, startedAt: Date.now(), lastBroadcastSeq: 0,
   };
   rooms.set(id, room);
   const sa = io.sockets.sockets.get(a.socketId);
@@ -210,7 +241,7 @@ function startShadeDuel(p: typeof queue[number]) {
   const room: Room = {
     id, mode: 'ranked', state, solution: Uint8Array.from(puz.solution),
     seats: new Map(), accounts: [p.accountId, null], names: [p.name, `Shade of ${p.name.split(' ').slice(-1)[0]}`],
-    lastPlaceAt: [0, 0], intervals: [], disconnectAt: [null, null], shadeSeat: 1, tier, startedAt: Date.now(), lastBroadcastSeq: 0,
+    lastPlaceAt: [0, 0], intervals: [], disconnectAt: [null, null], lastGraceEmitAt: [0, 0], shadeSeat: 1, tier, startedAt: Date.now(), lastBroadcastSeq: 0,
   };
   rooms.set(id, room);
   const s = io.sockets.sockets.get(p.socketId);
@@ -240,10 +271,22 @@ io.on('connection', (socket: Socket) => {
     const r = rooms.get(p.duelId);
     if (!acc || !r) { socket.emit('error', { code: 'duel' }); return; }
     const seat: PlayerId = r.accounts[0] === acc.id ? 0 : r.accounts[1] === acc.id ? 1 : 0;
+    const resumed = r.disconnectAt[seat] !== null;
     r.seats.set(socket.id, seat);
     r.disconnectAt[seat] = null;
     socket.join(p.duelId);
     socket.emit('matched', { duelId: r.id, seat, seed: r.state.seed, givens: Array.from(r.state.givens), tier: r.tier, foe: { name: r.names[seat === 0 ? 1 : 0], order: 'scholar', shade: r.shadeSeat === (seat === 0 ? 1 : 0), standing: 1000 }, stakes: { tier: r.tier, range: [0, 0] } });
+    // S08 resume: instant snapshot + tell the seat that stayed that its peer is back
+    socket.emit('reconnect_ok', { you: publicState(r, seat) });
+    if (resumed) {
+      for (const [sid, s] of r.seats) if (s !== seat) io.to(sid).emit('peer_reconnected', { seat });
+    }
+  });
+
+  // the client left matchmaking (Shade fallback / withdraw): drop its queue entry
+  socket.on('leave_queue', () => {
+    const qi = queue.findIndex((e) => e.socketId === socket.id);
+    if (qi >= 0) queue.splice(qi, 1);
   });
 
   socket.on('place', (p: { duelId: string; cell: number; digit: number }) => {
@@ -290,16 +333,28 @@ io.on('connection', (socket: Socket) => {
     const r = rooms.get(p.duelId);
     if (!acc || !r) return;
     const seat: PlayerId = r.accounts[0] === acc.id ? 0 : 1;
+    const resumed = r.disconnectAt[seat] !== null;
     r.seats.set(socket.id, seat);
     r.disconnectAt[seat] = null;
     socket.join(p.duelId);
     socket.emit('reconnect_ok', { you: publicState(r, seat) });
+    if (resumed) {
+      for (const [sid, s] of r.seats) if (s !== seat) io.to(sid).emit('peer_reconnected', { seat });
+    }
   });
 
   socket.on('disconnect', () => {
     for (const r of rooms.values()) {
       const seat = r.seats.get(socket.id);
-      if (seat !== undefined) r.disconnectAt[seat] = Date.now();
+      if (seat === undefined) continue;
+      r.seats.delete(socket.id); // stale socket id: reconnects register a fresh one
+      if ((r.state as { phase: string }).phase !== 'live') continue;
+      r.disconnectAt[seat] = Date.now();
+      r.lastGraceEmitAt[seat] = 0;
+      // S08: the seat that stayed learns immediately, then gets 1s grace ticks
+      for (const [sid, s] of r.seats) {
+        if (s !== seat) io.to(sid).emit('peer_disconnected', { seat, graceS: GRACE_S, name: r.names[seat] });
+      }
     }
     const qi = queue.findIndex((e) => e.socketId === socket.id);
     if (qi >= 0) queue.splice(qi, 1);

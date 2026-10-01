@@ -47,6 +47,16 @@ export default function Matchmaking() {
             },
           });
         });
+        // register/sync the guest identity with the court first — join_queue
+        // authenticates against the server account, so an unregistered guest
+        // would be silently dropped from the queue (found via T2 e2e testing).
+        try {
+          const res = await net.auth({ id: id.id, secret: id.secret, name: save.name, recoveryHash: id.recoveryHash });
+          const s = useSave.getState();
+          if (res?.ok && typeof res.standing === 'number' && s.save && s.save.stats.duels === 0 && s.save.standing !== res.standing) {
+            s.update((cur) => ({ ...cur, standing: res.standing }));
+          }
+        } catch { /* offline: the Shade fallback still fires */ }
         net.send('join_queue', { accountId: id.id, secret: id.secret, name: save.name, order: save.order });
         (net as unknown as { _offMatched?: () => void })._offMatched = off;
       }
@@ -54,7 +64,9 @@ export default function Matchmaking() {
 
     const tickWait = (elapsed: number) => {
       if (cancelRef.current || joined.current) return;
-      if (elapsed >= CONFIG.matchmaking.shadeFallbackMs) {
+      // the server runs its own Shade fallback at 4s; wait just past it so the
+      // authoritative 'matched' (human or Shade) wins the race against ours.
+      if (elapsed >= CONFIG.matchmaking.shadeFallbackMs + 500) {
         if (joined.current) return;
         joined.current = true;
         // no human answered: local Shade duel, honestly labelled (R7)
@@ -75,6 +87,8 @@ export default function Matchmaking() {
       clearTimeout(timer);
       const off = (net as unknown as { _offMatched?: () => void })._offMatched;
       off?.();
+      // never leave a ghost behind in the authoritative queue
+      net.send('leave_queue', {});
     };
   }, [ui, save]);
 

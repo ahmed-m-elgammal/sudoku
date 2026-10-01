@@ -25,6 +25,7 @@ export default function FriendScreen() {
       const ok = await net.connect();
       if (ok && save) {
         localStorage.setItem('assize-secret', id.secret);
+        try { await net.auth({ id: id.id, secret: id.secret, name: save.name, recoveryHash: id.recoveryHash }); } catch { /* offline fallback below */ }
         net.on('matched', (p) => {
           const m = p as { duelId: string; seat: 0 | 1; givens: number[]; foe: { name: string; order: 'scholar'; shade: boolean; standing: number } };
           useUi.getState().go('versus', {
@@ -87,6 +88,7 @@ export default function FriendScreen() {
               const ok = await net.connect();
               if (!ok || !save) { synth.error(); setError(true); return; }
               localStorage.setItem('assize-secret', id.secret);
+              try { await net.auth({ id: id.id, secret: id.secret, name: save.name, recoveryHash: id.recoveryHash }); } catch { /* the queue auth would fail offline anyway */ }
               const off = net.on('matched', (p) => {
                 off();
                 const m = p as { duelId: string; seat: 0 | 1; givens: number[]; foe: { name: string; order: 'scholar'; shade: boolean; standing: number } };

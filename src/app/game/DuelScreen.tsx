@@ -1,10 +1,13 @@
 // DuelScreen — S05 (mobile) / S05b (desktop). Tutorial margin notes, pause/concede modals,
-// keyboard play, end → Result flow (spec §4).
+// S08 disconnect countdown, keyboard play, end → Result flow (spec §4).
+// Layout zones (.duelMain > .duelLeft / .boardArea / .controls) collapse to display:contents
+// in portrait and become side columns on landscape phones and desktop — one DOM tree that
+// fits every device (see Duel.module.css).
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
-import { useDuelSession, specFromUi, type DuelSessionSpec } from './useDuelSession';
+import { useDuelSession, specFromUi, type DuelSessionSpec, type AnyDuel } from './useDuelSession';
 import Board from './Board';
 import NumPad from './NumPad';
 import AbilityBar from './AbilityBar';
@@ -14,7 +17,7 @@ import styles from './Duel.module.css';
 import i18n from '@/i18n/en.json';
 import { synth } from '@/audio/synth';
 import { net } from '@/net/client';
-import type { Digit } from '@shared/config';
+import type { Digit, OrderId } from '@shared/config';
 import { Rng } from '@shared/rng';
 
 export default function DuelScreen() {
@@ -25,6 +28,7 @@ export default function DuelScreen() {
   const [confirmConcede, setConfirmConcede] = useState(false);
   const [muted, setMuted] = useState(synth.muted);
   const endedRef = useRef(false);
+  const augurRef = useRef(false);
   const save = useSave((s) => s.save);
 
   useEffect(() => { setSpec(specFromUi()); }, []);
@@ -61,6 +65,9 @@ export default function DuelScreen() {
       if (e.kind === 'claim') sealTimeline.push([e.atMs, e.player === 0 ? (foe.seals ?? 0) : (me.seals ?? 0), e.player as number]);
     }
     const s = useSave.getState();
+    const recentEntry: { t: number; mode: string; result: 'w' | 'd' | 'l'; foe: string; shade: boolean; order: OrderId } = {
+      t: Date.now(), mode: ui.duelMode, result: winner === 0 ? 'w' : winner === 'draw' ? 'd' : 'l', foe: foe.name, shade: shadeDuel, order: me.order,
+    };
     s.update((cur) => ({
       ...cur,
       economy: { ...cur.economy, ink: cur.economy.ink + ink },
@@ -72,10 +79,7 @@ export default function DuelScreen() {
         losses: cur.stats.losses + (winner === 1 ? 1 : 0),
         draws: cur.stats.draws + (winner === 'draw' ? 1 : 0),
         claims: cur.stats.claims + me.claimed.length,
-        recent: [
-          { t: Date.now(), mode: ui.duelMode, result: winner === 0 ? 'w' : winner === 'draw' ? 'd' : 'l', foe: foe.name, shade: shadeDuel, order: me.order },
-          ...cur.stats.recent,
-        ].slice(0, 20),
+        recent: [recentEntry, ...cur.stats.recent].slice(0, 20),
       },
     }));
     // tutorial completion
@@ -86,18 +90,19 @@ export default function DuelScreen() {
     // TODO(T6): ending choice plate (Balance / Burn) after Folio IX.
     // TODO(T15): auto-route to interlude plates after (folio 2, duel 2) and (folio 5, duel 2).
     // campaign progression
-    if (ui.duelMode === 'campaign' && winner === 0 && ui.campaignDuel) {
-      const key = `${ui.campaignDuel.folio}-${ui.campaignDuel.duel}`;
+    const cd = ui.campaignDuel;
+    if (ui.duelMode === 'campaign' && winner === 0 && cd) {
+      const key = `${cd.folio}-${cd.duel}`;
       const stars = winner === 0 ? (me.mistakes === 0 ? 3 : 2) : 0;
       s.update((cur) => {
         const campaign = { ...cur.campaign, stars: { ...cur.campaign.stars, [key]: Math.max(cur.campaign.stars[key] ?? 0, stars) } };
-        if (ui.campaignDuel.duel < 2) campaign.duelIdx = ui.campaignDuel.duel + 1;
-        else if (ui.campaignDuel.folio < 8) { campaign.folioIdx = ui.campaignDuel.folio + 1; campaign.duelIdx = 0; }
+        if (cd.duel < 2) campaign.duelIdx = cd.duel + 1;
+        else if (cd.folio < 8) { campaign.folioIdx = cd.folio + 1; campaign.duelIdx = 0; }
         else campaign.ended = true;
         // unlocks (spec §2): Apothecary after Folio II, Warden after Folio IV
         const unlocked = [...cur.unlockedOrders];
-        if (ui.campaignDuel.folio === 1 && ui.campaignDuel.duel === 2 && !unlocked.includes('apothecary')) unlocked.push('apothecary');
-        if (ui.campaignDuel.folio === 3 && ui.campaignDuel.duel === 2 && !unlocked.includes('warden')) unlocked.push('warden');
+        if (cd.folio === 1 && cd.duel === 2 && !unlocked.includes('apothecary')) unlocked.push('apothecary');
+        if (cd.folio === 3 && cd.duel === 2 && !unlocked.includes('warden')) unlocked.push('warden');
         return { ...cur, campaign, unlockedOrders: unlocked };
       });
     }
@@ -146,6 +151,16 @@ export default function DuelScreen() {
     duel.opts.onEnd = (r) => finish(r);
   }, [duel, finish]);
 
+  const tutorialNote = duel && ui.duelMode === 'tutorial' ? duel.tutorialNote() : null;
+
+  // the tutorial grants one free Augur the moment its note asks for it
+  useEffect(() => {
+    if (tutorialNote === 'augur' && duel && !augurRef.current) {
+      augurRef.current = true;
+      duel.grantFreeAugur();
+    }
+  }, [tutorialNote, duel]);
+
   // keyboard (S05b): 1-9 place, arrows move, Backspace erase, N pencil, Q/W/E abilities, Esc pause
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -164,6 +179,7 @@ export default function DuelScreen() {
         duel.select(map[e.key]);
       } else if (e.key.toLowerCase() === 'n') {
         duel.pencil = !duel.pencil;
+        duel.bumpPublic();
       } else if (['q', 'w', 'e'].includes(e.key.toLowerCase())) {
         const idx = ['q', 'w', 'e'].indexOf(e.key.toLowerCase());
         const ids = Object.keys(duel.state.players[0].abilities) as Parameters<typeof duel.ability>[0][];
@@ -178,36 +194,43 @@ export default function DuelScreen() {
     return () => window.removeEventListener('keydown', onKey);
   }, [duel, ui.duelMode]);
 
-  const tutorialNote = duel && ui.duelMode === 'tutorial' ? duel.tutorialNote() : null;
   const foeName = useMemo(() => spec?.names[1] ?? 'The foe', [spec]);
 
   if (!duel || !spec) return <main className={styles.duelRoot} aria-busy="true"><div className="skeleton-parchment" style={{ margin: '40vh auto 0', width: 200, height: 12 }} /></main>;
 
+  const dc = duel.disconnect;
+
   return (
     <main className={styles.duelRoot}>
       <HudHeader duel={duel} />
-      <MirrorStrip duel={duel} />
-      <Ticker duel={duel} />
-      <div className={styles.duelBody}>
-        <Board duel={duel} />
-        <div className={styles.toolbar}>
-          <button aria-pressed={duel.pencil} onClick={() => { duel.pencil = !duel.pencil; duel.bumpPublic(); synth.uiTap(); }}>
-            {i18n.duel.toolbar.pencil}
-          </button>
-          <button onClick={() => { if (duel.selected !== null) { duel.setNotes(duel.selected, []); } synth.uiTap(); }}>
-            {i18n.duel.toolbar.erase}
-          </button>
-          <button aria-pressed={muted} onClick={() => { synth.setMuted(!muted); setMuted(!muted); }}>
-            {muted ? i18n.duel.toolbar.unmute : i18n.duel.toolbar.mute}
-          </button>
-          {ui.duelMode === 'ranked' || ui.duelMode === 'friend' ? (
-            <button onClick={() => setConfirmConcede(true)}>{i18n.duel.toolbar.concede}</button>
-          ) : (
-            <button onClick={() => setPaused(true)}>{i18n.duel.toolbar.pause}</button>
-          )}
+      <div className={styles.duelMain}>
+        <div className={styles.duelLeft}>
+          <MirrorStrip duel={duel} />
+          <Ticker duel={duel} />
         </div>
-        <NumPad duel={duel} />
-        <AbilityBar duel={duel} />
+        <div className={styles.boardArea}>
+          <Board duel={duel} />
+        </div>
+        <div className={styles.controls}>
+          <div className={styles.toolbar}>
+            <button aria-pressed={duel.pencil} onClick={() => { duel.pencil = !duel.pencil; duel.bumpPublic(); synth.uiTap(); }}>
+              {i18n.duel.toolbar.pencil}
+            </button>
+            <button onClick={() => { if (duel.selected !== null) { duel.setNotes(duel.selected, []); } synth.uiTap(); }}>
+              {i18n.duel.toolbar.erase}
+            </button>
+            <button aria-pressed={muted} onClick={() => { synth.setMuted(!muted); setMuted(!muted); }}>
+              {muted ? i18n.duel.toolbar.unmute : i18n.duel.toolbar.mute}
+            </button>
+            {ui.duelMode === 'ranked' || ui.duelMode === 'friend' ? (
+              <button onClick={() => setConfirmConcede(true)}>{i18n.duel.toolbar.concede}</button>
+            ) : (
+              <button onClick={() => setPaused(true)}>{i18n.duel.toolbar.pause}</button>
+            )}
+          </div>
+          <NumPad duel={duel} />
+          <AbilityBar duel={duel} />
+        </div>
       </div>
 
       {tutorialNote && (
@@ -224,10 +247,38 @@ export default function DuelScreen() {
         </>
       )}
 
+      {/* S08 — the 20s reconnect grace (TODO T2) */}
+      {dc && (
+        <div className={styles.disconnectVeil} role="alertdialog" aria-modal="true" aria-live="assertive" aria-label={i18n.duel.disconnect.title}>
+          <div className={`${styles.disconnectCard} page-turn`}>
+            <span className={styles.disconnectSigil} aria-hidden />
+            <h2>{i18n.duel.disconnect.title}</h2>
+            <p>{i18n.duel.disconnect.peerBody.replace('{who}', dc.who).replace('{s}', String(dc.secondsLeft))}</p>
+            <div className={styles.disconnectRingWrap}>
+              <svg className={styles.disconnectRing} viewBox="0 0 72 72" aria-hidden>
+                <circle className={styles.disconnectTrack} cx="36" cy="36" r="30" />
+                <circle
+                  className={styles.disconnectFill}
+                  cx="36" cy="36" r="30"
+                  strokeDasharray={2 * Math.PI * 30}
+                  strokeDashoffset={2 * Math.PI * 30 * (1 - Math.max(0, dc.secondsLeft) / dc.graceS)}
+                />
+              </svg>
+              <b className={`${styles.disconnectCount} digits`} aria-hidden>{dc.secondsLeft}</b>
+            </div>
+          </div>
+        </div>
+      )}
+      {duel.selfOffline && !dc && (
+        <div className={styles.reconnectBanner} role="status">
+          {i18n.duel.disconnect.youOffline}
+        </div>
+      )}
+
       {paused && (
         <Modal title={i18n.duel.toolbar.pause}>
           <p>{foeName} waits. The Tablet does not.</p>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12 }}>
+          <div className={styles.modalActions}>
             <button className="btn btn-primary" onClick={() => setPaused(false)}>{i18n.duel.toolbar.resume}</button>
             <button className="btn btn-oxblood" onClick={() => { setPaused(false); duel.concede(); }}>{i18n.duel.toolbar.concede}</button>
           </div>
@@ -236,7 +287,7 @@ export default function DuelScreen() {
       {confirmConcede && (
         <Modal title={i18n.duel.concedeConfirm.title}>
           <p>{i18n.duel.concedeConfirm.body}</p>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12 }}>
+          <div className={styles.modalActions}>
             <button className="btn btn-oxblood" onClick={() => { setConfirmConcede(false); duel.concede(); }}>{i18n.duel.concedeConfirm.confirm}</button>
             <button className="btn" onClick={() => setConfirmConcede(false)}>{i18n.duel.concedeConfirm.cancel}</button>
           </div>
@@ -248,8 +299,8 @@ export default function DuelScreen() {
 
 function Modal({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
-      <div className="panel modal-sheet page-turn" style={{ maxWidth: 340, margin: '30vh auto 0', padding: 20 }}>
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="panel modal-sheet page-turn" style={{ width: 'min(92vw, 340px)', padding: 20 }}>
         <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 8 }}>{title}</h2>
         {children}
       </div>

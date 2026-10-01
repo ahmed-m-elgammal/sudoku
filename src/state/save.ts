@@ -16,7 +16,7 @@ export interface SaveStateV2 {
     owned: string[];
     equipped: { board: string; wax: string; frame: string; numerals: string; stamps: string; banner: string };
   };
-  season: { ink: number; claimed: number[]; patron: boolean; endsAt: number };
+  season: { ink: number; claimed: string[]; patron: boolean; endsAt: number };
   daily: { lastDate: string | null; streak: number; best: number; candlesToday: number; candlesDate: string | null; times: Record<string, number> };
   achievements: Record<string, number>;
   stats: {

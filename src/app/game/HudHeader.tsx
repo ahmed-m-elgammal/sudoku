@@ -1,13 +1,13 @@
 // HudHeader.tsx — portraits, Roman medallion clock, wax seal pips, status chips (S05 header).
 'use client';
-import type { LocalDuel } from '@/game/localDuel';
+import type { AnyDuel } from './useDuelSession';
 import styles from './Duel.module.css';
 import { orderMeta } from '@shared/orders';
 import i18n from '@/i18n/en.json';
 
 const ROMAN_MIN = ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
-export default function HudHeader({ duel }: { duel: LocalDuel }) {
+export default function HudHeader({ duel }: { duel: AnyDuel }) {
   const st = duel.state;
   const [me, foe] = st.players;
   const mins = Math.floor(st.clockMs / 60000);
@@ -42,7 +42,7 @@ function SealPips({ n, max, you }: { n: number; max: number; you?: boolean }) {
   );
 }
 
-function StatusChips({ duel, seat }: { duel: LocalDuel; seat: 0 | 1 }) {
+function StatusChips({ duel, seat }: { duel: AnyDuel; seat: 0 | 1 }) {
   const p = duel.state.players[seat];
   if (!p.statuses.length) return null;
   return (

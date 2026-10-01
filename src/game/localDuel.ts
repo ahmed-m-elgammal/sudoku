@@ -3,11 +3,12 @@
 'use client';
 import {
   createDuel, place, useAbility, tick, resign, cellFlags,
-  type AbilityId, type Digit, type DuelState, type DuelEvent, type PlaceResult,
+  type DuelState, type DuelEvent, type PlaceResult,
 } from '@shared/engine';
-import { shadeAct, type ShadeProfile } from '@shared/shade';
+import { shadeAct, profileForStanding, type ShadeProfile } from '@shared/shade';
+import { tutorialAct, newTutorialScript, type TutorialScriptState } from '@shared/tutorial';
 import { Rng } from '@shared/rng';
-import type { OrderId, PlayerId, Tier } from '@shared/config';
+import type { AbilityId, Digit, OrderId, PlayerId, Tier } from '@shared/config';
 import { generatePuzzle } from '@shared/sudoku';
 import { synth } from '@/audio/synth';
 
@@ -44,10 +45,17 @@ export class LocalDuel {
   private lastFrame = 0;
   private shadeTimer: ReturnType<typeof setTimeout> | null = null;
   private rng: Rng;
+  private scriptRng: Rng;
+  private script: TutorialScriptState;
   private listeners = new Set<() => void>();
+  private lastNotifyAt = 0;
   version = 0;
   ended = false;
   paused = false;
+  // S08 parity with ServerDuel: solo duels never disconnect, but the union type
+  // must carry the same surface so DuelScreen renders both identically.
+  disconnect = null;
+  selfOffline = false;
   bumpPublic() { this.bump(); }
   tutorialStep = 0;
   freeAugurGranted = false;
@@ -56,6 +64,8 @@ export class LocalDuel {
     this.opts = opts;
     const puz = generatePuzzle(opts.seed, opts.tier);
     this.rng = new Rng(`${opts.seed}-shade`);
+    this.scriptRng = new Rng(`${opts.seed}-script`);
+    this.script = newTutorialScript();
     this.state = createDuel({
       seed: opts.seed,
       givens: Uint8Array.from(puz.givens),
@@ -68,7 +78,16 @@ export class LocalDuel {
   }
 
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
-  private bump() { this.version++; this.listeners.forEach((l) => l); }
+  // version bumps every call; listener notification is throttled to ~15fps — cooldown
+  // rings and the clock stay smooth without re-rendering the whole duel tree at 60fps.
+  private bump(immediate = false) {
+    this.version++;
+    const now = performance.now();
+    if (immediate || now - this.lastNotifyAt >= 66) {
+      this.lastNotifyAt = now;
+      this.listeners.forEach((l) => l());
+    }
+  }
   getSnapshot = () => this.version;
 
   start() {
@@ -144,7 +163,7 @@ export class LocalDuel {
     void before;
     this.opts.onEvent?.({ seq: -1, atMs: this.state.clockMs, kind: res.correct ? 'placed' : 'mistake', player: 0, cell, digit });
     // tutorial pacing hooks
-    if (this.opts.mode === 'tutorial') this.advanceTutorial(res.correct);
+    if (this.opts.mode === 'tutorial') this.advanceTutorial(!!res.correct);
     return res;
   }
   private autoCleanNotes(cell: number, digit: number) {
@@ -197,8 +216,12 @@ export class LocalDuel {
   }
   private shadeWake() {
     if (this.ended) return;
-    const prof = this.opts.foeProfile;
-    const act = shadeAct(this.state, 1, prof, () => this.rng.next(), performance.now());
+    const prof = this.opts.foeProfile ?? profileForStanding(1000);
+    // T3: the tutorial Shade is fully scripted (deterministic hand-loses-the-race);
+    // every other mode keeps the calibrated Shade bot.
+    const act = this.opts.mode === 'tutorial'
+      ? tutorialAct(this.script, this.state, 1, this.state.players[0].progress, this.scriptRng, performance.now())
+      : shadeAct(this.state, 1, prof, () => this.rng.next(), performance.now());
     if (act.kind === 'place') {
       const res = place(this.state, 1, act.cell, act.digit);
       if (res.ok && res.correct) synth.pencil();
@@ -210,8 +233,6 @@ export class LocalDuel {
     this.scheduleShade(act.kind === 'wait' ? Math.max(400, act.untilMs - performance.now()) : 900);
     this.bump();
   }
-
-  // TODO(T3): replace the standard slow profile with a fully deterministic scripted loss
   // ------------------------------------------------------------------ tutorial
   private advanceTutorial(correct: boolean) {
     if (correct) this.tutorialStep++;

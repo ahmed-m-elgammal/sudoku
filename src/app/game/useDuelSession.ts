@@ -7,7 +7,7 @@ import { ServerDuel, type ServerDuelInit } from '@/game/serverDuel';
 import { useUi, type PlayerSeat } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { synth } from '@/audio/synth';
-import { profileForStanding } from '@shared/shade';
+import { profileForStanding, type ShadeProfile } from '@shared/shade';
 import { FOLIOS } from '@shared/orders';
 import type { DuelEvent } from '@shared/engine';
 
@@ -20,6 +20,9 @@ export interface DuelSessionSpec {
   seals?: [number, number];
   foeProfile?: ShadeProfile;
 }
+
+// both duel runtimes share one surface; screens render either identically
+export type AnyDuel = LocalDuel | ServerDuel;
 
 export function useDuelSession(spec: DuelSessionSpec | null) {
   const ref = useRef<LocalDuel | ServerDuel | null>(null);

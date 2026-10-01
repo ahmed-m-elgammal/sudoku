@@ -1,10 +1,10 @@
 // NumPad.tsx — 5x2 numerals + Erase, remaining counts, Hush overlay (S05).
 'use client';
-import type { LocalDuel } from '@/game/localDuel';
+import type { AnyDuel } from './useDuelSession';
 import styles from './Duel.module.css';
 import type { Digit } from '@shared/config';
 
-export default function NumPad({ duel }: { duel: LocalDuel }) {
+export default function NumPad({ duel }: { duel: AnyDuel }) {
   const st = duel.state;
   const me = st.players[0];
   const flags = duel.flags();

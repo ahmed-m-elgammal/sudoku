@@ -1,7 +1,7 @@
 // AbilityBar.tsx — three engraved tiles with sigil, cooldown ring, countdown, ready pulse (S05).
 'use client';
 import { useState } from 'react';
-import type { LocalDuel } from '@/game/localDuel';
+import type { AnyDuel } from './useDuelSession';
 import styles from './Duel.module.css';
 import { orderMeta } from '@shared/orders';
 import { CONFIG, ORDER_ABILITIES, type AbilityId } from '@shared/config';
@@ -9,7 +9,7 @@ import i18n from '@/i18n/en.json';
 
 const ABILITY_TARGETS: Partial<Record<AbilityId, string>> = { augur: 'cell', fairCopy: 'cell' };
 
-export default function AbilityBar({ duel }: { duel: LocalDuel }) {
+export default function AbilityBar({ duel }: { duel: AnyDuel }) {
   const [descFor, setDescFor] = useState<AbilityId | null>(null);
   const me = duel.state.players[0];
   const meta = orderMeta(me.order);

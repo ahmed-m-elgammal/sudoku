@@ -1,5 +1,8 @@
 {
-  "meta": { "title": "ASSIZE", "city": "Novem" },
+  "meta": {
+    "title": "ASSIZE",
+    "city": "Novem"
+  },
   "common": {
     "you": "You",
     "theShade": "Shade",
@@ -22,7 +25,20 @@
     "empty": "Nothing here yet. The Ledger waits.",
     "error": "The ink ran dry. Tap to try again.",
     "loading": "Dusting the folios…",
-    "roman": ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
+    "roman": [
+      "I",
+      "II",
+      "III",
+      "IV",
+      "V",
+      "VI",
+      "VII",
+      "VIII",
+      "IX",
+      "X",
+      "XI",
+      "XII"
+    ]
   },
   "boot": {
     "line": "The Tablet does not forgive. Neither, I find, do I.",
@@ -43,7 +59,15 @@
     }
   },
   "duel": {
-    "toolbar": { "pencil": "Pencil", "erase": "Erase", "mute": "Mute", "unmute": "Unmute", "pause": "Pause", "concede": "Concede", "resume": "Resume" },
+    "toolbar": {
+      "pencil": "Pencil",
+      "erase": "Erase",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "pause": "Pause",
+      "concede": "Concede",
+      "resume": "Resume"
+    },
     "concedeConfirm": {
       "title": "Withdraw the plea?",
       "body": "To concede is to forfeit the duel and the Standing wagered on it.",
@@ -76,12 +100,31 @@
       "draw": "The Ledger balances. Neither prevails.",
       "suddenJudgment": "Sudden Judgment. The hour is spent.",
       "reckoningWin": "The Tablet is complete. By Reckoning, {player} prevails.",
-      "orderSwap": "{player} takes up a different Order."
+      "orderSwap": "{player} takes up a different Order.",
+      "waiting": "The Tablet is set. Your foe studies their hand."
     },
-    "units": { "r": "Row", "c": "Column", "b": "Box" },
-    "mirror": { "label": "Foe's Tablet", "expand": "Expand", "shrink": "Shrink" },
-    "pad": { "erase": "Erase", "remaining": "{n} left", "complete": "Complete" },
-    "disconnect": { "title": "The line is severed", "body": "Reconnecting… {s}s before forfeit." },
+    "units": {
+      "r": "Row",
+      "c": "Column",
+      "b": "Box"
+    },
+    "mirror": {
+      "label": "Foe's Tablet",
+      "expand": "Expand",
+      "shrink": "Shrink"
+    },
+    "pad": {
+      "erase": "Erase",
+      "remaining": "{n} left",
+      "complete": "Complete"
+    },
+    "disconnect": {
+      "title": "The line is severed",
+      "body": "Reconnecting… {s}s before forfeit.",
+      "peerBody": "{who} has left the hall. {s}s before the plea is forfeit.",
+      "youOffline": "Your line to the court frays. Rekindling the wax…",
+      "reconnected": "The line is whole again."
+    },
     "waitingShade": "No human answers the summons. A Shade will take the plea."
   },
   "orders": {
@@ -95,9 +138,18 @@
       "epithet": "Order of the Quill",
       "passive": "Marginalia — your first mistake each duel costs no Seal.",
       "abilities": {
-        "augur": { "name": "Augur", "desc": "Reveal the correct digit in the selected empty cell." },
-        "unseal": { "name": "Unseal", "desc": "Clear all statuses on your board and become immune for 6s." },
-        "fairCopy": { "name": "Fair Copy", "desc": "Auto-fill correct pencil candidates for the selected box." }
+        "augur": {
+          "name": "Augur",
+          "desc": "Reveal the correct digit in the selected empty cell."
+        },
+        "unseal": {
+          "name": "Unseal",
+          "desc": "Clear all statuses on your board and become immune for 6s."
+        },
+        "fairCopy": {
+          "name": "Fair Copy",
+          "desc": "Auto-fill correct pencil candidates for the selected box."
+        }
       }
     },
     "executioner": {
@@ -105,9 +157,18 @@
       "epithet": "Order of the Axe",
       "passive": "Last Rites — your claims deal +1 when the foe has 3 or fewer Seals.",
       "abilities": {
-        "sever": { "name": "Sever", "desc": "Chain the empty cell in the foe's most nearly complete unit for 8s." },
-        "hush": { "name": "Hush", "desc": "The foe's number pad is dead for 2.5s." },
-        "reckoning": { "name": "Reckoning", "desc": "Your next claim within 20s deals +1." }
+        "sever": {
+          "name": "Sever",
+          "desc": "Chain the empty cell in the foe's most nearly complete unit for 8s."
+        },
+        "hush": {
+          "name": "Hush",
+          "desc": "The foe's number pad is dead for 2.5s."
+        },
+        "reckoning": {
+          "name": "Reckoning",
+          "desc": "Your next claim within 20s deals +1."
+        }
       }
     },
     "apothecary": {
@@ -115,9 +176,18 @@
       "epithet": "Order of the Vial",
       "passive": "Distiller — statuses you apply last 2s longer.",
       "abilities": {
-        "smudge": { "name": "Smudge", "desc": "Blur 5 of the foe's placed digits for 7s." },
-        "tincture": { "name": "Tincture", "desc": "Restore 1 Seal (max 7). Two vials per duel." },
-        "miasma": { "name": "Miasma", "desc": "Erase the foe's notes and bar pencil for 10s." }
+        "smudge": {
+          "name": "Smudge",
+          "desc": "Blur 5 of the foe's placed digits for 7s."
+        },
+        "tincture": {
+          "name": "Tincture",
+          "desc": "Restore 1 Seal (max 7). Two vials per duel."
+        },
+        "miasma": {
+          "name": "Miasma",
+          "desc": "Erase the foe's notes and bar pencil for 10s."
+        }
       }
     },
     "warden": {
@@ -125,9 +195,18 @@
       "epithet": "Order of the Lantern",
       "passive": "Bulwark — the first incoming status each duel is negated.",
       "abilities": {
-        "ward": { "name": "Ward", "desc": "Negate the next incoming status within 15s." },
-        "mirror": { "name": "Mirror", "desc": "Reflect the next incoming status back within 10s." },
-        "quarantine": { "name": "Quarantine", "desc": "A unit you choose cannot be claimed by the foe for 12s." }
+        "ward": {
+          "name": "Ward",
+          "desc": "Negate the next incoming status within 15s."
+        },
+        "mirror": {
+          "name": "Mirror",
+          "desc": "Reflect the next incoming status back within 10s."
+        },
+        "quarantine": {
+          "name": "Quarantine",
+          "desc": "A unit you choose cannot be claimed by the foe for 12s."
+        }
       }
     }
   },
@@ -165,7 +244,11 @@
   "versus": {
     "stakes": "Tier {tier} · {rating}",
     "ratingRange": "Standing at stake: {range}",
-    "countdown": ["III", "II", "I"],
+    "countdown": [
+      "III",
+      "II",
+      "I"
+    ],
     "reveal": "The seal is broken"
   },
   "result": {
@@ -215,7 +298,14 @@
   },
   "cabinet": {
     "title": "The Cabinet",
-    "tabs": { "boards": "Board Themes", "seals": "Seal Waxes", "frames": "Frames", "numerals": "Numerals", "stamps": "Claim Stamps", "banners": "Victory Banners" },
+    "tabs": {
+      "boards": "Board Themes",
+      "seals": "Seal Waxes",
+      "frames": "Frames",
+      "numerals": "Numerals",
+      "stamps": "Claim Stamps",
+      "banners": "Victory Banners"
+    },
     "shop": "The Pawnshop of Novem",
     "patron": "Patron's Pouch",
     "patronNote": "Sigils buy cosmetics only. Never an edge.",
@@ -313,45 +403,240 @@
     "progress": "{ink} Season Ink to Tier {next}",
     "patronUnlock": "The Patron track",
     "tiers": [
-      { "name": "Mended Quill", "type": "ink" }, { "name": "Ash Wax Seal", "type": "cosmetic" }, { "name": "Vellum Board", "type": "cosmetic" },
-      { "name": "Clerk's Candle", "type": "cosmetic" }, { "name": "Ink Bottle Sigil", "type": "sigil" }, { "name": "Tower Stamp", "type": "cosmetic" },
-      { "name": "Bone Frame", "type": "cosmetic" }, { "name": "Thirty Ink", "type": "ink" }, { "name": "Linen Numerals", "type": "cosmetic" },
-      { "name": "Gilt Wax Seal", "type": "cosmetic" }, { "name": "Fifth Tier Sigil", "type": "sigil" }, { "name": "Laurel Stamp", "type": "cosmetic" },
-      { "name": "Bronze Frame", "type": "cosmetic" }, { "name": "Fifty Ink", "type": "ink" }, { "name": "Tallow Board", "type": "cosmetic" },
-      { "name": "Crown Stamp", "type": "cosmetic" }, { "name": "Iron Frame", "type": "cosmetic" }, { "name": "Sigil Purse", "type": "sigil" },
-      { "name": "Verdigris Wax", "type": "cosmetic" }, { "name": "Rubric Board", "type": "cosmetic" }, { "name": "Hundred Ink", "type": "ink" },
-      { "name": "Scale Stamp", "type": "cosmetic" }, { "name": "Black-lacquer Frame", "type": "cosmetic" }, { "name": "Fabled Sigil", "type": "sigil" },
-      { "name": "Rubric Banner", "type": "cosmetic" }, { "name": "Gilt Numerals", "type": "cosmetic" }, { "name": "Two Hundred Ink", "type": "ink" },
-      { "name": "Oxblood Wax", "type": "cosmetic" }, { "name": "Magistrate Frame", "type": "cosmetic" }, { "name": "The Ninth Banner", "type": "cosmetic" }
+      {
+        "name": "Mended Quill",
+        "type": "ink"
+      },
+      {
+        "name": "Ash Wax Seal",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Vellum Board",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Clerk's Candle",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Ink Bottle Sigil",
+        "type": "sigil"
+      },
+      {
+        "name": "Tower Stamp",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Bone Frame",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Thirty Ink",
+        "type": "ink"
+      },
+      {
+        "name": "Linen Numerals",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Gilt Wax Seal",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Fifth Tier Sigil",
+        "type": "sigil"
+      },
+      {
+        "name": "Laurel Stamp",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Bronze Frame",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Fifty Ink",
+        "type": "ink"
+      },
+      {
+        "name": "Tallow Board",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Crown Stamp",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Iron Frame",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Sigil Purse",
+        "type": "sigil"
+      },
+      {
+        "name": "Verdigris Wax",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Rubric Board",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Hundred Ink",
+        "type": "ink"
+      },
+      {
+        "name": "Scale Stamp",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Black-lacquer Frame",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Fabled Sigil",
+        "type": "sigil"
+      },
+      {
+        "name": "Rubric Banner",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Gilt Numerals",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Two Hundred Ink",
+        "type": "ink"
+      },
+      {
+        "name": "Oxblood Wax",
+        "type": "cosmetic"
+      },
+      {
+        "name": "Magistrate Frame",
+        "type": "cosmetic"
+      },
+      {
+        "name": "The Ninth Banner",
+        "type": "cosmetic"
+      }
     ]
   },
-  "ranks": ["Scrivener", "Clerk", "Notary", "Advocate", "Magistrate", "High Magistrate", "Justiciar", "Lord of the Assize"],
-  "divisions": ["Third Division", "Second Division", "First Division"],
+  "ranks": [
+    "Scrivener",
+    "Clerk",
+    "Notary",
+    "Advocate",
+    "Magistrate",
+    "High Magistrate",
+    "Justiciar",
+    "Lord of the Assize"
+  ],
+  "divisions": [
+    "Third Division",
+    "Second Division",
+    "First Division"
+  ],
   "achievements": {
-    "first-blood": { "title": "First Verdict", "desc": "Win your first duel." },
-    "clean-hand": { "title": "A Clean Hand", "desc": "Win a duel with zero mistakes." },
-    "seal-breaker": { "title": "Seal-Breaker", "desc": "Break all seven of a foe's Seals in one duel." },
-    "row-lord": { "title": "Lord of Rows", "desc": "Claim a full row." },
-    "column-saint": { "title": "Saint of Columns", "desc": "Claim a full column." },
-    "box-wright": { "title": "Box-Wright", "desc": "Claim all nine boxes in one duel." },
-    "flinchless": { "title": "Unflinching", "desc": "Win without a wrong placement." },
-    "tide-turner": { "title": "Tide-Turner", "desc": "Win after falling to 1 Seal." },
-    "hush-proof": { "title": "Unspoken", "desc": "Win a duel you were Hushed in twice." },
-    "unchained": { "title": "Unchained", "desc": "Win with three Chains set upon your board." },
-    "miasma-walker": { "title": "Miasma-Walker", "desc": "Place five digits during Miasma." },
-    "smudge-reader": { "title": "Reader of Blots", "desc": "Win a duel with five of your digits smudged." },
-    "augur-faithful": { "title": "Augur-Faithful", "desc": "Use Augur 25 times, in sum." },
-    "reckoning-dealt": { "title": "Reckoning Dealt", "desc": "Win a claim while Reckoning is armed." },
-    "warden-sworn": { "title": "Sworn to the Lantern", "desc": "Win ten duels as Warden." },
-    "scholar-sworn": { "title": "Sworn to the Quill", "desc": "Win ten duels as Scholar." },
-    "executioner-sworn": { "title": "Sworn to the Axe", "desc": "Win ten duels as Executioner." },
-    "apothecary-sworn": { "title": "Sworn to the Vial", "desc": "Win ten duels as Apothecary." },
-    "folio-first": { "title": "The First Folio", "desc": "Complete Folio I." },
-    "folio-fifth": { "title": "Halfway Hanged", "desc": "Complete Folio V." },
-    "folio-ninth": { "title": "The Ninth Seal Broken", "desc": "Complete the campaign." },
-    "daily-ember": { "title": "Daily Ember", "desc": "Complete three Daily Assizes." },
-    "streak-seven": { "title": "Seven Unbroken", "desc": "Hold a 7-day streak." },
-    "ledger-keeper": { "title": "Keeper of the Ledger", "desc": "Reach Standing 1400." }
+    "first-blood": {
+      "title": "First Verdict",
+      "desc": "Win your first duel."
+    },
+    "clean-hand": {
+      "title": "A Clean Hand",
+      "desc": "Win a duel with zero mistakes."
+    },
+    "seal-breaker": {
+      "title": "Seal-Breaker",
+      "desc": "Break all seven of a foe's Seals in one duel."
+    },
+    "row-lord": {
+      "title": "Lord of Rows",
+      "desc": "Claim a full row."
+    },
+    "column-saint": {
+      "title": "Saint of Columns",
+      "desc": "Claim a full column."
+    },
+    "box-wright": {
+      "title": "Box-Wright",
+      "desc": "Claim all nine boxes in one duel."
+    },
+    "flinchless": {
+      "title": "Unflinching",
+      "desc": "Win without a wrong placement."
+    },
+    "tide-turner": {
+      "title": "Tide-Turner",
+      "desc": "Win after falling to 1 Seal."
+    },
+    "hush-proof": {
+      "title": "Unspoken",
+      "desc": "Win a duel you were Hushed in twice."
+    },
+    "unchained": {
+      "title": "Unchained",
+      "desc": "Win with three Chains set upon your board."
+    },
+    "miasma-walker": {
+      "title": "Miasma-Walker",
+      "desc": "Place five digits during Miasma."
+    },
+    "smudge-reader": {
+      "title": "Reader of Blots",
+      "desc": "Win a duel with five of your digits smudged."
+    },
+    "augur-faithful": {
+      "title": "Augur-Faithful",
+      "desc": "Use Augur 25 times, in sum."
+    },
+    "reckoning-dealt": {
+      "title": "Reckoning Dealt",
+      "desc": "Win a claim while Reckoning is armed."
+    },
+    "warden-sworn": {
+      "title": "Sworn to the Lantern",
+      "desc": "Win ten duels as Warden."
+    },
+    "scholar-sworn": {
+      "title": "Sworn to the Quill",
+      "desc": "Win ten duels as Scholar."
+    },
+    "executioner-sworn": {
+      "title": "Sworn to the Axe",
+      "desc": "Win ten duels as Executioner."
+    },
+    "apothecary-sworn": {
+      "title": "Sworn to the Vial",
+      "desc": "Win ten duels as Apothecary."
+    },
+    "folio-first": {
+      "title": "The First Folio",
+      "desc": "Complete Folio I."
+    },
+    "folio-fifth": {
+      "title": "Halfway Hanged",
+      "desc": "Complete Folio V."
+    },
+    "folio-ninth": {
+      "title": "The Ninth Seal Broken",
+      "desc": "Complete the campaign."
+    },
+    "daily-ember": {
+      "title": "Daily Ember",
+      "desc": "Complete three Daily Assizes."
+    },
+    "streak-seven": {
+      "title": "Seven Unbroken",
+      "desc": "Hold a 7-day streak."
+    },
+    "ledger-keeper": {
+      "title": "Keeper of the Ledger",
+      "desc": "Reach Standing 1400."
+    }
   },
   "loading": [
     "Wax is warmed. Hands are steadied.",

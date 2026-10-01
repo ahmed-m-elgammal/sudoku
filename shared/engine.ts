@@ -79,7 +79,7 @@ export interface DuelState {
 
 export interface PlaceResult {
   ok: boolean;
-  reason?: 'ended' | 'filled' | 'given' | 'chained' | 'hushed' | 'noSolution';
+  reason?: 'ended' | 'filled' | 'given' | 'chained' | 'hushed' | 'noSolution' | 'invalidTarget';
   correct?: boolean;
   claim?: { unit: UnitId; clean: boolean; damage: number; deferred?: boolean };
   inkAward?: number;

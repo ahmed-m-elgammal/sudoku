@@ -2,7 +2,8 @@
 // Implements the same surface as LocalDuel so DuelScreen renders both identically.
 // The solution never reaches the client in PvP; placements round-trip through the server.
 'use client';
-import type { AbilityId, Digit, DuelState, PlayerId } from '@shared/config';
+import type { DuelState } from '@shared/engine';
+import type { AbilityId, Digit, PlayerId } from '@shared/config';
 import { createDuel } from '@shared/engine';
 import { proto, net } from '@/net/client';
 import { synth } from '@/audio/synth';
@@ -15,6 +16,13 @@ export interface ServerDuelInit {
   myName: string;
   myOrder: 'scholar' | 'executioner' | 'apothecary' | 'warden';
   foeOrder: 'scholar' | 'executioner' | 'apothecary' | 'warden';
+}
+
+// S08 (TODO T2): the 20s reconnect grace, mirrored client-side for the modal.
+export interface DisconnectState {
+  secondsLeft: number;   // grace remaining (server-ticked)
+  graceS: number;        // total grace the countdown started with
+  who: string;           // the seat that dropped
 }
 
 export class ServerDuel {
@@ -31,6 +39,8 @@ export class ServerDuel {
   paused = false;
   ended = false;
   version = 0;
+  disconnect: DisconnectState | null = null; // peer dropped: S08 countdown
+  selfOffline = false;                        // MY line dropped: reconnecting banner
   private listeners = new Set<() => void>();
   private unsubs: Array<() => void> = [];
   tutorialStep = 0;
@@ -58,9 +68,42 @@ export class ServerDuel {
         const e = p as { winner?: PlayerId | 'draw'; reason?: string; ratingDelta?: number | null };
         this.applyEnd(e.winner ?? 'draw', e.reason ?? '', e.ratingDelta ?? null);
       }),
+      // ---- S08 disconnect grace (TODO T2) --------------------------------
+      net.on('peer_disconnected', (p) => {
+        const d = p as { graceS?: number; name?: string };
+        this.disconnect = { secondsLeft: Math.max(0, d.graceS ?? 20), graceS: Math.max(1, d.graceS ?? 20), who: d.name ?? this.state.players[this.opts.seat === 0 ? 1 : 0].name };
+        synth.padlock();
+        this.bump();
+      }),
+      net.on('reconnect_grace', (p) => {
+        const d = p as { s?: number };
+        if (!this.disconnect) this.disconnect = { secondsLeft: Math.max(0, d.s ?? 20), graceS: 20, who: this.state.players[this.opts.seat === 0 ? 1 : 0].name };
+        else this.disconnect = { ...this.disconnect, secondsLeft: Math.max(0, d.s ?? this.disconnect.secondsLeft) };
+        this.bump();
+      }),
+      net.on('peer_reconnected', () => {
+        this.disconnect = null;
+        synth.statusEnded();
+        this.bump();
+      }),
+      // ---- my own line: banner + automatic resume -------------------------
+      net.on('net:offline', () => {
+        this.selfOffline = true;
+        this.bump();
+      }),
+      net.on('net:online', () => {
+        this.selfOffline = false;
+        // the socket is back: re-register with the room; the server answers
+        // reconnect_ok with a fresh authoritative snapshot.
+        proto.joinDuel(this.opts.duelId, localStorage.getItem('assize-secret') ?? '');
+        this.bump();
+      }),
+      net.on('reconnect_ok', (p) => {
+        this.disconnect = null;
+        this.selfOffline = false;
+        this.applyYou((p as { you: unknown }).you);
+      }),
     );
-    // TODO(T2): wire the 20s disconnect countdown modal to server 'reconnect_grace' events.
-    net.on('reconnect_ok', (p) => this.applyYou((p as { you: unknown }).you));
   }
 
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
@@ -104,7 +147,7 @@ export class ServerDuel {
     foe.progress = d.foe.progress;
     foe.claimed = d.foe.claimed;
     foe.statuses = d.foe.statuses;
-    st.unitOwner = d.unitOwner;
+    st.unitOwner = d.unitOwner as Record<string, PlayerId>;
     st.clockMs = d.clockMs;
     st.phase = d.phase === 'ended' ? 'ended' : 'live';
     // sfx on transitions
@@ -124,6 +167,8 @@ export class ServerDuel {
   private applyEnd(winner: PlayerId | 'draw', reason: string, ratingDelta: number | null = null) {
     if (this.ended) return;
     this.ended = true;
+    this.disconnect = null;
+    this.selfOffline = false;
     const mySeat = this.opts.seat;
     const mapped = winner === 'draw' ? 'draw' : winner === mySeat ? 0 : 1;
     this.lastRatingDelta = ratingDelta;

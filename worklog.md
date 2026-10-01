@@ -51,3 +51,24 @@ Work Log:
 Stage Summary:
 - ASSIZE is complete and playable per spec build order; TODO(T1-T15) recorded in TODO.md with matching code markers
 - Browser-verified: R1 instant play, tutorial loop, claims/damage/win, result->hub, campaign detail, cabinet/ledger/daily/settings
+
+---
+Task ID: 13
+Agent: main
+Task: T2 (disconnect countdown modal) + T3 (scripted tutorial loss) + UI responsiveness polish + logic hardening
+
+Work Log:
+- T3: new pure module shared/tutorial.ts (seeded scripted Shade: holds until Clerk's first true digit, races 4.2-6.8s/digit, slips every 3rd placement, max ONE teaching claim, correct-ink cap 22, falters to slips-only, never casts); 7 vitest tests (shared/__tests__/tutorial.test.ts) incl. 4-seed always-loses + determinism
+- T3 wiring: LocalDuel uses tutorialAct via scriptRng in tutorial mode; free Augur now granted when its note shows (DuelScreen effect); FIXED LocalDuel.bump() never calling listeners (throttled to ~15fps)
+- T2 server: peer_disconnected {seat,graceS,name} on drop, reconnect_grace {s} at 1s cadence to the remaining seat, peer_reconnected + instant reconnect_ok snapshot on join_duel/reconnect; stale seat ids deleted on disconnect
+- T2 client: ServerDuel.disconnect {secondsLeft,graceS,who} + selfOffline; net:online auto-re-joins the duel; LocalDuel carries union-parity nulls; DuelScreen renders S08 alertdialog (oxblood ring + live seconds) and the self-offline reconnect banner
+- S08 verified E2E in browser: 2 tabs -> human match -> close one -> S08 with peer name + ticking ring -> forfeit end -> result screen; socket flow 6/6 via scripts/pvp-disconnect-test.mjs
+- Logic fixes found while testing: (1) matchmaking interval crashed on stale splice index and silently killed queue/tick timers in Bun - fixed + try/catch armor on both loops; (2) ghost queue entries after client fallback - client sends leave_queue, server skips dead sockets, client fallback now waits server-time+500ms; (3) guest identities were never registered server-side so human PvP could never pair - Matchmaking/FriendScreen now auth() before join_queue (+ standing sync for fresh saves); (4) Next rewrites for /api/* + /socket.io/ with skipTrailingSlashRedirect + polling-first transport so the duel server is reachable on plain localhost too; (5) Ticker no longer says "Shade of Orsolo waits" in every mode (new i18n duel.log.waiting)
+- UI responsiveness overhaul (Duel.module.css rewritten): layout zones .duelMain > .duelLeft/.boardArea/.controls (display:contents portrait; side columns landscape+desktop); board sized by container-query units min(100cqw,100cqh,560px) with vh fallback; landscape phones (max-height 560) get board-left/controls-right with compact HUD; desktop >=1100 keeps the shell a column with board centered between mirror/ticker column and controls column (fixes old overflow that cut the ability bar on laptops); fluid clamps for HUD/portraits/pips/numpad/abilities; 44px coarse-pointer targets; press/active feedback; margin note centered via left/right+margin (page-turn animation was overriding translateX); skip-tutorial chip legible over HUD; T12 mirror claim stamps mapped to exact cell positions; modal-backdrop grid-centered + blur; SW cache version bumped to assize-v2-t2t3
+- Type hygiene: PlaceResult gains invalidTarget; type imports moved to @shared/config (localDuel/serverDuel/assize-server); AnyDuel union for all duel screens' props; fixed pre-existing tsc errors in DuelScreen (recent entry + campaignDuel narrowing), save.ts season.claimed string[], idb oldVersion via IDBVersionChangeEvent, Antechamber double-go
+- Verified: 42/42 vitest; tsc clean for touched files; no browser console errors; screenshots at 390x844, 360x740, 844x390, 768x1024, 1280x800
+
+Stage Summary:
+- T2, T3, T12 marked DONE in TODO.md; app + assize-server running with all fixes
+- Key decisions: server shade fallback stays the source of truth (client waits 500ms past it); tutorial Shade never claims twice and caps ink so it can only lose; S08 countdown is server-ticked, client merely renders
+- Next candidates: T4 Orsolo adaptive swap, T6 ending choice, T15 interlude auto-trigger (all small), T5 Stripe mock

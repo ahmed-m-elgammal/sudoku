@@ -25,7 +25,7 @@ export function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => migrate(req.result, req.result.version === 1 ? 1 : req.transaction?.oldVersion ?? 0);
+    req.onupgradeneeded = (ev) => migrate(req.result, (ev as IDBVersionChangeEvent).oldVersion);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });

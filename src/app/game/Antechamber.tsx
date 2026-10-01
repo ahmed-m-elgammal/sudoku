@@ -66,7 +66,7 @@ export default function Antechamber() {
           </button>
         </div>
 
-        <button className="panel card" onClick={() => { synth.uiTap(); ui.go('practice', { duelMode: 'practice' }); ui.go('orders', { duelMode: 'practice' }); }}>
+        <button className="panel card" onClick={() => { synth.uiTap(); ui.go('orders', { duelMode: 'practice' }); }}>
           <h3>{i18n.hub.practice}</h3>
           <p>{i18n.hub.practiceSub}</p>
         </button>

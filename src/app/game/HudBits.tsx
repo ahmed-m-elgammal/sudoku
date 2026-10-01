@@ -2,11 +2,26 @@
 // Ticker.tsx — the one-line diegetic event log above the board.
 'use client';
 import { useState } from 'react';
-import type { LocalDuel } from '@/game/localDuel';
+import type { AnyDuel } from './useDuelSession';
 import styles from './Duel.module.css';
 import i18n from '@/i18n/en.json';
 
-export function MirrorStrip({ duel }: { duel: LocalDuel }) {
+// T12: exact unit→position mapping for claim stamps inside the mirror matrix.
+// Rows stamp the right-edge cell of their row, columns the bottom cell of their
+// column, boxes the centre cell of the box — so a glance reads where the claim sits.
+function stampPos(unit: string): { left: string; top: string } {
+  const step = 100 / 9;
+  const mid = (i: number) => `${((i + 0.5) * step).toFixed(3)}%`;
+  const n = parseInt(unit.slice(1), 10) || 0;
+  const kind = unit[0];
+  if (kind === 'r') return { left: mid(8), top: mid(n) };
+  if (kind === 'c') return { left: mid(n), top: mid(8) };
+  const br = Math.floor(n / 3) * 3;
+  const bc = (n % 3) * 3;
+  return { left: mid(bc + 1), top: mid(br + 1) };
+}
+
+export function MirrorStrip({ duel }: { duel: AnyDuel }) {
   const [big, setBig] = useState(false);
   const foe = duel.state.players[1];
   const claimed = duel.state.unitOwner;
@@ -20,17 +35,29 @@ export function MirrorStrip({ duel }: { duel: LocalDuel }) {
       {Array.from({ length: 81 }, (_, c) => (
         <i key={c} className={`${styles.mirrorDot} ${foe.board[c] ? styles.mirrorInk : ''}`} aria-hidden />
       ))}
-      {Object.entries(claimed).map(([unit, owner]) => (
-        <i key={unit} className={`${styles.mirrorStamp} ${owner === 1 ? styles.mirrorFoe : ''}`} data-unit={unit} aria-hidden />
-      ))}
+      {Object.entries(claimed).map(([unit, owner]) => {
+        const pos = stampPos(unit);
+        return (
+          <i
+            key={unit}
+            className={`${styles.mirrorStamp} ${owner === 1 ? styles.mirrorFoe : ''}`}
+            style={pos}
+            data-unit={unit}
+            aria-hidden
+          />
+        );
+      })}
     </div>
   );
 }
 
-export function Ticker({ duel }: { duel: LocalDuel }) {
+export function Ticker({ duel }: { duel: AnyDuel }) {
   const events = duel.state.events;
   const last = events[events.length - 1];
-  const text = last ? formatEvent(last) : i18n.tutorial.shadeName + ' waits.';
+  const quiet = (duel as { mode?: string }).mode === 'tutorial'
+    ? `${i18n.tutorial.shadeName} waits.`
+    : i18n.duel.log.waiting;
+  const text = last ? formatEvent(last) : quiet;
   return (
     <p className={styles.ticker} role="log" aria-live="polite">{text}</p>
   );

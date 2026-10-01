@@ -46,7 +46,7 @@ class NetClient {
     return new Promise((resolve) => {
       try {
         this.socket = io(`/?XTransformPort=${SERVER_PORT}`, {
-          transports: ['websocket', 'polling'],
+          transports: ['polling', 'websocket'], // polling first: survives proxies; upgrades to ws when possible
           forceNew: true,
           reconnection: true,
           reconnectionAttempts: 4,
@@ -121,4 +121,5 @@ export const proto = {
   concede: (duelId: string) => net.send('concede', { duelId }),
   reconnect: (duelId: string, secret: string) => net.send('reconnect', { duelId, secret }),
   joinDuel: (duelId: string, secret: string) => net.send('join_duel', { duelId, secret }),
+  leaveQueue: () => net.send('leave_queue', {}),
 };
