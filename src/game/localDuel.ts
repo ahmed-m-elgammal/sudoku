@@ -317,7 +317,10 @@ export class LocalDuel {
     } else if (act.kind === 'ability') {
       useAbility(this.state, 1, act.id, { cell: act.cell, unit: act.unit });
     }
-    this.scheduleShade(act.kind === 'wait' ? Math.max(400, act.untilMs - performance.now()) : 900);
+    // post-action cadence: shipped bots reschedule at a fixed 900 ms; a T17 mined
+    // profile carries its own ink cadence so your Shade paces ink at YOUR tempo
+    const cadence = prof.placeCadenceMs;
+    this.scheduleShade(act.kind === 'wait' ? Math.max(400, act.untilMs - performance.now()) : Math.max(400, cadence ?? 900));
     this.bump();
   }
 

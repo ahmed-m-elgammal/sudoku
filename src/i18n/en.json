@@ -396,6 +396,11 @@
     "duel": "Face this echo",
     "count": "{n} echoes on the shelf",
     "degraded": "Some echoes failed to settle and rest as ordinary Shades.",
+    "yourShadeTitle": "Your Shade",
+    "yourShadeSub": "Your newest ink, turned against you — it paces as you paced, errs as you erred, casts as you cast.",
+    "yourShadeDuel": "Duel your Shade",
+    "yourShadeStats": "{pace}s per digit · {err}% burned ink · {rites} rites",
+    "yourShadeFaint": "The newest ink is too faint to read. An ordinary Shade answers in your echo's name.",
     "back": "Back to the Antechamber"
   },
   "friend": {

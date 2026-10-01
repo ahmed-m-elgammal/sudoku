@@ -7,7 +7,7 @@ import { ServerDuel, type ServerDuelInit } from '@/game/serverDuel';
 import { useUi, type PlayerSeat } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { synth } from '@/audio/synth';
-import { profileForStanding, type ShadeProfile } from '@shared/shade';
+import { profileForStanding, tieredTechniques, type ShadeProfile } from '@shared/shade';
 import type { DuelReplay } from '@shared/replay';
 import { FOLIOS } from '@shared/orders';
 import type { DuelEvent } from '@shared/engine';
@@ -123,6 +123,9 @@ export function specFromUi(): DuelSessionSpec {
         placeDelayMs: [Math.round(prof.placeDelayMs[0] / shadeTierFactor), Math.round(prof.placeDelayMs[1] / shadeTierFactor)],
         mistakeRate: Math.max(0.02, prof.mistakeRate / shadeTierFactor),
         singlesSkill: Math.min(0.97, prof.singlesSkill * shadeTierFactor),
+        // T16 — the folio role re-tiers deduction: minors one rung down, the
+        // Magistrate one rung up, so higher folios genuinely solve
+        techniques: tieredTechniques(prof.techniques ?? 0, foe.shadeKind),
       },
     };
   }
@@ -131,6 +134,19 @@ export function specFromUi(): DuelSessionSpec {
     return {
       mode: 'replay', seed: echo.seed, tier: echo.tier, orders: echo.orders,
       names: ['You', echo.names[0]], seals: echo.seals, replay: echo,
+    };
+  }
+  // T17 — "Your Shade": a fresh tablet of the echo's tier, faced against a Shade
+  // mined from the recorded Clerk's own ink (pace, burned-ink rate, rite rhythm)
+  if (mode === 'shade' && ui.pendingPersonalShade) {
+    const { replay, profile } = ui.pendingPersonalShade;
+    return {
+      mode: 'shade',
+      seed: `your-shade-${Date.now()}`,
+      tier: replay.tier,
+      orders: [save.order, profile.order],
+      names: ['You', profile.name],
+      foeProfile: profile,
     };
   }
   if (mode === 'daily') {

@@ -25,6 +25,8 @@ A complete, playable, web-first implementation of the ASSIZE design document:
 - **M4 Friend Duel** — create a code/link, both parties queue with it, unrated.
 - **M5 Practice** — any difficulty, hints allowed, small daily Ink cap.
 - **T7 Shade Echoes** — your human duels (practice, daily, Shade, echo duels) are recorded as compact, validated replay logs; the Antechamber's *Shade Echoes* shelf lets you duel the recorded ink of any past duel as an opponent. Echo validation is fail-closed; a corrupted echo degrades visibly to an ordinary Shade, never a crash.
+- **T16 Shades that solve** — the Shade AI climbs a deduction ladder (naked singles → hidden singles → pair eliminations → pointing) gated by a `techniques` tier that rises with your Standing and re-tiers per campaign foe role (minor/lieutenant/boss); at a sealed gap of ±3 the Shade's tempo adapts within a hard envelope — it leans in when losing, coasts when crushing.
+- **T17 Your Shade** — your newest echo is *mined*: the deterministic generator reconstructs the exact tablet you faced, so the game measures your real wrong-ink rate, thinking pace and rite rhythm and raises a personal Shade that paces ink at YOUR tempo. "Duel your Shade" on the Echoes shelf; faint ink degrades visibly; dueling your Shade records new echoes.
 - **4 Orders / 12 abilities / 5 statuses** with the exact anti-frustration rules; Momentum, Clean claims, Flinch; all four win conditions in the specified order.
 - **Economy & meta** — Ink, Sigils, Reliquaries (every 3rd win), Season Ledger (30 tiers), Cabinet with 26 cosmetics across 6 tabs, Great Ledger profile with Standing graph, 24 achievements ("Marginalia"), Recovery Code, export/import.
 - **PWA** — installable, offline-capable (service worker precaches the shell; M0/M1/M5/Shade duels run entirely on the local engine).
@@ -116,13 +118,42 @@ All sixteen entry points are now hardened (seat validation everywhere, integer d
 
 **The shipped suite also had a luck-pass**: "every ability casts from a fresh board" only passed because the foe's seeded placements happened to drop Seals below Tincture's cap first. The new A1 test builds every precondition explicitly — no test here passes for a reason it doesn't name.
 
-### The three test layers now in place (258 tests total)
+### The three test layers now in place (258 tests at the T7 iteration — 300 after T16/T17)
 
 1. **Adversarial engine suite** (`shared/__tests__/adversarial.test.ts`, 168 tests): hostile-input rejection (H1–H16); a **fuzz harness** running 120 seeded random duels × 240 steps (valid + hostile placements, abilities, ticks, swaps, direct status applications) checking ~20 invariants after *every* step (boards ⊆ solution, givens immutable, progress bookkeeping, mistakes ledger, claims ↔ unitOwner bijection, seals bounds, cooldown floors, status well-formedness, event-seq integrity, phase/winner consistency) — and re-running every script twice to demand **byte-identical** serialization (determinism is asserted, not assumed); the full status interaction matrix (Bulwark/Ward/Mirror precedence, gap-only-on-success, per-type immunity from the expiry tick, final-10s ban, Distiller's exact +2 s); clock/boundary behaviour (Flinch freeze windows, Momentum floors, Sudden-Judgment precedence including seal-death-beats-reckoning on the same placement, idempotent endings); every ability's contract with explicit preconditions; swap invariants (passives return unworn — Marginalia forgives *again* after a swap cycle); serialization round-trips byte-identical on rich mid-duel states including a live quarantine deferred-claim.
 2. **Generator / RNG / AI fuzz** (`shared/__tests__/generators.test.ts`, 16 tests): 24+ puzzles across tiers re-verified for uniqueness, givens ⊆ solution, metadata honesty; `countSolutions` purity; grader termination on degenerate and contradictory grids; daily tier rotation pinned to a known calendar; malformed daily keys throw `RangeError` (a garbage key used to index `DAILY_TIERS[NaN]`); 50k-draw `Rng` bounds, permutation and mid-stream state-resume contracts; 30 seeded Shade runs asserting every placement lands legally; the tutorial script under a worst-case Clerk (never casts, never wins by its own hand — only by yours, which is the T3 contract).
 3. **Replay suite** (`shared/__tests__/replay.test.ts`, 23 tests): the full hostile-payload matrix, recorder cap/seal semantics, driver clock semantics, headless LocalDuel record → replay determinism, corrupt-echo degradation, echo resign, past-the-buzzer actions never landing — plus **R23**, a regression test for the one bug only the browser caught (see Verification status).
 
 **Every red test led to either an engine fix or a test fix, and the reason for each is recorded in the assertion message. Nothing was left artificially green.**
+
+---
+
+## What landed in this iteration (T16 + T17 — Shades that solve, and YOUR Shade)
+
+Two core-loop systems, built on the same rule as the last iteration: the adversarial tests are written to break the code first, and they did.
+
+### T16 — the technique ladder + tempo adaptation
+
+The shipped Shade found naked singles and waited — it never truly solved, and every mode leaned on it (campaign, the 4 s PvP fallback, daily, echo duels). Now:
+
+- **Deduction ladder** (`shared/shade.ts`): a `techniques` tier (0–3) on `ShadeProfile` gates the repertoire — tier 0 is the shipped bot exactly (pinned by test against 24 seeded boards); tier 1 adds hidden singles; tier 2 adds naked- and hidden-pair eliminations; tier 3 adds pointing. Tier ≥ 2 also aims rites: Augur lands in the Shade's most nearly complete unit, Quarantine seals the foe's. `profileForStanding` climbs 0→3 across the Standing curve, and `tieredTechniques(base, shadeKind)` re-tiers campaign foes (minor −1, lieutenant ±0, Magistrate +1).
+- **Tempo adaptation** (`adaptProfile`): at a sealed gap of ±3 the Shade leans in when losing (×0.78 pace, +0.12 skill, fewer burns, +0.1 aggression) and coasts when crushing. Pure, RNG-free, and clamped — determinism survives because adaptation reads only state.
+- **One envelope to rule them all**: `clampProfile()` normalizes every profile (calibrated, adapted, mined). Its floors are ZERO on purpose — the practice/daily "Tablet does not play" profiles must stay inert; the envelope caps monsters and never resurrects statues. *An early draft floored aggression/skill, the shipped replay pins (R14/R15) went red because pacified foes started solving Easy tablets, and the fix went in at the root.* That is the adversarial workflow doing its job.
+- **Ink cadence**: `LocalDuel` reschedules post-action at the profile's optional `placeCadenceMs` (T17) — absent means the shipped 900 ms, so nothing outside mined profiles changes feel.
+
+### T17 — Your Shade (mined from your own echoes)
+
+The T7 recorder stored every human action; nothing read it back as gameplay. The miner closes the loop:
+
+- **Reconstruction is exact**: echoes store `seed` + `tier`, and `generatePuzzle(seed, tier)` is deterministic — so `shared/personalShade.ts` rebuilds the very tablet you faced and measures your REAL burned-ink rate (not an estimate), your median thinking pace (burst-capped, idle-capped), and your rite density.
+- **The mined profile**: pace → `placeCadenceMs` (your Shade paces ink at YOUR tempo — `placeDelayMs` alone was only ever stuck-thinking time, a flaw the round-trip test caught and the cadence field fixed) and a delay band; burned ink → `mistakeRate`; rite density → `aggression`; outcome + cleanliness → `singlesSkill`; tier + a flawless win → `techniques`.
+- **Fail-closed end to end**: validator first; fewer than 8 placements → null (too faint, shown honestly); wrong-ink above 50% → null (no real duel on this tablet can produce it — Seals die first); every field through the envelope; pure function, input never mutated, byte-identical profile per echo.
+- **The shelf grows a face**: "Your Shade" rises from your newest echo with its stats line (*1.5 s per digit · 0% burned ink · 0 rites*), and dueling it launches a fresh tablet of the echo's tier — your ink, turned against you. Dueling your Shade records new echoes; the loop feeds itself. Echo *sharing* between Clerks still waits on the privacy pass for recorded names.
+
+### The two new adversarial suites (42 tests)
+
+4. **Shade ladder** (`shared/__tests__/shadeLadder.test.ts`, 24 tests): tier-0 purity vs the shipped bot; candidate-consistency under every tier on clean AND poisoned boards (elimination bugs die here); byte-identical determinism at all tiers; statistical monotonicity (aggregate true ink climbs with tier over 10 seeds); the solve guarantee (tier 3 wins 5/5 Easy seeds with ≥ 3 units genuinely claimed); legality fuzz (24 seeds × all tiers — no given/filled/chained, no unknown casts); the adaptation envelope over the full 9×9 seal grid, deadband, lean/coast ordering and purity; hush-awareness; quarantine targeting pins.
+5. **Echo mining** (`shared/__tests__/personalShade.test.ts`, 18 tests): exact pins on the median→band math; degenerate echoes (0/1 placements, all-wrong, zero-cast, 400 s idles, duplicated fizzled cells) never produce NaN or a throw; 200 seeded payloads (half solution-true duels, half garbage) — null-or-envelope-valid, always; purity and no input mutation; validator-hostile shapes deferred; and the round-trip: the mined Shade's *observed* placement gaps track the mined cadence (0.6×–1.6×), slow clerks mine slower Shades than fast ones.
 
 ### Shipped in earlier iterations (kept for the record)
 
@@ -148,7 +179,7 @@ cd mini-services/assize-server && bun install && bun run dev   # REST + socket.i
 
 Then open the preview URL (port 3000). Fresh load lands on the tutorial duel within ~2 s.
 
-**Tests:** `bun run test` (Vitest, **258 tests** across six suites: 35 engine — puzzle uniqueness and tier bands, claims/damage/Clean, Momentum, all 12 abilities, all 5 statuses + anti-frustration, win-condition order, determinism, serialization, Shade legality, campaign structure; 7 tutorial scripting; 9 adaptive-swap; **168 adversarial engine**; **16 generator/RNG/AI fuzz**; **23 replay/T7**).
+**Tests:** `bun run test` (Vitest, **300 tests** across eight suites: 35 engine — puzzle uniqueness and tier bands, claims/damage/Clean, Momentum, all 12 abilities, all 5 statuses + anti-frustration, win-condition order, determinism, serialization, Shade legality, campaign structure; 7 tutorial scripting; 9 adaptive-swap; **168 adversarial engine**; **16 generator/RNG/AI fuzz**; **23 replay/T7**; **24 shade ladder/T16**; **18 echo mining/T17**).
 
 ## Environment
 
@@ -164,12 +195,14 @@ shared/                 pure deterministic engine (spec R6) — used by BOTH cli
   engine.ts             duel state machine: placement, claims, statuses, abilities,
                         win order, swapOrder() (T4), hostile-input hardening
   orders.ts             Orders, abilities, campaign definitions, ADAPTIVE_COUNTER (T4)
-  shade.ts              Shade AI (placement skill, mistake rate, ability cadence by Standing)
+  shade.ts              the Shade AI: Standing-calibrated profiles, the T16 deduction
+                        ladder + tempo adaptation, clampProfile envelope, tieredTechniques
   tutorial.ts           the scripted tutorial Shade (T3)
   replay.ts             T7: validated duel replays (recorder, fail-closed validator,
                         clock-driven ReplayDriver, echo-storage helpers)
-  __tests__/            258 Vitest tests (engine / tutorial / adaptive / adversarial /
-                        generators / replay)
+  personalShade.ts      T17: echo → personal ShadeProfile miner (fail-closed)
+  __tests__/            300 Vitest tests (engine / tutorial / adaptive / adversarial /
+                        generators / replay / shadeLadder / personalShade)
 src/                    the client (Next.js 16, React 19, Zustand, CSS Modules + design tokens)
   app/game/             21 screens (S01–S19 + EndingChoice + EchoesScreen) + duel runtime wiring
   game/localDuel.ts     local engine harness (tutorial/campaign/daily/practice/Shade/replay)
@@ -221,10 +254,11 @@ Saves, identity, cosmetics and achievements live in **IndexedDB** (versioned, mi
 
 ## Verification status
 
-- **258/258 Vitest green** (`bun run test`): engine 35, tutorial scripting 7, adaptive swap 9, **adversarial 168, generators/RNG/AI 16, replay/T7 23**.
+- **300/300 Vitest green** (`bun run test`): engine 35, tutorial scripting 7, adaptive swap 9, adversarial 168, generators/RNG/AI 16, replay/T7 23, **shade ladder/T16 24, echo mining/T17 18**.
 - **`tsc --noEmit` clean** for `src/` and `shared/` (remaining project-level notes are sandbox scaffolding outside the app).
 - **Adversarial red → fix → green is on the record**: the probe script and the new suites failed 106 times against the unhardened engine (4 crash classes, 4 semantic holes, 1 luck-pass exposed); every failure was either fixed in the engine or corrected in the test with the reason named, and the suite now passes from a clean run.
 - **Browser-verified end-to-end** (agent-browser, 390×844): boot → tutorial → **won live** (race script) → result → hub → Practice → OrderSelect → duel → won → result. The browser pass caught a real bug the headless harness could not — the rAF clock is fractional and the replay validator (correctly) demands integer ms, so echoes silently failed to save; fixed at the recorder boundary and pinned by test R23, which now drives fractional ticks deliberately.
+- **T16/T17 walked in a real browser** (390×844): daily duel won → echo lands on the shelf → **"Your Shade"** card with honest mined stats → "Duel your Shade" launches a live duel against foe *"Shade of You"* (your Order, the echo's tier, cadence 1500 ms, tier-3 deductions) placing true ink from the first seconds; console clean throughout. Screenshots in `scripts/shots/t17-*.png`.
 - **Socket-level disconnect flow** 6/6 via `scripts/pvp-disconnect-test.mjs` (T2).
 
 ## Known limits
@@ -234,9 +268,9 @@ Saves, identity, cosmetics and achievements live in **IndexedDB** (versioned, mi
 - Payments and rewarded ads are stubbed (TODO T5). No real money moves.
 - Solver-app assistance cannot be fully prevented (honest, per spec §6): the server applies speed/uniformity sanity checks and shadow-queues, but a solver feeding moves at human pace is undetectable.
 - The adaptive swap exists only in local (campaign/Shade) duels; bringing it to server-authoritative duels would need the swap decision (and its counter map) mirrored server-side — deliberately out of scope while PvP has no magistrates.
-- Echoes are local-only for now (your own duels on your own device); sharing echoes between Clerks (export codes, or server-side anonymous echo pools for the matchmaking Shade fallback) is the natural next step and needs a privacy pass on the recorded names first.
+- Echoes are local-only for now (your own duels on your own device); sharing echoes between Clerks (export codes, or server-side anonymous echo pools for the matchmaking Shade fallback) is the natural next step and needs a privacy pass on the recorded names first. *Your* Shade already rises locally from your newest echo (T17) — sharing mined profiles would need the same pass.
 - The browser session used for the echo-shelf walk went unreliable partway (stale hydration after HMR); the shelf's full happy path is covered by the headless replay suite instead, and the one bug the browser did surface is pinned by R23.
-- See `TODO.md` for the full honest list (T1–T15, with T2/T3/T4/T6/T7/T12/T15 marked DONE).
+- See `TODO.md` for the full honest list (T1–T17, with T2/T3/T4/T6/T7/T12/T15/T16/T17 marked DONE).
 
 ## Future work
 
