@@ -46,19 +46,20 @@ Every unfinished or stubbed item, per spec R3. Sorted by priority. Each ID is ma
 - **Wired:** `LocalDuel` tutorial mode uses `tutorialAct` with its own `scriptRng`; the free Augur is now actually granted the moment its margin note shows; the render-notification bug in `LocalDuel.bump()` (listeners were never invoked) is fixed and throttled to ~15 fps.
 - **Verified:** 7 new Vitest tests in `shared/__tests__/tutorial.test.ts` (holds hand, never casts, ≤1 claim, ink cap, always loses by Seals on 4 seeds, determinism, the Clerk can still lose by their own hand); live-browser run finished VICTORY by Seals.
 
-### T4 · area: campaign — Orsolo's adaptive swap
-- **Missing:** the mid-duel Order swap at 4 Seals for Magistrate Orsolo (Folio IX, duel 3).
-- **Why:** budget; the flag (`adaptive: true`) and data exist, the runtime trigger was cut.
-- **Stands in for:** a fixed strong loadout for the final duel; `TODO(T4)` in `DuelScreen.tsx` finish path.
-- **Steps to finish:** in the campaign runtime, when `foe.adaptive && foe.seals === 4`, swap `foe.order` + rebuild ability runtimes + emit `orderSwap` (the event kind and log line already exist).
-- **Effort:** ~1.5 h.
+### T4 · area: campaign — Orsolo's adaptive swap — ✅ DONE (this iteration)
+- **Shipped:** `swapOrder()` in the engine (one atomic mid-duel Order change: runtimes rebuilt fresh with the 50% first-use factor, incoming passive unworn, outgoing Reckoning/Ward/Mirror windows lapsed, everything earned or suffered preserved) + `ADAPTIVE_COUNTER` / `adaptiveSwapTarget()` in `shared/orders.ts` (Scholar→Apothecary, Executioner→Warden, Apothecary→Executioner, Warden→Scholar; if the Ninth already wears the counter he rotates one step — he has worn them all).
+- **Runtime:** `LocalDuel.checkAdaptive()` on the frame loop — one swap per duel, never after the duel ends, triggers the instant `foe.seals <= CONFIG.seals.adaptiveSwapAtSeals (4)` from any damage source; `foe.adaptive` flows through `DuelSessionSpec` for Folio IX duel III only; PvP never adapts (`ServerDuel.swapBanner()` parity stub).
+- **Presentation:** non-blocking brass callout ("He adapts." + old→new portraits with glow, ~4.2 s, pointer-events:none), new WebAudio `orderSwap()` sting (bowed fall + wax crack + floor boom), haptics, Ticker line with both Order names, HUD portrait flips automatically.
+- **Verified:** 9 new Vitest tests (`shared/__tests__/adaptive.test.ts`); live campaign duel transcript shows Orsolo Scholar 8→6→4 → swaps to Apothecary (counter of my Scholar) → 2 → 0; banner + ticker captured in a real browser at 390×844.
 
-### T6 · area: campaign — ending choice
-- **Missing:** the explicit "Balance or Burn" choice screen after the Orsolo reveal plate; both endings are fully written with plates (`story.endings.*`, `plate-ending-*.webp`).
-- **Why:** budget.
-- **Stands in for:** the campaign completion sets `ended` and the reveal plate ships; `TODO(T6)` in the campaign finish path.
-- **Steps to finish:** add a 2-button plate after `plate-orsolo-reveal`; set `save.campaign.ending`; route to `StoryCard` with the chosen ending lines; continue to the Endless Assize.
-- **Effort:** ~2 h.
+### T6 · area: campaign — ending choice — ✅ DONE (this iteration)
+- **Shipped:** the finale flow — first clear of Folio IX duel III routes straight past the result screen into the Orsolo reveal plate (`story.orsoloReveal`, previously unused), then to the new **S19 EndingChoice** screen: two engraved verdict panels (Balance in brass / Burn in oxblood, each with its plate art), keyboard 1/2 + Enter + Esc, and a confirm modal ("This choice is remembered. It cannot be un-written.").
+- **Persistence:** the verdict writes `save.campaign.ending` ('balance' | 'burn'), then the chosen ending plate plays as a StoryCard (`story.endings.*`) and closes into the Endless Assize (Antechamber). Replays of the final duel skip the beat (first-clear guard) and show the normal result screen.
+- **Also fixed while in the finish path:** the Marginalia achievements existed in copy but were never awarded — `first-blood`, `folio-first`, `folio-fifth`, `folio-ninth` are now granted by `unlockAchievement` (idempotent on replays); the Antechamber Folios card reads "The Ledger is {Balanced|Burned}. The Endless Assize continues." once the campaign is settled.
+- **Verified E2E in a real browser:** seeded save at (8,2) → won the duel → reveal → chose Burn (confirm) → ending plate → hub shows "The Ledger is Burned."; repeated with Balance; IDB save shows `ending` + `folio-ninth` on both paths.
+
+### T15 · area: interlude auto-trigger — ✅ DONE (this iteration)
+- **Shipped:** first clear of (folio 2, duel 2) routes to `story.interlude1` + `plate-interlude-1`, first clear of (folio 5, duel 2) to `story.interlude2` + `plate-interlude-2`, then continues to the Folio map at the next folio. First-clear guard: replays go straight to the result screen.
 
 ### T7 · area: Shades (spec §7)
 - **Missing:** replay-Shades built from stored anonymized human duels (move log with timestamps).
@@ -97,10 +98,3 @@ Every unfinished or stubbed item, per spec R3. Sorted by priority. Each ID is ma
 - **Stands in for:** `t()`-less direct imports; swapping the import switches the language.
 - **Steps to finish:** add `next-intl` (already installed) with the `en` namespace as the first message catalog.
 - **Effort:** ~2 h.
-
-### T15 · area: interlude auto-trigger
-- **Missing:** automatic routing to the two interlude plates after Folio III and VI wins (cards + text exist; the router hook was cut).
-- **Why:** budget.
-- **Stands in for:** interlude plates viewable via the story system; `TODO(T15)` in the campaign finish path.
-- **Steps to finish:** in the campaign win branch, when `(folio, duel)` is (2,2) or (5,2), route to `story` with the interlude payload before the folio card.
-- **Effort:** ~1 h.

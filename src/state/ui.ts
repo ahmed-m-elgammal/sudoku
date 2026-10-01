@@ -6,7 +6,8 @@ import { synth } from '@/audio/synth';
 export type Screen =
   | 'boot' | 'duel' | 'tutorial' | 'antechamber' | 'orders' | 'matchmaking' | 'versus'
   | 'result' | 'reliquary' | 'folioMap' | 'folioDetail' | 'daily' | 'cabinet'
-  | 'season' | 'ledger' | 'settings' | 'offline' | 'story' | 'purse' | 'friend';
+  | 'season' | 'ledger' | 'settings' | 'offline' | 'story' | 'purse' | 'friend'
+  | 'endingChoice'; // T6 — the Balance / Burn verdict after the Orsolo reveal
 
 export interface StoryPayload {
   lines: string[];

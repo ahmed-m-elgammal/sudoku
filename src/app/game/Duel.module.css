@@ -364,6 +364,50 @@
 .modalActions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
 .modalActions .btn { flex: 1 1 auto; min-width: 120px; }
 
+/* ------------------------------------------------------------------ T4 adaptive swap
+   A non-blocking callout over the board: he sets one Order aside, takes up another.
+   pointer-events:none so play never stops; auto-dismisses after ~4.2s (real time). */
+.swapBanner {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: center;
+  pointer-events: none;
+  padding: 16px;
+}
+.swapCard {
+  display: grid; justify-items: center; gap: 6px;
+  width: min(92vw, 400px);
+  padding: 16px 18px 14px;
+  text-align: center;
+  background: rgba(14, 14, 15, 0.94);
+  border: 1.5px solid var(--brass);
+  border-radius: 6px;
+  box-shadow: 0 10px 44px rgba(0, 0, 0, 0.7);
+  animation: ink-settle 240ms ease-out both;
+}
+.swapSigils { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+.swapSigil {
+  width: clamp(44px, 7.2dvh, 56px);
+  height: clamp(56px, 9dvh, 70px);
+  background-size: cover; background-position: center top;
+  border: 2px solid var(--brass-dim); border-radius: 3px;
+  background-color: var(--charcoal);
+}
+.swapSigilNew {
+  border-color: var(--brass);
+  animation: swapGlow 1.4s ease-in-out infinite alternate;
+}
+@keyframes swapGlow {
+  from { box-shadow: 0 0 0 1px rgba(165, 136, 73, 0.45), 0 0 10px rgba(165, 136, 73, 0.18); }
+  to   { box-shadow: 0 0 0 1px rgba(165, 136, 73, 0.7),  0 0 22px rgba(165, 136, 73, 0.42); }
+}
+.swapArrow { color: var(--brass); font-size: 20px; line-height: 1; }
+.swapTitle {
+  font-family: var(--font-display); letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--brass); font-size: var(--fs-lg);
+}
+.swapBody { color: var(--fg); font-size: var(--fs-sm); font-style: italic; max-width: 34ch; }
+.swapNote { color: var(--ash); font-size: var(--fs-xs); }
+
 /* coarse pointers keep 44px targets everywhere */
 @media (pointer: coarse) {
   .toolbar button { min-height: 44px; }
@@ -472,7 +516,8 @@
   .abilityBar { padding-left: clamp(20px, 8vw, 90px); padding-right: clamp(20px, 8vw, 90px); }
 }
 
-/* reduced motion: kill the S08 pulse and shake */
+/* reduced motion: kill the S08 pulse, shake, and T4 glow */
 :root[data-motion='reduced'] .disconnectSigil,
 :root[data-motion='reduced'] .wrong,
-:root[data-motion='reduced'] .abilityReady { animation: none !important; }
+:root[data-motion='reduced'] .abilityReady,
+:root[data-motion='reduced'] .swapSigilNew { animation: none !important; }

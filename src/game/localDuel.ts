@@ -2,13 +2,14 @@
 // M3 daily, M5 practice and offline Shade duels (spec §3; the server runs it for M2/M4).
 'use client';
 import {
-  createDuel, place, useAbility, tick, resign, cellFlags,
+  createDuel, place, useAbility, tick, resign, cellFlags, swapOrder,
   type DuelState, type DuelEvent, type PlaceResult,
 } from '@shared/engine';
 import { shadeAct, profileForStanding, type ShadeProfile } from '@shared/shade';
 import { tutorialAct, newTutorialScript, type TutorialScriptState } from '@shared/tutorial';
+import { adaptiveSwapTarget } from '@shared/orders';
 import { Rng } from '@shared/rng';
-import type { AbilityId, Digit, OrderId, PlayerId, Tier } from '@shared/config';
+import { CONFIG, type AbilityId, type Digit, type OrderId, type PlayerId, type Tier } from '@shared/config';
 import { generatePuzzle } from '@shared/sudoku';
 import { synth } from '@/audio/synth';
 
@@ -20,6 +21,7 @@ export interface LocalDuelOpts {
   seals?: [number, number];
   foeProfile?: ShadeProfile;
   mode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade';
+  adaptive?: boolean;             // T4: the Ninth swaps Orders when he falls to 4 Seals
   settingsHaptics?: () => boolean;
   onEnd?: (r: { winner: PlayerId | 'draw'; reason: string }) => void;
   onEvent?: (e: DuelEvent) => void;
@@ -59,6 +61,12 @@ export class LocalDuel {
   bumpPublic() { this.bump(); }
   tutorialStep = 0;
   freeAugurGranted = false;
+  // T4 state — the swap happens once, mid-duel, when the adaptive foe drops to
+  // CONFIG.seals.adaptiveSwapAtSeals; the banner window is real-time (keeps running
+  // while the engine clock is paused) so the callout never freezes mid-animation.
+  private adaptiveDone = false;
+  private swapFlash: { from: OrderId; to: OrderId } | null = null;
+  private swapFlashAt = 0;
 
   constructor(opts: LocalDuelOpts) {
     this.opts = opts;
@@ -97,6 +105,7 @@ export class LocalDuel {
       this.lastFrame = t;
       if (!this.ended && !this.paused) {
         tick(this.state, dt);
+        this.checkAdaptive();
         synth.tickMusic(this.tension());
         this.drainEvents();
         if (this.state.phase === 'ended') this.finish();
@@ -119,6 +128,33 @@ export class LocalDuel {
     const foe = this.state.players[1];
     const low = Math.min(me.seals, foe.seals);
     return low <= 3 ? (4 - low) / 3 : 0;
+  }
+
+  // T4 — Orsolo's adaptive swap (FOLIOS[8].duels[2].adaptive). Checked on the frame
+  // loop so the trigger catches Seals lost to any source (claims, Reckoning bonus,
+  // Last Rites) the instant they land. One swap per duel; never after the duel ends.
+  private checkAdaptive() {
+    if (!this.opts.adaptive || this.adaptiveDone) return;
+    if (this.state.phase !== 'live') return;
+    if (this.state.players[1].seals > CONFIG.seals.adaptiveSwapAtSeals) return;
+    this.adaptiveDone = true;
+    const me = this.state.players[0];
+    const foe = this.state.players[1];
+    const from = foe.order;
+    const to = adaptiveSwapTarget(me.order, foe.order);
+    if (swapOrder(this.state, 1, to)) {
+      this.swapFlash = { from, to };
+      this.swapFlashAt = performance.now();
+      synth.orderSwap();
+      if (this.opts.settingsHaptics?.() ?? true) navigator.vibrate?.([40, 70, 110]);
+      this.bump(true);
+    }
+  }
+
+  // DuelScreen reads this each render; truthy for ~4.2s after the swap (real time).
+  swapBanner(): { from: OrderId; to: OrderId } | null {
+    if (!this.swapFlash) return null;
+    return performance.now() - this.swapFlashAt < 4200 ? this.swapFlash : null;
   }
 
   private drainEvents() {

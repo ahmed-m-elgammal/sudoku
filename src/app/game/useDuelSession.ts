@@ -19,6 +19,7 @@ export interface DuelSessionSpec {
   names: [string, string];
   seals?: [number, number];
   foeProfile?: ShadeProfile;
+  adaptive?: boolean;   // T4: Magistrate Orsolo (Folio IX, duel III) swaps Orders at 4 Seals
 }
 
 // both duel runtimes share one surface; screens render either identically
@@ -83,6 +84,7 @@ function hookEvent(e: DuelEvent) {
     case 'status': synth.statusApplied(); navigator.vibrate?.(30); break;
     case 'statusEnded': synth.statusEnded(); break;
     case 'negated': case 'mirrored': synth.padlock(); break;
+    case 'orderSwap': synth.orderSwap(); navigator.vibrate?.([30, 50, 90]); break; // T4 (server duels never adapt; kept for parity)
     case 'end': break; // handled by finish()
   }
 }
@@ -111,6 +113,7 @@ export function specFromUi(): DuelSessionSpec {
       orders: [save.order, foe.order],
       names: ['You', foe.name],
       seals: [7, foe.seals],
+      adaptive: foe.adaptive === true,
       foeProfile: {
         ...prof,
         name: foe.name,

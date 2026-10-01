@@ -17,6 +17,8 @@ import styles from './Duel.module.css';
 import i18n from '@/i18n/en.json';
 import { synth } from '@/audio/synth';
 import { net } from '@/net/client';
+import { orderMeta } from '@shared/orders';
+import storyJson from '@/i18n/story.json';
 import type { Digit, OrderId } from '@shared/config';
 import { Rng } from '@shared/rng';
 
@@ -86,14 +88,13 @@ export default function DuelScreen() {
     if (ui.duelMode === 'tutorial' && winner === 0) {
       s.update((cur) => ({ ...cur, tutorialDone: true, antechamberUnlocked: true, economy: { ...cur.economy, ink: cur.economy.ink + 100, reliquaryProgress: cur.economy.reliquaryProgress + 1 } }));
     }
-    // TODO(T4): Orsolo adaptive order swap at 4 Seals goes here (FOLIOS[8].duels[2].adaptive).
-    // TODO(T6): ending choice plate (Balance / Burn) after Folio IX.
-    // TODO(T15): auto-route to interlude plates after (folio 2, duel 2) and (folio 5, duel 2).
     // campaign progression
     const cd = ui.campaignDuel;
+    let storyBeat: 'interlude1' | 'interlude2' | 'reveal' | null = null;
     if (ui.duelMode === 'campaign' && winner === 0 && cd) {
       const key = `${cd.folio}-${cd.duel}`;
-      const stars = winner === 0 ? (me.mistakes === 0 ? 3 : 2) : 0;
+      const stars = me.mistakes === 0 ? 3 : 2;
+      const firstClear = (save?.campaign.stars[key] ?? 0) === 0;
       s.update((cur) => {
         const campaign = { ...cur.campaign, stars: { ...cur.campaign.stars, [key]: Math.max(cur.campaign.stars[key] ?? 0, stars) } };
         if (cd.duel < 2) campaign.duelIdx = cd.duel + 1;
@@ -105,6 +106,20 @@ export default function DuelScreen() {
         if (cd.folio === 3 && cd.duel === 2 && !unlocked.includes('warden')) unlocked.push('warden');
         return { ...cur, campaign, unlockedOrders: unlocked };
       });
+      // Marginalia that existed in copy but were never awarded: first win + folio
+      // completions. unlockAchievement no-ops when already owned, so replays stay clean.
+      s.unlockAchievement('first-blood');
+      if (cd.folio === 0 && cd.duel === 2) s.unlockAchievement('folio-first');
+      if (cd.folio === 4 && cd.duel === 2) s.unlockAchievement('folio-fifth');
+      if (cd.folio === 8 && cd.duel === 2) s.unlockAchievement('folio-ninth');
+      // T15 + T6 — narrative beats fire once, on the first clear of their duel only:
+      // interludes close Folios III and VI; the Orsolo reveal closes Folio IX and
+      // hands the pen to the Balance / Burn choice (EndingChoice).
+      if (firstClear) {
+        if (cd.folio === 2 && cd.duel === 2) storyBeat = 'interlude1';
+        else if (cd.folio === 5 && cd.duel === 2) storyBeat = 'interlude2';
+        else if (cd.folio === 8 && cd.duel === 2) storyBeat = 'reveal';
+      }
     }
     // daily result recording (server-tracked streaks/leaderboard; spec M3)
     if (ui.duelMode === 'daily') {
@@ -133,6 +148,19 @@ export default function DuelScreen() {
       const wins = (save?.stats.wins ?? 0) + 1;
       reliquaryWon = wins % 3 === 0;
       if (reliquaryWon) s.update((cur) => ({ ...cur, economy: { ...cur.economy, reliquaryProgress: 0 } }));
+    }
+    // story beats replace the result screen on their first clear — the reveal plays
+    // immediately after Folio IX (spec: before the ending choice), interludes close
+    // Folios III and VI. Rewards above were already written to the save.
+    if (storyBeat) {
+      const payload =
+        storyBeat === 'reveal'
+          ? { lines: [...storyJson.orsoloReveal], plate: '/assets/plates/plate-orsolo-reveal.webp', then: 'endingChoice' as const }
+          : storyBeat === 'interlude1'
+            ? { lines: [...storyJson.interlude1], plate: '/assets/plates/plate-interlude-1.webp', then: 'folioMap' as const, campaignIndex: { folio: 3, duel: 0 } }
+            : { lines: [...storyJson.interlude2], plate: '/assets/plates/plate-interlude-2.webp', then: 'folioMap' as const, campaignIndex: { folio: 6, duel: 0 } };
+      ui.go('story', { serverDuel: null, lastResult: null, story: payload });
+      return;
     }
     ui.go('result', {
       serverDuel: null,
@@ -199,6 +227,7 @@ export default function DuelScreen() {
   if (!duel || !spec) return <main className={styles.duelRoot} aria-busy="true"><div className="skeleton-parchment" style={{ margin: '40vh auto 0', width: 200, height: 12 }} /></main>;
 
   const dc = duel.disconnect;
+  const swap = duel.swapBanner(); // T4 — truthy for ~4.2s after Orsolo adapts
 
   return (
     <main className={styles.duelRoot}>
@@ -272,6 +301,27 @@ export default function DuelScreen() {
       {duel.selfOffline && !dc && (
         <div className={styles.reconnectBanner} role="status">
           {i18n.duel.disconnect.youOffline}
+        </div>
+      )}
+
+      {/* T4 — Orsolo's adaptive swap: non-blocking callout, never interrupts play */}
+      {swap && (
+        <div className={styles.swapBanner} role="status" aria-live="assertive">
+          <div className={`${styles.swapCard} page-turn`}>
+            <div className={styles.swapSigils} aria-hidden>
+              <i className={styles.swapSigil} style={{ backgroundImage: `url(${orderMeta(swap.from).portrait})` }} />
+              <span className={styles.swapArrow}>→</span>
+              <i className={`${styles.swapSigil} ${styles.swapSigilNew}`} style={{ backgroundImage: `url(${orderMeta(swap.to).portrait})` }} />
+            </div>
+            <b className={styles.swapTitle}>{i18n.duel.swap.title}</b>
+            <p className={styles.swapBody}>
+              {i18n.duel.swap.body
+                .replace('{name}', duel.state.players[1].name)
+                .replace('{from}', orderMeta(swap.from).name)
+                .replace('{to}', orderMeta(swap.to).name)}
+            </p>
+            <small className={styles.swapNote}>{i18n.duel.swap.note}</small>
+          </div>
         </div>
       )}
 

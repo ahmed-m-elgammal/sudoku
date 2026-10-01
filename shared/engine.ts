@@ -493,6 +493,30 @@ export function resign(st: DuelState, player: PlayerId) {
   endDuel(st, player === 0 ? 1 : 0, 'forfeit');
 }
 
+// ---------------------------------------------------------------- order swap (T4)
+// Orsolo's adaptive phase: one mid-duel Order swap. The new Order arrives fresh —
+// ability runtimes rebuilt (first casts start at the 50% first-use factor), the new
+// Order's passive flags reset — while everything earned or suffered so far (Seals,
+// claims, board, statuses, immunity) is kept exactly as it was. Outgoing ability
+// windows (Reckoning / Ward / Mirror) lapse: the rites that armed them are gone.
+export function swapOrder(st: DuelState, player: PlayerId, newOrder: OrderId): boolean {
+  if (st.phase !== 'live') return false;
+  const p = st.players[player];
+  if (p.order === newOrder) return false;
+  const from = p.order;
+  p.order = newOrder;
+  p.abilities = Object.fromEntries(
+    ORDER_ABILITIES[newOrder].map((a) => [a, { cdLeftMs: 0, usedOnce: false, usesLeft: a === 'tincture' ? CONFIG.abilityCdMs.tinctureUsesPerDuel : null }]),
+  );
+  p.marginaliaUsed = false; // Scholar's Marginalia returns unworn
+  p.bulwarkUsed = false;    // Warden's Bulwark returns unworn
+  p.reckoningUntilMs = 0;
+  p.wardUntilMs = 0;
+  p.mirrorUntilMs = 0;
+  pushEvent(st, 'orderSwap', { player, from, to: newOrder });
+  return true;
+}
+
 // ---------------------------------------------------------------- serialization
 export const serializeDuel = (st: DuelState): string => JSON.stringify({
   ...st,

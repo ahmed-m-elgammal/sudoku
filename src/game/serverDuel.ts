@@ -3,7 +3,7 @@
 // The solution never reaches the client in PvP; placements round-trip through the server.
 'use client';
 import type { DuelState } from '@shared/engine';
-import type { AbilityId, Digit, PlayerId } from '@shared/config';
+import type { AbilityId, Digit, OrderId, PlayerId } from '@shared/config';
 import { createDuel } from '@shared/engine';
 import { proto, net } from '@/net/client';
 import { synth } from '@/audio/synth';
@@ -48,6 +48,9 @@ export class ServerDuel {
   claimedOnce = false;
   freeAugurGranted = false;
   mode = 'server' as const;
+
+  // T4 parity: human opponents never adapt; the union surface stays identical.
+  swapBanner(): { from: OrderId; to: OrderId } | null { return null; }
 
   constructor(init: ServerDuelInit) {
     this.opts = { duelId: init.duelId, seat: init.seat };

@@ -54,7 +54,11 @@ export default function Antechamber() {
           </button>
           <button className="panel card" onClick={() => { synth.uiTap(); ui.go('folioMap'); }}>
             <h3>{i18n.hub.folios}</h3>
-            <p>{i18n.hub.foliosSub.replace('{done}', String(folioDuels))}</p>
+            <p>
+              {save.campaign.ended
+                ? i18n.hub.foliosSettled.replace('{ending}', save.campaign.ending === 'burn' ? i18n.hub.endingBurned : i18n.hub.endingBalanced)
+                : i18n.hub.foliosSub.replace('{done}', String(folioDuels))}
+            </p>
           </button>
           <button className="panel card" onClick={() => { synth.uiTap(); ui.go('season'); }}>
             <h3>{i18n.hub.season}</h3>

@@ -100,8 +100,13 @@
       "draw": "The Ledger balances. Neither prevails.",
       "suddenJudgment": "Sudden Judgment. The hour is spent.",
       "reckoningWin": "The Tablet is complete. By Reckoning, {player} prevails.",
-      "orderSwap": "{player} takes up a different Order.",
+      "orderSwap": "{player} sets aside the {from} — the {to} answers.",
       "waiting": "The Tablet is set. Your foe studies their hand."
+    },
+    "swap": {
+      "title": "He adapts.",
+      "body": "{name} casts aside the {from} — the {to} answers.",
+      "note": "Fresh rites. The passive returns. Mind your Seals."
     },
     "units": {
       "r": "Row",
@@ -217,6 +222,9 @@
     "dailySub": "One Tablet. One day. Unbroken Days: {streak}",
     "folios": "Folios",
     "foliosSub": "{done} of 27 duels settled",
+    "foliosSettled": "The Ledger is {ending}. The Endless Assize continues.",
+    "endingBalanced": "Balanced",
+    "endingBurned": "Burned",
     "season": "Season Ledger",
     "seasonSub": "Tier {tier} · {ink} Season Ink",
     "friend": "Friend Duel",
@@ -540,6 +548,19 @@
     "Second Division",
     "First Division"
   ],
+  "endingChoice": {
+    "title": "The Ninth Seal is broken.",
+    "sub": "Two verdicts remain, Clerk, and only your hand holds the pen. Whatever you write here is written into the Ledger for good.",
+    "balanceTitle": "Balance the Ledger",
+    "balanceDesc": "The truth, read aloud in the hall. It will cost you what it cost him.",
+    "burnTitle": "Burn the Ledger",
+    "burnDesc": "Every debt to ash. The city goes free — and nothing holds it up.",
+    "confirmTitle": "Seal this verdict?",
+    "confirmBody": "The choice is remembered in your save. It cannot be un-written.",
+    "confirm": "Seal it",
+    "return": "Return",
+    "hint": "Press 1 or 2 — or tap a verdict"
+  },
   "achievements": {
     "first-blood": {
       "title": "First Verdict",

@@ -235,6 +235,17 @@ class Synth {
   }
   uiTap() { if (!this.ctx) return; this.tone('sine', 840, this.t(), 0.002, 0.04, 0.06); }
   error() { if (!this.ctx) return; const t = this.t(); this.tone('square', 160, t, 0.004, 0.12, 0.1); this.tone('square', 120, t + 0.07, 0.004, 0.12, 0.1); }
+  // T4 — the Ninth sets one Order aside and takes up another: a bowed fall, a wax
+  // crack, and a floor-drop boom. Meant to feel like the room tilting.
+  orderSwap() {
+    if (!this.ctx) return;
+    const t = this.t();
+    this.tone('sawtooth', 196, t, 0.02, 0.7, 0.16);
+    this.tone('sawtooth', 130.8, t + 0.12, 0.02, 0.8, 0.15);
+    this.tone('sine', 65.4, t + 0.28, 0.03, 1.1, 0.24);
+    this.noise(t + 0.05, 0.4, 0.16, 500, 'lowpass');
+    this.padlock();
+  }
 }
 
 export const synth = new Synth();

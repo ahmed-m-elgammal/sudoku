@@ -114,3 +114,28 @@ export const FOLIOS: FolioDef[] = [
 ];
 
 export const totalCampaignDuels = FOLIOS.reduce((n, f) => n + f.duels.length, 0); // 27
+
+// ---------------------------------------------------------------- T4 — Orsolo's adaptive swap
+// Story: "I have worn nine Orders waiting for you." Mechanic: when the Ninth falls to
+// 4 Seals he sets his Order aside and answers YOURS with the one that hurts it most.
+//   Scholar (info + one forgiven mistake) → Apothecary: Smudge/Miasma bury information,
+//                                           Tincture out-sustains a recovery Order.
+//   Executioner (burst pressure)          → Warden: Bulwark/Ward/Mirror eat the pressure
+//                                           and reflect it back.
+//   Apothecary (status grind)             → Executioner: Reckoning + Last Rites race past
+//                                           the vial before the grind lands.
+//   Warden (defense + denial)             → Scholar: Augur and Fair Copy out-tempo a wall.
+export const ADAPTIVE_COUNTER: Record<OrderId, OrderId> = {
+  scholar: 'apothecary',
+  executioner: 'warden',
+  apothecary: 'executioner',
+  warden: 'scholar',
+};
+
+// Pure and total: picks the counter to the player's Order; if the Ninth already wears it
+// (e.g. player Warden vs Orsolo opening Scholar) he rotates one step further — he has,
+// after all, worn them all. Deterministic, no rng.
+export const adaptiveSwapTarget = (playerOrder: OrderId, currentFoeOrder: OrderId): OrderId => {
+  const base = ADAPTIVE_COUNTER[playerOrder];
+  return base === currentFoeOrder ? ADAPTIVE_COUNTER[base] : base;
+};

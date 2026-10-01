@@ -23,6 +23,7 @@ import LedgerProfile from './LedgerProfile';
 import SettingsScreen from './SettingsScreen';
 import OfflineScreen from './OfflineScreen';
 import StoryCard from './StoryCard';
+import EndingChoice from './EndingChoice';
 import PurseScreen from './PurseScreen';
 import FriendScreen from './FriendScreen';
 
@@ -83,6 +84,7 @@ export default function GameShell() {
     case 'settings': return <SettingsScreen />;
     case 'offline': return <OfflineScreen />;
     case 'story': return <StoryCard />;
+    case 'endingChoice': return <EndingChoice />;
     case 'purse': return <PurseScreen />;
     case 'friend': return <FriendScreen />;
     default: return <BootScreen />;

@@ -17,6 +17,7 @@ export const CONFIG = {
     start: 7,
     magistrate: 8,                  // Magistrates have 8 Seals
     tinctureCap: 7,                 // Tincture restores up to this cap
+    adaptiveSwapAtSeals: 4,         // T4: Orsolo swaps Orders when he falls TO this many Seals
   },
   placement: {
     wrongSealCost: 1,               // wrong digit costs 1 Seal

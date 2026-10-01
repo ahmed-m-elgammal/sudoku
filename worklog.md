@@ -72,3 +72,25 @@ Stage Summary:
 - T2, T3, T12 marked DONE in TODO.md; app + assize-server running with all fixes
 - Key decisions: server shade fallback stays the source of truth (client waits 500ms past it); tutorial Shade never claims twice and caps ink so it can only lose; S08 countdown is server-ticked, client merely renders
 - Next candidates: T4 Orsolo adaptive swap, T6 ending choice, T15 interlude auto-trigger (all small), T5 Stripe mock
+
+---
+Task ID: 14
+Agent: main
+Task: T4 (Orsolo's adaptive swap) + T6 (Balance/Burn ending choice) + T15 (interludes) + achievement fix + comprehensive README
+
+Work Log:
+- T4 engine: swapOrder() in shared/engine.ts (atomic Order change: fresh ability runtimes w/ 50% first-use factor, incoming passive unworn, outgoing Reckoning/Ward/Mirror windows lapsed, Seals/claims/board/statuses preserved, one orderSwap event); CONFIG.seals.adaptiveSwapAtSeals = 4; ADAPTIVE_COUNTER + adaptiveSwapTarget(player, foeCurrent) in shared/orders.ts (scholar->apothecary, executioner->warden, apothecary->executioner, warden->scholar; rotates one step if the counter is already worn)
+- T4 runtime: LocalDuel.checkAdaptive() on the rAF loop (one swap/duel, never post-end, catches Seal loss from any source); opts.adaptive through DuelSessionSpec/specFromUi (Folio IX duel III only); ServerDuel.swapBanner() parity stub; synth.orderSwap() sting (bowed fall + wax crack + floor boom); hookEvent sfx + haptics
+- T4 UI: non-blocking .swapBanner callout in DuelScreen (HE ADAPTS. + old->new portraits w/ glow, 4.2s, pointer-events:none, reduced-motion safe), Ticker formatEvent orderSwap case with Order names, HUD portrait auto-flips via orderMeta(foe.order)
+- T6: 'endingChoice' Screen + EndingChoice.tsx (S19: Balance brass / Burn oxblood verdict panels with plates, keyboard 1/2/Enter/Esc, confirm modal); DuelScreen.finish() finale: first clear of (8,2) -> Orsolo reveal StoryCard (story.orsoloReveal + plate-orsolo-reveal, previously unused) -> EndingChoice -> save.campaign.ending -> ending StoryCard -> antechamber; first-clear guard skips beat on replays; Antechamber Folios card reads "The Ledger is Balanced/Burned."
+- T15 (bonus, same path): first clear of (2,2)/(5,2) routes to interlude plates 1/2 then folioMap at next folio
+- Logic completion: unlockAchievement was never called anywhere in the app - first-blood, folio-first, folio-fifth, folio-ninth now awarded in the campaign finish path (idempotent)
+- Tests: shared/__tests__/adaptive.test.ts (9: counter map total/self-free/deterministic, rotation fallback, runtimes rebuilt, state preserved, bulwark works after swap, windows lapsed, no-op refusal, ended-phase refusal)
+- Fixed during build: Rng import dropped from localDuel during edit (tsc caught), i18n.orders cast needed unknown bridge, unused eslint-disable in EndingChoice
+- Verified: 51/51 vitest; tsc clean for src/+shared/; agent-browser E2E at 390x844+1280x800: forced trigger banner screenshot; seeded campaign (8,2) -> win (transcript: Scholar 8-6-4 -> SWAP to apothecary -> 2-0) -> reveal -> Burn (confirm modal) -> ending plate -> hub "The Ledger is Burned." -> IDB ending=burn + folio-ninth; full rerun with Balance -> ending=balance; replay of (8,2) correctly shows normal result screen (first-clear guard); console clean
+- README.md rewritten (~215 lines): pitch, full feature tour, duel rules table, Orders table, T4/T6/T15/T2/T3 deep-dives, run+test instructions (51 tests), architecture incl. EndingChoice, responsive construction, 11 design decisions (+3 new for swap/finale/ending), verification status, known limits, future work (9-item TODO table + 6 design ideas), credits; copied to download/README.md; TODO.md T4/T6/T15 marked DONE
+
+Stage Summary:
+- T4, T6, T15 shipped and verified E2E; achievement system actually functional now
+- Key decisions: swap policy in runtime (engine stays pure/reusable), counter picked vs player's CURRENT order, finale replaces result screen on first clear only, ending is cosmetic not mechanical
+- Remaining TODOs: T1 (playwright), T5 (stripe), T7 (replay shades), T8, T9, T10, T11, T13, T14

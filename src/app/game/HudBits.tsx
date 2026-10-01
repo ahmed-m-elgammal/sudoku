@@ -82,6 +82,10 @@ function formatEvent(e: Record<string, unknown>): string {
     case 'statusEnded': return i18n.duel.log.statusEnded.replace('{status}', i18n.duel.status[String(e.status) as keyof typeof i18n.duel.status] ?? 'A rite').replace('{player}', e.player === 0 ? you : foeName);
     case 'negated': return i18n.duel.log.negated.replace('{player}', e.player === 0 ? you : foeName);
     case 'mirrored': return i18n.duel.log.mirrored.replace('{player}', e.player === 0 ? you : foeName);
+    case 'orderSwap': return i18n.duel.log.orderSwap
+      .replace('{player}', e.player === 0 ? you : foeName)
+      .replace('{from}', orderName(String(e.from)))
+      .replace('{to}', orderName(String(e.to)));
     case 'forfeit': return i18n.duel.log.forfeit.replace('{player}', e.player === 0 ? you : foeName);
     case 'end': return e.winner === 'draw' ? i18n.duel.log.draw : i18n.duel.log.win.replace('{player}', e.winner === 0 ? you : foeName);
     default: return '…';
@@ -94,4 +98,9 @@ function unitName(u: string): string {
   const roman = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'][n] ?? String(n);
   const label = kind === 'r' ? i18n.duel.units.r : kind === 'c' ? i18n.duel.units.c : i18n.duel.units.b;
   return `${label} ${roman}`;
+}
+
+function orderName(id: string): string {
+  const o = (i18n.orders as unknown as Record<string, { name: string }>)[id];
+  return o?.name ?? 'a different Order';
 }
