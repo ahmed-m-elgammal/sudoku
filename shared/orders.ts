@@ -90,6 +90,7 @@ export interface FoeDef {
   tier: Tier;
   shadeKind: 'minor' | 'lieutenant' | 'magistrate';
   adaptive?: boolean;       // Orsolo swaps Orders at 4 Seals
+  script?: string;          // T18 — BOSS_SCRIPTS id: the Magistrate's named arc
 }
 
 export interface FolioDef {
@@ -98,19 +99,21 @@ export interface FolioDef {
   duels: [FoeDef, FoeDef, FoeDef];
 }
 
-const mk = (key: string, name: string, order: OrderId, tier: Tier, kind: FoeDef['shadeKind'], seals = 7, adaptive = false): FoeDef =>
-  ({ key: `mag.${key}`, name, order, tier, shadeKind: kind, seals, adaptive });
+const mk = (key: string, name: string, order: OrderId, tier: Tier, kind: FoeDef['shadeKind'], seals = 7, adaptive = false, script?: string): FoeDef =>
+  ({ key: `mag.${key}`, name, order, tier, shadeKind: kind, seals, adaptive, script });
 
+// T18 — every Magistrate (duel index 2) carries a named PhaseScript arc; see
+// shared/phaseScript.ts for the arcs and docs/BALANCE.md for the reasoning.
 export const FOLIOS: FolioDef[] = [
-  { numeral: 'I', key: 'halbrecht', duels: [mk('halbrecht.s1', 'Halbrecht', 'executioner', 'Easy', 'minor'), mk('halbrecht.s2', 'Halbrecht', 'executioner', 'Easy', 'lieutenant'), mk('halbrecht', 'Halbrecht the Headsman', 'executioner', 'Medium', 'magistrate', 8)] },
-  { numeral: 'II', key: 'vael', duels: [mk('vael.s1', 'Vael', 'apothecary', 'Easy', 'minor'), mk('vael.s2', 'Vael', 'apothecary', 'Medium', 'lieutenant'), mk('vael', 'Mother Vael, the Apothecary', 'apothecary', 'Medium', 'magistrate', 8)] },
-  { numeral: 'III', key: 'ilse', duels: [mk('ilse.s1', 'Ilse', 'executioner', 'Medium', 'minor'), mk('ilse.s2', 'Ilse', 'executioner', 'Medium', 'lieutenant'), mk('ilse', 'Cantor Ilse, the Bellringer', 'executioner', 'Hard', 'magistrate', 8)] },
-  { numeral: 'IV', key: 'anselm', duels: [mk('anselm.s1', 'Anselm', 'warden', 'Medium', 'minor'), mk('anselm.s2', 'Anselm', 'warden', 'Hard', 'lieutenant'), mk('anselm', 'Brother Anselm, Warden of the Lantern', 'warden', 'Hard', 'magistrate', 8)] },
-  { numeral: 'V', key: 'corvane', duels: [mk('corvane.s1', 'Corvane', 'warden', 'Hard', 'minor'), mk('corvane.s2', 'Corvane', 'warden', 'Hard', 'lieutenant'), mk('corvane', 'Dame Corvane, the Cartographer', 'warden', 'Hard', 'magistrate', 8)] },
-  { numeral: 'VI', key: 'quill', duels: [mk('quill.s1', 'Quill', 'scholar', 'Hard', 'minor'), mk('quill.s2', 'Quill', 'scholar', 'Hard', 'lieutenant'), mk('quill', 'Tobias Quill, the Forger', 'scholar', 'Expert', 'magistrate', 8)] },
-  { numeral: 'VII', key: 'marchetti', duels: [mk('marchetti.s1', 'Marchetti', 'executioner', 'Hard', 'minor'), mk('marchetti.s2', 'Marchetti', 'executioner', 'Expert', 'lieutenant'), mk('marchetti', 'Lord Marchetti, the Moneylender', 'executioner', 'Expert', 'magistrate', 8)] },
-  { numeral: 'VIII', key: 'nox', duels: [mk('nox.s1', 'Nox', 'apothecary', 'Expert', 'minor'), mk('nox.s2', 'Nox', 'apothecary', 'Expert', 'lieutenant'), mk('nox', 'Old Nox, the Gravedigger', 'apothecary', 'Expert', 'magistrate', 8)] },
-  { numeral: 'IX', key: 'orsolo', duels: [mk('orsolo.s1', 'Orsolo', 'scholar', 'Expert', 'minor'), mk('orsolo.s2', 'Orsolo', 'warden', 'Expert', 'lieutenant'), mk('orsolo', 'Magistrate Orsolo, the Ninth Seal', 'scholar', 'Expert', 'magistrate', 8, true)] },
+  { numeral: 'I', key: 'halbrecht', duels: [mk('halbrecht.s1', 'Halbrecht', 'executioner', 'Easy', 'minor'), mk('halbrecht.s2', 'Halbrecht', 'executioner', 'Easy', 'lieutenant'), mk('halbrecht', 'Halbrecht the Headsman', 'executioner', 'Medium', 'magistrate', 8, false, 'the-grip')] },
+  { numeral: 'II', key: 'vael', duels: [mk('vael.s1', 'Vael', 'apothecary', 'Easy', 'minor'), mk('vael.s2', 'Vael', 'apothecary', 'Medium', 'lieutenant'), mk('vael', 'Mother Vael, the Apothecary', 'apothecary', 'Medium', 'magistrate', 8, false, 'the-drip')] },
+  { numeral: 'III', key: 'ilse', duels: [mk('ilse.s1', 'Ilse', 'executioner', 'Medium', 'minor'), mk('ilse.s2', 'Ilse', 'executioner', 'Medium', 'lieutenant'), mk('ilse', 'Cantor Ilse, the Bellringer', 'executioner', 'Hard', 'magistrate', 8, false, 'the-peal')] },
+  { numeral: 'IV', key: 'anselm', duels: [mk('anselm.s1', 'Anselm', 'warden', 'Medium', 'minor'), mk('anselm.s2', 'Anselm', 'warden', 'Hard', 'lieutenant'), mk('anselm', 'Brother Anselm, Warden of the Lantern', 'warden', 'Hard', 'magistrate', 8, false, 'the-lantern')] },
+  { numeral: 'V', key: 'corvane', duels: [mk('corvane.s1', 'Corvane', 'warden', 'Hard', 'minor'), mk('corvane.s2', 'Corvane', 'warden', 'Hard', 'lieutenant'), mk('corvane', 'Dame Corvane, the Cartographer', 'warden', 'Hard', 'magistrate', 8, false, 'the-map')] },
+  { numeral: 'VI', key: 'quill', duels: [mk('quill.s1', 'Quill', 'scholar', 'Hard', 'minor'), mk('quill.s2', 'Quill', 'scholar', 'Hard', 'lieutenant'), mk('quill', 'Tobias Quill, the Forger', 'scholar', 'Expert', 'magistrate', 8, false, 'the-forgery')] },
+  { numeral: 'VII', key: 'marchetti', duels: [mk('marchetti.s1', 'Marchetti', 'executioner', 'Hard', 'minor'), mk('marchetti.s2', 'Marchetti', 'executioner', 'Expert', 'lieutenant'), mk('marchetti', 'Lord Marchetti, the Moneylender', 'executioner', 'Expert', 'magistrate', 8, false, 'the-ledger')] },
+  { numeral: 'VIII', key: 'nox', duels: [mk('nox.s1', 'Nox', 'apothecary', 'Expert', 'minor'), mk('nox.s2', 'Nox', 'apothecary', 'Expert', 'lieutenant'), mk('nox', 'Old Nox, the Gravedigger', 'apothecary', 'Expert', 'magistrate', 8, false, 'the-exhumation')] },
+  { numeral: 'IX', key: 'orsolo', duels: [mk('orsolo.s1', 'Orsolo', 'scholar', 'Expert', 'minor'), mk('orsolo.s2', 'Orsolo', 'warden', 'Expert', 'lieutenant'), mk('orsolo', 'Magistrate Orsolo, the Ninth Seal', 'scholar', 'Expert', 'magistrate', 8, true, 'the-ninth')] },
 ];
 
 export const totalCampaignDuels = FOLIOS.reduce((n, f) => n + f.duels.length, 0); // 27

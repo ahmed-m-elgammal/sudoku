@@ -80,6 +80,14 @@ export default function Antechamber() {
           <h3>{i18n.hub.echoes}</h3>
           <p>{i18n.hub.echoesSub}</p>
         </button>
+
+        {/* T18 — the Endless Assize: the Nine Folios as a circuit that never closes */}
+        <button className="panel card" onClick={() => { synth.uiTap(); ui.go('endless'); }}>
+          <h3>{i18n.hub.endless}</h3>
+          <p>{i18n.hub.endlessSub
+            .replace('{rung}', String((save.endless?.current ?? 0) + 1))
+            .replace('{best}', String(save.endless?.best ?? 0))}</p>
+        </button>
       </div>
       <Ribbon />
     </main>

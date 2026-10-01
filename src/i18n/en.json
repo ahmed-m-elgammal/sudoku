@@ -233,8 +233,23 @@
     "practiceSub": "Any difficulty. No witness, small reward.",
     "echoes": "Shade Echoes",
     "echoesSub": "Duel the ink of Clerks who came before",
+    "endless": "Endless Assize",
+    "endlessSub": "Rung {rung} · best {best}. The circuit never ends.",
     "headerName": "the Clerk",
     "candle": "candle"
+  },
+  "endless": {
+    "title": "The Endless Assize",
+    "sub": "The Nine ride their circuit again, forever. Every third rung is a Magistrate's duel — eight Seals and their arc.",
+    "rungLabel": "Rung",
+    "bestLabel": "Best",
+    "nextLabel": "WAITING ON THIS RUNG",
+    "seals": "Seals",
+    "bossBadge": "Magistrate's duel",
+    "queueLabel": "Then:",
+    "ascend": "Ascend",
+    "law": "A win sets you one rung higher. A loss returns you to the foot of the stair — what you climbed stays written.",
+    "back": "Back to the Antechamber"
   },
   "matchmaking": {
     "title": "Summoning",
@@ -401,6 +416,20 @@
     "yourShadeDuel": "Duel your Shade",
     "yourShadeStats": "{pace}s per digit · {err}% burned ink · {rites} rites",
     "yourShadeFaint": "The newest ink is too faint to read. An ordinary Shade answers in your echo's name.",
+    "sealChit": "Seal a chit — pass this echo on",
+    "chitTitle": "A sealed chit",
+    "chitBody": "The chit carries the ink of the duel — the tablet, the rites, the faltering hand — but no names. Pass it to another Clerk.",
+    "copy": "Copy the chit",
+    "copied": "Sealed — the chit is on your clipboard.",
+    "copyFail": "The wax would not take. Copy the chit by hand:",
+    "importChit": "Break a chit another Clerk sealed",
+    "importTitle": "Break a chit",
+    "importPlaceholder": "Paste ASSIZE1-…",
+    "importAction": "Set it on the shelf",
+    "importBad": "The chit is broken or forged — nothing to read.",
+    "importOk": "The echo takes its place on the shelf.",
+    "chitBadge": "from a chit",
+    "privacyNote": "A shared chit never carries names — only ink.",
     "back": "Back to the Antechamber"
   },
   "friend": {
@@ -673,6 +702,10 @@
     "ledger-keeper": {
       "title": "Keeper of the Ledger",
       "desc": "Reach Standing 1400."
+    },
+    "endless-ten": {
+      "title": "Tenth Rung",
+      "desc": "Clear ten rungs of the Endless Assize."
     }
   },
   "loading": [

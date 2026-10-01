@@ -82,7 +82,8 @@ export default function ResultScreen() {
       </section>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', padding: '14px 0 20px', flexWrap: 'wrap' }}>
-        <button className="btn btn-primary" onClick={() => { ui.go('matchmaking', { duelMode: ui.duelMode === 'tutorial' ? 'shade' : ui.duelMode }); }}>{i18n.result.rematch}</button>
+        {/* T18 — an endless rung rematches on the stair itself, not in the queue */}
+        <button className="btn btn-primary" onClick={() => { if (ui.duelMode === 'endless') { ui.go('endless'); return; } ui.go('matchmaking', { duelMode: ui.duelMode === 'tutorial' ? 'shade' : ui.duelMode }); }}>{i18n.result.rematch}</button>
         <button className="btn" onClick={() => ui.go('antechamber')}>{i18n.result.antechamber}</button>
         <button className="btn btn-ghost" onClick={share}>{i18n.result.share}</button>
       </div>

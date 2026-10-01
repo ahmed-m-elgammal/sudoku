@@ -9,13 +9,14 @@ export const isEchoAvailable = (): boolean =>
   typeof window !== 'undefined' && 'indexedDB' in window;
 
 /** validates on the way IN as well — nothing unvalidated ever reaches the store */
-export async function saveEcho(replay: DuelReplay): Promise<string | null> {
+export async function saveEcho(replay: DuelReplay, opts?: { imported?: boolean }): Promise<string | null> {
   if (!isEchoAvailable()) return null;
   const clean = validateReplay(replay);
   if (!clean) return null;
   const key = nextEchoKey(Date.now(), Math.floor(Math.random() * 1e9));
   try {
-    await idbSet('duels', key, { ...clean, savedAt: Date.now() });
+    // T19 — imported chits carry the badge so the shelf tells the tale honestly
+    await idbSet('duels', key, { ...clean, savedAt: Date.now(), ...(opts?.imported ? { imported: true } : {}) });
     await trimEchoes();
     return key;
   } catch {
@@ -27,6 +28,7 @@ export interface EchoEntry {
   key: string;
   replay: DuelReplay;
   savedAt: number;
+  imported: boolean;
 }
 
 export async function listEchoes(): Promise<EchoEntry[]> {
@@ -46,7 +48,12 @@ export async function listEchoes(): Promise<EchoEntry[]> {
       if (!raw) continue;
       const clean = validateReplay(raw);
       if (!clean) continue; // a corrupted row is skipped, not shown, not crashing
-      out.push({ key: k, replay: clean, savedAt: typeof raw.savedAt === 'number' ? raw.savedAt : 0 });
+      out.push({
+        key: k,
+        replay: clean,
+        savedAt: typeof raw.savedAt === 'number' ? raw.savedAt : 0,
+        imported: raw.imported === true,
+      });
     }
     return out.sort((a, b) => b.savedAt - a.savedAt);
   } catch {

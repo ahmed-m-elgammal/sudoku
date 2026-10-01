@@ -3,6 +3,11 @@
 import { create } from 'zustand';
 import { idbGet, idbSet } from './idb';
 import type { OrderId } from '@shared/config';
+import { newEndlessState, sanitizeEndless, type EndlessState } from '@shared/endless';
+
+// T18 — the Endless Assize ladder lives in the save; the salt is generated once
+// per Clerk and persisted, so rung duels stay deterministic per save.
+const newEndlessSalt = (): string => Math.random().toString(36).slice(2, 10);
 
 export interface SaveStateV2 {
   v: 2;
@@ -28,6 +33,7 @@ export interface SaveStateV2 {
     recent: Array<{ t: number; mode: string; result: 'w' | 'l' | 'd'; foe: string; shade: boolean; order: OrderId }>;
   };
   standing: number;
+  endless: EndlessState;         // T18 — the Endless Assize ladder
   settings: {
     music: number; fx: number; haptics: boolean; contrast: boolean; reducedMotion: boolean;
     text: 's' | 'm' | 'l'; autoNotes: boolean; highlights: boolean; leftHand: boolean; telemetry: boolean;
@@ -56,6 +62,7 @@ export const freshSave = (name: string): SaveStateV2 => ({
     byOrder: {}, longestStreak: 0, standingHistory: [1000], recent: [],
   },
   standing: 1000,
+  endless: newEndlessState(newEndlessSalt()),
   settings: {
     music: 0.3, fx: 0.7, haptics: true, contrast: false, reducedMotion: false,
     text: 'm', autoNotes: true, highlights: true, leftHand: false, telemetry: true,
@@ -87,6 +94,10 @@ export const useSave = create<SaveStore>((set, get) => ({
       const fresh = freshSave(id.name);
       await idbSet('save', 'me', fresh);
       set({ save: fresh });
+    } else if (existing && !existing.endless) {
+      // T18 migration: persist the freshly minted endless state (its salt must
+      // stick, or rung duels would re-derive from a new seed every load)
+      await idbSet('save', 'me', migrated);
     }
   },
   update: (fn) => {
@@ -106,6 +117,10 @@ export const useSave = create<SaveStore>((set, get) => ({
 }));
 
 function migrate(s: SaveStateV2): SaveStateV2 {
-  if (s.v === 2) return s;
+  if (s.v === 2) {
+    // T18 — hostile/legacy endless states are sanitized on every load, and a
+    // save from before this iteration gains a fresh (persisted) ladder
+    return { ...s, endless: sanitizeEndless(s.endless) };
+  }
   return { ...freshSave(s.name ?? 'the Clerk'), ...s, v: 2 };
 }

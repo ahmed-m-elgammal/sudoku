@@ -8,7 +8,8 @@ export type Screen =
   | 'result' | 'reliquary' | 'folioMap' | 'folioDetail' | 'daily' | 'cabinet'
   | 'season' | 'ledger' | 'settings' | 'offline' | 'story' | 'purse' | 'friend'
   | 'endingChoice' // T6 — the Balance / Burn verdict after the Orsolo reveal
-  | 'echoes';      // T7 — the Shade Echoes shelf (duel a stored replay)
+  | 'echoes'       // T7 — the Shade Echoes shelf (duel a stored replay)
+  | 'endless';     // T18 — the Endless Assize ladder
 
 export interface StoryPayload {
   lines: string[];
@@ -23,10 +24,12 @@ interface UiStore {
   prev: Screen | null;
   direction: number; // page turn variant
   story: StoryPayload | null;
-  duelMode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'ranked' | 'friend' | 'replay';
+  duelMode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'ranked' | 'friend' | 'replay' | 'endless';
   pendingEcho: import('@shared/replay').DuelReplay | null; // T7 — the chosen echo for a replay duel
   // T17 — "Your Shade": the echo mined into a personal profile + the echo it came from
   pendingPersonalShade: { replay: import('@shared/replay').DuelReplay; profile: import('@shared/shade').ShadeProfile } | null;
+  // T18 — the Endless rung this duel ascends (0-based; null = the save's current rung)
+  endlessRung: number | null;
   campaignDuel: { folio: number; duel: number } | null;
   lastResult: {
     winner: PlayerSeat | 'draw'; reason: string; mode: string;
@@ -53,6 +56,7 @@ export const useUi = create<UiStore>((set, get) => ({
   pendingFoe: null,
   pendingEcho: null,
   pendingPersonalShade: null,
+  endlessRung: null,
   serverDuel: null,
   go: (s, payload) => {
     synth.pageTurn();

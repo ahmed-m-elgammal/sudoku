@@ -389,7 +389,9 @@ export function shadeAct(
 }
 
 // most nearly complete unclaimed unit on a board (mirror of the engine's sever
-// heuristic, kept local so the AI module stays engine-import-light)
+// heuristic, kept local so the AI module stays engine-import-light).
+// T18: exported as mostCompleteUnit — the PhaseScript signature casts (an Augur
+// into the boss's best unit, a Quarantine onto the Clerk's) aim with the same eye.
 const bestUnitFor = (board: Uint8Array, owner: Record<string, PlayerId>): string | null => {
   let best: string | null = null;
   let bestN = -1;
@@ -405,3 +407,4 @@ const bestUnitFor = (board: Uint8Array, owner: Record<string, PlayerId>): string
   }
   return best;
 };
+export const mostCompleteUnit = bestUnitFor;

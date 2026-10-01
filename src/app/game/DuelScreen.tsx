@@ -21,6 +21,7 @@ import { orderMeta } from '@shared/orders';
 import storyJson from '@/i18n/story.json';
 import type { Digit, OrderId } from '@shared/config';
 import { Rng } from '@shared/rng';
+import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
 
 export default function DuelScreen() {
   const ui = useUi();
@@ -151,9 +152,21 @@ export default function DuelScreen() {
     }
     // T7 — recordable human duels leave an echo behind (the ink-echo another Clerk
     // may duel later). Tutorial (scripted) and campaign (canon foes) stay unrecorded.
-    if (duel && 'toReplay' in duel && ['practice', 'daily', 'shade', 'replay'].includes(ui.duelMode)) {
+    if (duel && 'toReplay' in duel && ['practice', 'daily', 'shade', 'replay', 'endless'].includes(ui.duelMode)) {
       const rec = duel.toReplay({ winner, reason: r.reason });
       if (rec) void import('@/game/echoes').then(({ saveEcho }) => saveEcho(rec));
+    }
+    // T18 — Endless Assize ladder law: a win ascends (best tracks), a loss returns
+    // the Clerk to the foot of the stair; the rung win mints rung-scaled Ink.
+    if (ui.duelMode === 'endless') {
+      const foughtRung = ui.endlessRung ?? save?.endless?.current ?? 0;
+      const next = winner === 0 ? endlessOnWin(save?.endless) : endlessOnLoss(save?.endless);
+      s.update((cur) => ({
+        ...cur,
+        endless: next,
+        economy: { ...cur.economy, ink: cur.economy.ink + (winner === 0 ? endlessInkBonus(foughtRung) : 0) },
+      }));
+      if (next.best >= 10) s.unlockAchievement('endless-ten');
     }
     // story beats replace the result screen on their first clear — the reveal plays
     // immediately after Folio IX (spec: before the ending choice), interludes close

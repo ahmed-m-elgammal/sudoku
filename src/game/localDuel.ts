@@ -7,6 +7,7 @@ import {
 } from '@shared/engine';
 import { shadeAct, profileForStanding, type ShadeProfile } from '@shared/shade';
 import { tutorialAct, newTutorialScript, type TutorialScriptState } from '@shared/tutorial';
+import { bossAct, newBossScriptState, type BossScript, type BossScriptState } from '@shared/phaseScript';
 import { adaptiveSwapTarget } from '@shared/orders';
 import { validateReplay, ReplayDriver, newReplayRecorder, recordAction, buildReplay, type DuelReplay, type ReplayRecorder, type ReplayAction } from '@shared/replay';
 import { Rng } from '@shared/rng';
@@ -21,8 +22,9 @@ export interface LocalDuelOpts {
   names: [string, string];
   seals?: [number, number];
   foeProfile?: ShadeProfile;
-  mode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'replay';
+  mode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'replay' | 'endless';
   adaptive?: boolean;             // T4: the Ninth swaps Orders when he falls to 4 Seals
+  foeScript?: BossScript;         // T18: the foe's PhaseScript arc (campaign Magistrates, endless boss rungs)
   replay?: DuelReplay;            // T7: the ink-echo this duel's foe replays (mode 'replay')
   settingsHaptics?: () => boolean;
   onEnd?: (r: { winner: PlayerId | 'draw'; reason: string }) => void;
@@ -75,6 +77,9 @@ export class LocalDuel {
   private adaptiveDone = false;
   private swapFlash: { from: OrderId; to: OrderId } | null = null;
   private swapFlashAt = 0;
+  // T18 — the boss's PhaseScript state (phase ladder + pending signature), owned
+  // here like the tutorial's script state; present only when opts.foeScript is set.
+  private bossState: BossScriptState | null = null;
 
   constructor(opts: LocalDuelOpts) {
     this.opts = opts;
@@ -96,6 +101,7 @@ export class LocalDuel {
       if (validated) this.echo = new ReplayDriver(validated, 1);
       else this.replayDegraded = true;
     }
+    if (opts.foeScript) this.bossState = newBossScriptState();
   }
 
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
@@ -305,10 +311,14 @@ export class LocalDuel {
     }
     const prof = this.opts.foeProfile ?? profileForStanding(1000);
     // T3: the tutorial Shade is fully scripted (deterministic hand-loses-the-race);
-    // every other mode keeps the calibrated Shade bot.
+    // T18: a PhaseScript boss advances its arc, casts signature rites, and otherwise
+    // acts through the same calibrated Shade (phase-patched); every other mode keeps
+    // the plain calibrated Shade bot.
     const act = this.opts.mode === 'tutorial'
       ? tutorialAct(this.script, this.state, 1, this.state.players[0].progress, this.scriptRng, performance.now())
-      : shadeAct(this.state, 1, prof, () => this.rng.next(), performance.now());
+      : this.bossState && this.opts.foeScript
+        ? bossAct(this.opts.foeScript, this.bossState, this.state, 1, prof, () => this.rng.next(), performance.now())
+        : shadeAct(this.state, 1, prof, () => this.rng.next(), performance.now());
     if (act.kind === 'place') {
       const res = place(this.state, 1, act.cell, act.digit);
       if (res.ok && res.correct) synth.pencil();

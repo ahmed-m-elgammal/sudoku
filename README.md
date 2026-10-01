@@ -27,6 +27,8 @@ A complete, playable, web-first implementation of the ASSIZE design document:
 - **T7 Shade Echoes** — your human duels (practice, daily, Shade, echo duels) are recorded as compact, validated replay logs; the Antechamber's *Shade Echoes* shelf lets you duel the recorded ink of any past duel as an opponent. Echo validation is fail-closed; a corrupted echo degrades visibly to an ordinary Shade, never a crash.
 - **T16 Shades that solve** — the Shade AI climbs a deduction ladder (naked singles → hidden singles → pair eliminations → pointing) gated by a `techniques` tier that rises with your Standing and re-tiers per campaign foe role (minor/lieutenant/boss); at a sealed gap of ±3 the Shade's tempo adapts within a hard envelope — it leans in when losing, coasts when crushing.
 - **T17 Your Shade** — your newest echo is *mined*: the deterministic generator reconstructs the exact tablet you faced, so the game measures your real wrong-ink rate, thinking pace and rite rhythm and raises a personal Shade that paces ink at YOUR tempo. "Duel your Shade" on the Echoes shelf; faint ink degrades visibly; dueling your Shade records new echoes.
+- **T18 PhaseScript bosses + the Endless Assize** — every campaign Magistrate duels with a *named arc*: a monotonic ladder of phases driven by the live duel (clock, Seals, claims, ink), each phase patching tempo/skill within the hard envelope and casting one-shot signature rites when they are actually legal — Halbrecht's Grip, Vael's Drip, Ilse's Peals, Marchetti's Ledger, Nox's Exhumation, Orsolo's Ninth… And the Nine ride again forever: the Endless Assize derives a fully deterministic foe (tier, Seals, deduction, tablet, arc) from rung + a per-save salt; wins ascend, losses return you to the foot, best is forever.
+- **T19 Sealed chits (echo sharing + the privacy pass)** — pass an echo to another Clerk as an `ASSIZE1-` copy-paste code. The privacy pass is structural and two-directional: export replaces both names with fixed fictional labels, import force-redacts again — a chit carries the ink of a duel, never a name.
 - **4 Orders / 12 abilities / 5 statuses** with the exact anti-frustration rules; Momentum, Clean claims, Flinch; all four win conditions in the specified order.
 - **Economy & meta** — Ink, Sigils, Reliquaries (every 3rd win), Season Ledger (30 tiers), Cabinet with 26 cosmetics across 6 tabs, Great Ledger profile with Standing graph, 24 achievements ("Marginalia"), Recovery Code, export/import.
 - **PWA** — installable, offline-capable (service worker precaches the shell; M0/M1/M5/Shade duels run entirely on the local engine).
@@ -148,12 +150,36 @@ The T7 recorder stored every human action; nothing read it back as gameplay. The
 - **Reconstruction is exact**: echoes store `seed` + `tier`, and `generatePuzzle(seed, tier)` is deterministic — so `shared/personalShade.ts` rebuilds the very tablet you faced and measures your REAL burned-ink rate (not an estimate), your median thinking pace (burst-capped, idle-capped), and your rite density.
 - **The mined profile**: pace → `placeCadenceMs` (your Shade paces ink at YOUR tempo — `placeDelayMs` alone was only ever stuck-thinking time, a flaw the round-trip test caught and the cadence field fixed) and a delay band; burned ink → `mistakeRate`; rite density → `aggression`; outcome + cleanliness → `singlesSkill`; tier + a flawless win → `techniques`.
 - **Fail-closed end to end**: validator first; fewer than 8 placements → null (too faint, shown honestly); wrong-ink above 50% → null (no real duel on this tablet can produce it — Seals die first); every field through the envelope; pure function, input never mutated, byte-identical profile per echo.
-- **The shelf grows a face**: "Your Shade" rises from your newest echo with its stats line (*1.5 s per digit · 0% burned ink · 0 rites*), and dueling it launches a fresh tablet of the echo's tier — your ink, turned against you. Dueling your Shade records new echoes; the loop feeds itself. Echo *sharing* between Clerks still waits on the privacy pass for recorded names.
+- **The shelf grows a face**: "Your Shade" rises from your newest echo with its stats line (*1.5 s per digit · 0% burned ink · 0 rites*), and dueling it launches a fresh tablet of the echo's tier — your ink, turned against you. Dueling your Shade records new echoes; the loop feeds itself. (Echo *sharing* shipped the next iteration as T19, behind the privacy pass.)
 
 ### The two new adversarial suites (42 tests)
 
 4. **Shade ladder** (`shared/__tests__/shadeLadder.test.ts`, 24 tests): tier-0 purity vs the shipped bot; candidate-consistency under every tier on clean AND poisoned boards (elimination bugs die here); byte-identical determinism at all tiers; statistical monotonicity (aggregate true ink climbs with tier over 10 seeds); the solve guarantee (tier 3 wins 5/5 Easy seeds with ≥ 3 units genuinely claimed); legality fuzz (24 seeds × all tiers — no given/filled/chained, no unknown casts); the adaptation envelope over the full 9×9 seal grid, deadband, lean/coast ordering and purity; hush-awareness; quarantine targeting pins.
 5. **Echo mining** (`shared/__tests__/personalShade.test.ts`, 18 tests): exact pins on the median→band math; degenerate echoes (0/1 placements, all-wrong, zero-cast, 400 s idles, duplicated fizzled cells) never produce NaN or a throw; 200 seeded payloads (half solution-true duels, half garbage) — null-or-envelope-valid, always; purity and no input mutation; validator-hostile shapes deferred; and the round-trip: the mined Shade's *observed* placement gaps track the mined cadence (0.6×–1.6×), slow clerks mine slower Shades than fast ones.
+
+## What landed in this iteration (T18 + T19 — bosses with arcs, and a stair that never ends)
+
+### T18 — PhaseScript bosses + the Endless Assize ladder
+
+The T3 tutorial proved a pure scripted controller can drive the shared engine; T18 generalizes that pattern from "one scripted loser" to bosses with *arcs*, and then builds an infinite ladder on top.
+
+- **The phase ladder** (`shared/phaseScript.ts`): a `BossScript` is an ordered list of `PhaseRule`s. The boss lives in exactly one phase; the ladder only ever ADVANCES (a Magistrate does not un-lose their composure — recovered Seals never walk it back, pinned by test). Each rule carries `when` (engine-observable triggers: clock, own/foe Seals, own claims, own ink — all ANDed; a rule with no finite condition NEVER matches, so a garbage script degrades to the base Shade instead of handing out an unconditional god-phase), `patch` (RELATIVE tempo/skill deltas — pace factor ×, mistake/skill/aggression + — merged onto the duel's standing-calibrated base profile through `clampProfile`, so the envelope still holds under ~500 hostile patches), and `signature` (one-shot rites dispatched on the first wake they are actually LEGAL — own Order, off cooldown, uses left — so a pending rite never stalls the boss and never fizzles).
+- **The nine arcs**: Halbrecht's *Grip* (claims, then hushes, then closes), Vael's *Drip* (poison thickens as her ink spreads), Ilse's *Peals* (clock-driven bell-bursts that quicken), Anselm's *Lantern* (holds the wall, opens under your pressure), Corvane's *Map* (draws lines, then quarantines yours), Quill's *Forgery* (studies, then copies better), Marchetti's *Ledger* (hoards every rite, spends it all below 5 Seals), Nox's *Exhumation* (buries the opening slow, digs the endgame fast), Orsolo's *Ninth* (probes, punishes, spends everything when the ninth Seal cracks — his T4 adaptive swap rides on top). `FoeDef.script?` flows through `specFromUi`; LocalDuel owns a per-duel `BossScriptState` exactly like the tutorial's script state.
+- **The Endless Assize** (`shared/endless.ts`): rung r is a fully deterministic duel derived from two pure facts (r, a per-save salt persisted once on migration — a re-minted salt would silently rewrite every rung's tablet). Magistrate m = r % 9 rides again with circuit numerals from the second circuit; tier Easy→Expert over the first circuit; every 3rd rung is a Magistrate's duel (8 Seals + its arc); pace/mistake/skill/aggression/techniques tighten monotonically inside the envelope. Ladder law: a win ascends (best tracks), a loss returns you to the foot while best stays written; rung-scaled Ink; the `endless-ten` Marginalium. New EndlessScreen + hub card + rematch routing back to the stair. *The property sweep caught a real design flaw before it shipped: a boss-rung techniques +1 made the rung AFTER it a gentler duel — the deduction curve is now purely the rung curve, and bosses keep their teeth in the 8 Seals and the arc.*
+
+### T19 — Sealed chits (echo sharing behind the privacy pass)
+
+The T7/T17 deferred obligation, paid: echo sharing without leaking a name.
+
+- **The chit** (`shared/echoShare.ts`): `ASSIZE1-` + unpadded base64url (pure TS — no Buffer, no btoa-unicode traps) of a fixed-key-order JSON payload of the validated replay. Encoding is deterministic (the same echo seals to the byte-identical chit) and never throws; decoding is fail-closed across the whole hostile matrix — wrong prefix, foreign alphabet, dangling 6-bit lengths, invalid UTF-8, JSON bombs, prototype-pollution payloads, oversize, invalid replays — always null, never a crash.
+- **The privacy pass is structural, both directions**: export replaces both seats with fixed fictional labels (*a wandering Clerk* / *an ink-echo*) before a single byte is encoded, and import force-redacts AGAIN — a hand-crafted name-smuggling chit cannot put a name on your shelf even in principle. Sliding-window pins verify no ≥5-char fragment of any original name survives anywhere in the emitted code. Gameplay data (seed, tier, orders, actions, outcome, seals) stays byte-faithful so the echo replays exactly — only anonymously.
+- **The shelf**: per-echo "Seal a chit" (clipboard with a legacy fallback, modal with the code), "Break a chit" import, and an honest `from a chit` badge on imported echoes.
+
+### The three new adversarial suites (64 tests)
+
+6. **PhaseScript** (`shared/__tests__/phaseScript.test.ts`, 25 tests): hostile `when`-fields fail closed; monotonicity under state wobble; empty phases ≡ byte-identical plain shadeAct; envelope-idempotent patches; signature one-shot semantics, cooldown-wait, foreign-Order skip (warden Orsolo never casts the scholar fairCopy); all nine arcs × seeds driven to judgment under engine invariants; byte-identical determinism; LocalDuel runtime parity. Two probe scaffolds initially let the boss WIN mid-test (clean crossing claims deal up to 6 Seals in one placement) — the tests were fixed; the lethality was kept. It is the arc working.
+7. **Endless** (`shared/__tests__/endless.test.ts`, 12 tests): rung-0 pins, boss-rung law, cycle numerals, seed stability/salt sensitivity, hostile rungs (NaN/Infinity/garbage → the foot of the stair, never a corruption teleport to rung 1e6), the monotonic property sweep r 0..40, ladder law incl. NaN-hostile states.
+8. **Echo sharing** (`shared/__tests__/echoShare.test.ts`, 27 tests): round-trip of a real recorded echo (byte-equal gameplay, redacted names); sliding-window privacy pins; import-redaction of a smuggling code; the hostile-code matrix; truncated-chit sweep; 200-payload fuzz; 4000-action maximum echo within the cap.
 
 ### Shipped in earlier iterations (kept for the record)
 
@@ -179,7 +205,7 @@ cd mini-services/assize-server && bun install && bun run dev   # REST + socket.i
 
 Then open the preview URL (port 3000). Fresh load lands on the tutorial duel within ~2 s.
 
-**Tests:** `bun run test` (Vitest, **300 tests** across eight suites: 35 engine — puzzle uniqueness and tier bands, claims/damage/Clean, Momentum, all 12 abilities, all 5 statuses + anti-frustration, win-condition order, determinism, serialization, Shade legality, campaign structure; 7 tutorial scripting; 9 adaptive-swap; **168 adversarial engine**; **16 generator/RNG/AI fuzz**; **23 replay/T7**; **24 shade ladder/T16**; **18 echo mining/T17**).
+**Tests:** `bun run test` (Vitest, **364 tests** across eleven suites: 35 engine — puzzle uniqueness and tier bands, claims/damage/Clean, Momentum, all 12 abilities, all 5 statuses + anti-frustration, win-condition order, determinism, serialization, Shade legality, campaign structure; 7 tutorial scripting; 9 adaptive-swap; **168 adversarial engine**; **16 generator/RNG/AI fuzz**; **23 replay/T7**; **24 shade ladder/T16**; **18 echo mining/T17**; **25 phase-script bosses/T18**; **12 endless ladder/T18**; **27 sealed chits/T19**).
 
 ## Environment
 
@@ -201,12 +227,17 @@ shared/                 pure deterministic engine (spec R6) — used by BOTH cli
   replay.ts             T7: validated duel replays (recorder, fail-closed validator,
                         clock-driven ReplayDriver, echo-storage helpers)
   personalShade.ts      T17: echo → personal ShadeProfile miner (fail-closed)
-  __tests__/            300 Vitest tests (engine / tutorial / adaptive / adversarial /
-                        generators / replay / shadeLadder / personalShade)
+  phaseScript.ts        T18: BossScript phase ladders + the nine Magistrate arcs
+                        (monotonic phases, relative patches, one-shot signature rites)
+  endless.ts            T18: the Endless Assize — rung → foe derivation, ladder law
+  echoShare.ts          T19: sealed chits — encode/decode + the two-way privacy pass
+  __tests__/            364 Vitest tests (engine / tutorial / adaptive / adversarial /
+                        generators / replay / shadeLadder / personalShade / phaseScript /
+                        endless / echoShare)
 src/                    the client (Next.js 16, React 19, Zustand, CSS Modules + design tokens)
-  app/game/             21 screens (S01–S19 + EndingChoice + EchoesScreen) + duel runtime wiring
-  game/localDuel.ts     local engine harness (tutorial/campaign/daily/practice/Shade/replay)
-                        + checkAdaptive() trigger + swapBanner() (T4) + echo recorder/driver (T7)
+  app/game/             22 screens (S01–S19 + EndingChoice + EchoesScreen + EndlessScreen) + duel wiring
+  game/localDuel.ts     local engine harness (tutorial/campaign/daily/practice/Shade/replay/endless)
+                        + checkAdaptive() (T4) + echo recorder/driver (T7) + bossAct drive (T18)
   game/echoes.ts        T7: IndexedDB echo storage (validate-on-write, ring buffer, corrupt-row skip)
   game/serverDuel.ts    client mirror for authoritative duels (predict + reconcile,
                         S08 disconnect state; swapBanner() parity stub)
@@ -254,11 +285,12 @@ Saves, identity, cosmetics and achievements live in **IndexedDB** (versioned, mi
 
 ## Verification status
 
-- **300/300 Vitest green** (`bun run test`): engine 35, tutorial scripting 7, adaptive swap 9, adversarial 168, generators/RNG/AI 16, replay/T7 23, **shade ladder/T16 24, echo mining/T17 18**.
+- **364/364 Vitest green** (`bun run test`): engine 35, tutorial scripting 7, adaptive swap 9, adversarial 168, generators/RNG/AI 16, replay/T7 23, shade ladder/T16 24, echo mining/T17 18, **phase-script bosses/T18 25, endless ladder/T18 12, sealed chits/T19 27**.
 - **`tsc --noEmit` clean** for `src/` and `shared/` (remaining project-level notes are sandbox scaffolding outside the app).
 - **Adversarial red → fix → green is on the record**: the probe script and the new suites failed 106 times against the unhardened engine (4 crash classes, 4 semantic holes, 1 luck-pass exposed); every failure was either fixed in the engine or corrected in the test with the reason named, and the suite now passes from a clean run.
 - **Browser-verified end-to-end** (agent-browser, 390×844): boot → tutorial → **won live** (race script) → result → hub → Practice → OrderSelect → duel → won → result. The browser pass caught a real bug the headless harness could not — the rAF clock is fractional and the replay validator (correctly) demands integer ms, so echoes silently failed to save; fixed at the recorder boundary and pinned by test R23, which now drives fractional ticks deliberately.
 - **T16/T17 walked in a real browser** (390×844): daily duel won → echo lands on the shelf → **"Your Shade"** card with honest mined stats → "Duel your Shade" launches a live duel against foe *"Shade of You"* (your Order, the echo's tier, cadence 1500 ms, tier-3 deductions) placing true ink from the first seconds; console clean throughout. Screenshots in `scripts/shots/t17-*.png`.
+- **T18/T19 walked in a real browser** (390×844): hub **Endless Assize** card ("Rung 1 · best 0") → stair (rung, best, waiting foe + next-three queue) → Ascend → rung 0 duel with seed `endless-prvg4zsx-0` and the foe actively solving; concede → DEFEAT → Rematch routes back to the stair with the ladder still at the foot (IDB: current 0/best 0); hook-win → VICTORY → current 1/best 1, duel recorded as mode `endless`; rung 2 resolves to a Magistrate's duel (8 Seals + `the-peal` attached) — and the Magistrate legitimately defeated the slow Clerk. On the shelf: sealed a real echo → a 1388-char `ASSIZE1-` chit with zero name leakage; broke the same chit → new shelf row badge `from a chit` reading *"Shade of a wandering Clerk"*; the imported echo duels (mode `replay`, correct tablet, not degraded); console clean. Screenshots in `scripts/shots/t18-*.png`, `t19-*.png`.
 - **Socket-level disconnect flow** 6/6 via `scripts/pvp-disconnect-test.mjs` (T2).
 
 ## Known limits
@@ -268,9 +300,9 @@ Saves, identity, cosmetics and achievements live in **IndexedDB** (versioned, mi
 - Payments and rewarded ads are stubbed (TODO T5). No real money moves.
 - Solver-app assistance cannot be fully prevented (honest, per spec §6): the server applies speed/uniformity sanity checks and shadow-queues, but a solver feeding moves at human pace is undetectable.
 - The adaptive swap exists only in local (campaign/Shade) duels; bringing it to server-authoritative duels would need the swap decision (and its counter map) mirrored server-side — deliberately out of scope while PvP has no magistrates.
-- Echoes are local-only for now (your own duels on your own device); sharing echoes between Clerks (export codes, or server-side anonymous echo pools for the matchmaking Shade fallback) is the natural next step and needs a privacy pass on the recorded names first. *Your* Shade already rises locally from your newest echo (T17) — sharing mined profiles would need the same pass.
+- Echo *chits* are copy-paste strings by design (no server pool yet): the privacy pass ships with T19 — names are structurally redacted at export AND import — so a future anonymous server-side echo pool can ride the same `echoShare.ts` primitives without a second pass. PvP replays remain unrecorded (server-authoritative duels would need an action log too).
 - The browser session used for the echo-shelf walk went unreliable partway (stale hydration after HMR); the shelf's full happy path is covered by the headless replay suite instead, and the one bug the browser did surface is pinned by R23.
-- See `TODO.md` for the full honest list (T1–T17, with T2/T3/T4/T6/T7/T12/T15/T16/T17 marked DONE).
+- See `TODO.md` for the full honest list (T1–T19, with T2/T3/T4/T6/T7/T12/T15/T16/T17/T18/T19 marked DONE).
 
 ## Future work
 
@@ -289,11 +321,12 @@ Saves, identity, cosmetics and achievements live in **IndexedDB** (versioned, mi
 
 ### Design ideas beyond the TODO
 
-- **Post-campaign content:** the adaptive-swap pattern generalizes — "rematch" Magistrates with a second swap phase, or an Endless ladder of multi-phase Shades that swap at thresholds (the engine's `swapOrder()` + counter map already support it; it needs data and a ladder mode).
+- **Deeper arcs:** the PhaseScript vocabulary (clock/Seals/claims/ink triggers, relative patches, signature rites) composes — scripted cross-Order boss phases, "duet" bosses that swap arcs mid-duel via `swapOrder()`, or Weekly Assize modifiers that patch the endless foe's profile per week.
 - **An Order of your own to counter-pick:** expose an Order-swap token (one per duel, earned at 3 Seals down) so human duels get the same phase-2 drama the Ninth has.
 - **Ending echo:** thread `campaign.ending` into Duel-screen flavour (burned-ledger wax, balanced-ledger stamps) and into Shade taunts — the save field is already there.
+- **Anonymous echo pool:** a server endpoint storing redacted chits (the T19 pass already guarantees no names) to feed the matchmaking Shade fallback with real Clerk ink.
 - **Weekly seeded "Assize of Nine":** a 9-duel gauntlet on one seed, leaderboard by total time+mistakes; reuses the daily pipeline.
-- **Replay viewer:** the T7 recorder already keeps the full action log; a scrubber over `DuelEvent[]` with the T12 stamp positions would make losses teach like the tutorial does. Echo *sharing* (export codes, anonymous server pools) builds directly on the same validated format.
+- **Replay viewer:** the T7 recorder already keeps the full action log; a scrubber over `DuelEvent[]` with the T12 stamp positions would make losses teach like the tutorial does.
 - **Full server-authoritative solo mode** if the Ink economy ever becomes competitive: the local engine already serializes/deserializes whole duel state, so moving campaign validation server-side is a protocol task, not a rewrite.
 
 ## Credits

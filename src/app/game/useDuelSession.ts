@@ -8,6 +8,8 @@ import { useUi, type PlayerSeat } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { synth } from '@/audio/synth';
 import { profileForStanding, tieredTechniques, type ShadeProfile } from '@shared/shade';
+import { endlessFoe, newEndlessState } from '@shared/endless';
+import { BOSS_SCRIPTS, type BossScript } from '@shared/phaseScript';
 import type { DuelReplay } from '@shared/replay';
 import { FOLIOS } from '@shared/orders';
 import type { DuelEvent } from '@shared/engine';
@@ -21,6 +23,7 @@ export interface DuelSessionSpec {
   seals?: [number, number];
   foeProfile?: ShadeProfile;
   adaptive?: boolean;   // T4: Magistrate Orsolo (Folio IX, duel III) swaps Orders at 4 Seals
+  foeScript?: BossScript; // T18: the Magistrate's named PhaseScript arc
   replay?: DuelReplay;  // T7: duel against a stored human log (the ink-echo)
 }
 
@@ -116,6 +119,8 @@ export function specFromUi(): DuelSessionSpec {
       names: ['You', foe.name],
       seals: [7, foe.seals],
       adaptive: foe.adaptive === true,
+      // T18 — the Magistrate's named arc (undefined for minors/lieutenants)
+      foeScript: foe.script ? BOSS_SCRIPTS[foe.script] : undefined,
       foeProfile: {
         ...prof,
         name: foe.name,
@@ -155,6 +160,22 @@ export function specFromUi(): DuelSessionSpec {
       mode: 'daily', seed: `assize-daily-${key}`, tier: dailyTier(key),
       orders: [save.order, 'executioner'], names: ['You', 'The Tablet'],
       foeProfile: { ...profileForStanding(1), placeDelayMs: [99999, 100000], mistakeRate: 0, aggression: 0, singlesSkill: 0 }, // solo: the Tablet does not play
+    };
+  }
+  // T18 — the Endless Assize: rung r is a fully deterministic duel (magistrate,
+  // tier, tier of deduction, seals, seed) derived from the save's own salt
+  if (mode === 'endless') {
+    const ladder = save.endless ?? newEndlessState('novem');
+    const foe = endlessFoe(ui.endlessRung ?? ladder.current, ladder.salt);
+    return {
+      mode: 'endless',
+      seed: foe.seed,
+      tier: foe.tier,
+      orders: [save.order, foe.order],
+      names: ['You', foe.name],
+      seals: foe.seals,
+      foeProfile: foe.profile,
+      foeScript: foe.script,
     };
   }
   const tier = (ui as { practiceTier?: string }).practiceTier as 'Easy' | 'Medium' | 'Hard' | 'Expert' | undefined;
