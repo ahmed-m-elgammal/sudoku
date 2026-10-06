@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<rect width="256" height="256" fill="rgba(0,0,0,0)"/>
+
+  <defs>
+  <filter id="grain-chn" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="304" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.06 0 0 0 0.09 0"/>
+    <feComposite operator="over" in2="SourceGraphic"/>
+  </filter>
+  <filter id="wobble-chn" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="2" seed="511" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2.4"/>
+  </filter>
+  <pattern id="hatch-chn" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+    <rect width="6" height="6" fill="none"/><line x1="0" y1="0" x2="0" y2="6" stroke="#1A1410" stroke-width="1"/>
+  </pattern>
+  <pattern id="cross-chn" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <line x1="0" y1="0" x2="0" y2="7" stroke="#1A1410" stroke-width="0.9"/><line x1="0" y1="0" x2="7" y2="0" stroke="#1A1410" stroke-width="0.9"/>
+  </pattern>
+  <radialGradient id="vig-chn" cx="50%" cy="46%" r="72%">
+    <stop offset="62%" stop-color="#000000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000000" stop-opacity="0.26"/>
+  </radialGradient>
+</defs>
+  
+    <rect x="16" y="82" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(-6 34 96)"/>
+    <rect x="62" y="82" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(-6 80 96)"/>
+    <rect x="108" y="82" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(-6 126 96)"/>
+    <rect x="154" y="82" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(-6 172 96)"/>
+    <rect x="200" y="82" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(-6 218 96)"/>
+    <rect x="36" y="118" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(8 34 132)"/>
+    <rect x="82" y="118" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(8 80 132)"/>
+    <rect x="128" y="118" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(8 126 132)"/>
+    <rect x="174" y="118" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(8 172 132)"/>
+    <rect x="220" y="118" width="38" height="26" rx="13" fill="none" stroke="#6F5B31" stroke-width="5" transform="rotate(8 218 132)"/>
+  <g transform="translate(96 128)">
+    <rect x="0" y="14" width="64" height="46" rx="8" fill="#A58849" stroke="#1A1410" stroke-width="3"/>
+    <path d="M14 14 V0 a18 18 0 0 1 36 0 V14" fill="none" stroke="#1A1410" stroke-width="6"/>
+    <circle cx="32" cy="36" r="7" fill="#1A1410"/><rect x="29" y="36" width="6" height="14" fill="#1A1410"/>
+    <path d="M-39.3 -16.2 L-19.0 10.2 L2.4 37.3" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-35.6 -11.6 L-15.2 15.1 L5.9 41.8" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-32.2 -7.1 L-11.6 19.5 L9.4 46.8" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-28.2 -1.9 L-7.4 24.6 L13.1 51.2" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-24.7 2.4 L-3.7 29.0 L16.5 55.9" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-21.3 7.3 L-0.4 34.0 L20.4 60.6" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-17.3 11.9 L3.6 38.8 L24.3 65.4" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-13.9 17.1 L6.8 43.7 L27.5 70.5" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-9.6 21.8 L11.0 48.2 L31.8 75.1" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-6.7 26.3 L14.9 53.3 L35.1 79.3" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M-2.4 31.2 L18.4 57.8 L39.1 84.0" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/><path d="M1.3 35.8 L22.2 62.6 L42.5 88.9" stroke="#000" stroke-width="0.6" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>
