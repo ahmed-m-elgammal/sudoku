@@ -42,10 +42,12 @@ export default function GameShell() {
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true; // handled: even at a root we swallow, then the OS decides
-    });
+    const sub = BackHandler.addEventListener('hardwareBackPress', () =>
+      // `true` only when goBack popped a screen. Returning true unconditionally — the
+      // old behaviour — SWALLOWS the event at a root screen, which is precisely what
+      // stops the OS from ever closing the app with the back button.
+      goBack(),
+    );
     return () => sub.remove();
   }, [goBack]);
 
