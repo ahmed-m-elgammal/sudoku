@@ -84,6 +84,7 @@ export default function MirrorStrip({ duel, theme }: MirrorStripProps) {
               styles.stamp,
               { left: `${pos.left}%`, top: `${pos.top}%` },
               { backgroundColor: owner === 1 ? seat.foe : seat.you },
+              { borderColor: theme.stampRing },
             ]}
           />
         );
@@ -123,6 +124,5 @@ const styles = StyleSheet.create({
     marginLeft: -3,
     marginTop: -3,
     borderWidth: 1,
-    borderColor: 'rgba(14, 14, 15, 0.7)',
   },
 });

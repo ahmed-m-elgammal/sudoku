@@ -54,6 +54,12 @@ export type Theme = {
   cdTrack: string;
   /** the Hush veil over a dead pad */
   hushVeil: string;
+  /** J1 — the selected cell's brass wash (web `.selected` background) */
+  cellSelected: string;
+  /** J1 — the same-digit highlight wash (web `.sameDigit` background) */
+  cellSameDigit: string;
+  /** the wax stamp's ink ring on the Mirror strip (the web's 1px `box-shadow` ring) */
+  stampRing: string;
   /** the engraved tile grounds (num tile, ability tile) sit at this opacity */
   tileArtAlpha: number;
   textScale: number;
@@ -85,6 +91,12 @@ const base = {
   heatWashAlpha: 0.6,
   cdTrack: 'rgba(0, 0, 0, 0.40)',
   hushVeil: 'rgba(14, 14, 15, 0.55)',
+  // Cell + Mirror values lifted verbatim from Duel.module.css (`.selected`,
+  // `.sameDigit`, the stamp's ring). They live here so no component ever writes a
+  // colour literal.
+  cellSelected: 'rgba(165, 136, 73, 0.14)',
+  cellSameDigit: 'rgba(165, 136, 73, 0.22)',
+  stampRing: 'rgba(14, 14, 15, 0.65)',
   tileArtAlpha: 0.28,
 };
 
@@ -111,10 +123,23 @@ export function themeFor(settings?: {
 }
 
 // ------------------------------------------------------------------ type
+// The three families are the web build's `--font-display` / `--font-body` /
+// `--font-digit` stacks, reduced to the single face RN will actually load
+// (see src/theme/loadFonts.ts, which registers every name below with expo-font).
+// The italic/bold cuts are registered as their OWN family names because RN cannot
+// synthesize italics or weights for custom-loaded fonts reliably across platforms —
+// asking for `fontStyle: 'italic'` on the regular face would silently render regular.
 export const fonts = {
+  /** `--font-display` — headings, the wordmark, screen titles */
   display: 'IM Fell English SC',
+  /** `--font-body` — running text */
   body: 'IM Fell DW Pica',
+  /** the italic cut of the body face (the boot line) */
+  bodyItalic: 'IM Fell DW Pica Italic',
+  /** `--font-digit` — board digits, counters */
   digit: 'Libre Caslon Text',
+  /** the bold cut of the digit face (given digits) */
+  digitBold: 'Libre Caslon Text Bold',
 } as const;
 
 const step = (px: number, scale: number) => Math.round(px * scale);

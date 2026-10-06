@@ -16,7 +16,6 @@
 import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
-import { ROW_OF, COL_OF } from '@shared/config';
 import type { DuelRuntime } from '@/game/duelRuntime';
 import { cellsOfFlood, centroidOfUnit, ownerOfCell } from '@/game/fx';
 import Cell from './Cell';

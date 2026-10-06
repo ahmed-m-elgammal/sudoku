@@ -24,7 +24,6 @@
 import { Image } from 'react-native';
 
 /** Convert a Metro asset ID (from require()) to a URI string that SvgUri can render. */
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 export function resolveUri(assetId: number): string {
   const source = Image.resolveAssetSource(assetId);
   return source?.uri ?? '';

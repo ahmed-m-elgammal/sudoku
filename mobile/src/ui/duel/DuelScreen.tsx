@@ -26,12 +26,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { recordInk } from '@/state/inkLedger';
 import { audio } from '@/platform/audio';
 import { useDisplaySettings } from '@/platform/display';
-import { themeFor } from '@/theme/tokens';
+import { fonts, themeFor } from '@/theme/tokens';
 import { storyJson, i18n } from '@/i18n';
 import { SLOW_INK_MS } from '@/game/fx';
 import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
@@ -53,6 +54,13 @@ export default function DuelScreen() {
   const theme = useMemo(() => themeFor({ contrast: display.contrast, text: display.text }), [display.contrast, display.text]);
   const { width, height } = useWindowDimensions();
   const landscape = width > height;
+  // web offsets were `calc(var(--safe-top|bottom) + Npx)`; the hardcoded guesses (44 top,
+  // 10 bottom, fixed banner offsets) ignored the notch, the Dynamic Island and the
+  // home-indicator — edge-to-edge makes the bottom inset REAL on every modern phone.
+  const insets = useSafeAreaInsets();
+  // web `.marginNote`: bottom: clamp(238px, 34dvh, 318px) — dvh, not a fixed pixel, or it
+  // overlaps the pad on short phones and floats on tall ones.
+  const marginNoteBottom = Math.min(318, Math.max(238, height * 0.34));
 
   // `specFromUi()` reads the screen machine and the save synchronously and has no side
 // effects, so the spec is available on the FIRST render. The web build deferred it to a
@@ -358,7 +366,7 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   );
 
   const controls = (
-    <View style={styles.controls}>
+    <View style={{ paddingBottom: insets.bottom + 8 }}>
       <View style={styles.toolbar}>
         <ToolBtn
           label={i18n.duel.toolbar.pencil}
@@ -430,14 +438,14 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
               duel.concede();
             }}
             accessibilityRole="button"
-            style={[styles.skip, { borderColor: theme.line, backgroundColor: theme.bg }]}
+            style={[styles.skip, { top: insets.top + 3, right: 8, borderColor: theme.line, backgroundColor: theme.bg }]}
           >
             <Text style={[styles.skipText, { color: theme.fgDim }]}>{i18n.tutorial.skip}</Text>
           </Pressable>
           <View
             accessibilityRole="text"
             pointerEvents="none"
-            style={[styles.marginNote, { backgroundColor: theme.fg, borderColor: theme.bg }]}
+            style={[styles.marginNote, { bottom: marginNoteBottom, backgroundColor: theme.fg, borderColor: theme.bg }]}
           >
             <Text style={[styles.marginNoteText, { color: theme.bg }]}>
               {i18n.tutorial.notes[tutorialNote as keyof typeof i18n.tutorial.notes]}
@@ -447,7 +455,7 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
       ) : null}
 
       {duel.selfOffline && !dc ? (
-        <View accessibilityRole="text" style={[styles.offline, { backgroundColor: theme.bgRaised, borderColor: theme.lineStrong }]}>
+        <View accessibilityRole="text" style={[styles.offline, { top: insets.top + 8, backgroundColor: theme.bgRaised, borderColor: theme.lineStrong }]}>
           <Text style={{ color: theme.fg }}>{i18n.duel.disconnect.youOffline}</Text>
         </View>
       ) : null}
@@ -502,14 +510,17 @@ const styles = StyleSheet.create({
   mainLandscape: { flexDirection: 'row', gap: 12 },
   left: { alignItems: 'center', paddingVertical: 2 },
   boardArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
-  controls: { paddingBottom: 10 },
   toolbar: { flexDirection: 'row', gap: 6, justifyContent: 'center', paddingVertical: 4 },
   toolBtn: { flex: 1, paddingVertical: 6, borderWidth: 1, borderRadius: 3, minHeight: 38, alignItems: 'center', justifyContent: 'center' },
-  toolText: { fontFamily: 'IM Fell English SC', fontSize: 13, letterSpacing: 0.5 },
+  toolText: { fontFamily: fonts.display, fontSize: 13, letterSpacing: 0.5 },
   skeleton: { width: 200, height: 12, marginTop: '40%', alignSelf: 'center' },
-  skip: { position: 'absolute', top: 52, right: 64, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderRadius: 3, minHeight: 28, justifyContent: 'center', zIndex: 10 },
+  // top/right/bottom offsets are injected inline from useSafeAreaInsets / window height
+  // (web: top calc(safe-top + 3px), right 8px)
+  skip: { position: 'absolute', paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderRadius: 3, minHeight: 28, justifyContent: 'center', zIndex: 10 },
   skipText: { fontSize: 11, textDecorationLine: 'underline' },
-  marginNote: { position: 'absolute', left: '6%', right: '6%', bottom: 236, borderWidth: 1, borderRadius: 3, padding: 8, zIndex: 10 },
+  marginNote: { position: 'absolute', left: '6%', right: '6%', borderWidth: 1, borderRadius: 3, padding: 8, zIndex: 10 },
   marginNoteText: { fontSize: 13, textAlign: 'center' },
-  offline: { position: 'absolute', top: 46, left: 10, borderWidth: 1, borderRadius: 3, padding: 8 },
+  // web `.reconnectBanner`: fixed, top calc(safe-top + 8px), horizontally centered —
+  // alignSelf centers the absolute child the way the web's left:50% translateX(-50%) did
+  offline: { position: 'absolute', alignSelf: 'center', borderWidth: 1, borderRadius: 3, padding: 8 },
 });

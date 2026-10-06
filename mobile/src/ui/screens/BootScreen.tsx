@@ -8,7 +8,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import i18n from '@/i18n/en.json';
-import { palette, type as typeScale } from '@/theme/tokens';
+import { fonts, palette, type as typeScale } from '@/theme/tokens';
 
 function advance(go: ReturnType<typeof useUi.getState>['go'], _tutorialDone: boolean) {
   // TODO: once Antechamber is implemented, route returning players there:
@@ -51,8 +51,7 @@ const styles = StyleSheet.create({
   },
   line: {
     color: palette.brassDim,
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
+    fontFamily: fonts.bodyItalic,
     fontSize: typeScale(1).md,
     opacity: 0.85,
     marginBottom: 24,
@@ -60,7 +59,7 @@ const styles = StyleSheet.create({
   },
   wordmark: {
     color: palette.parchmentLight,
-    fontFamily: 'Georgia',
+    fontFamily: fonts.display,
     fontSize: 52,
     letterSpacing: 8,
     fontWeight: '400',
@@ -68,7 +67,7 @@ const styles = StyleSheet.create({
   },
   sub: {
     color: palette.brassDim,
-    fontFamily: 'Georgia',
+    fontFamily: fonts.body,
     fontSize: typeScale(1).xs,
     letterSpacing: 5,
     marginTop: 18,

@@ -21,6 +21,7 @@ import { useSave } from '@/state/save';
 import { flushInkLedger } from '@/state/inkLedger';
 import { loadIdentity } from '@/state/identity';
 import { DisplaySettingsProvider } from '@/platform/display';
+import { useAssizeFonts } from '@/theme/loadFonts';
 import { audio } from '@/platform/audio';
 import { setHapticsEnabled } from '@/platform/haptics';
 import { palette } from '@/theme/tokens';
@@ -41,6 +42,10 @@ export default function App() {
 function Boot() {
   const loaded = useSave((s) => s.loaded);
   const settings = useSave((s) => s.save?.settings);
+  // Spec 1.1 — the canon families are registered before ANY screen renders: until the
+  // fonts are in, we hold the same black boot view the save loader shows. Without this
+  // gate the first frames would paint in the system fallback and the wordmark would flash.
+  const fontsLoaded = useAssizeFonts();
 
   useEffect(() => {
     void useSave.getState().load().then(() => flushInkLedger());
@@ -57,7 +62,7 @@ function Boot() {
   // iOS/Android require a user gesture before audio may start
   const unlock = () => audio.unlock();
 
-  if (!loaded) {
+  if (!loaded || !fontsLoaded) {
     return <View style={styles.boot} onTouchStart={unlock} />;
   }
 

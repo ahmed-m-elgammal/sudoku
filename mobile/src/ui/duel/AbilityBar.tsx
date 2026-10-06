@@ -17,7 +17,7 @@ import type { DuelRuntime } from '@/game/duelRuntime';
 import { duelSvgs, sigilSvg } from './duelAssets';
 import { i18n } from '@/i18n';
 import { audio } from '@/platform/audio';
-import { layout, type Theme } from '@/theme/tokens';
+import { fonts, layout, type Theme } from '@/theme/tokens';
 
 export interface AbilityBarProps {
   duel: DuelRuntime;
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     gap: 1,
     overflow: 'hidden',
   },
-  name: { fontFamily: 'IM Fell English SC', fontSize: 12, letterSpacing: 0.5 },
+  name: { fontFamily: fonts.display, fontSize: 12, letterSpacing: 0.5 },
   uses: { position: 'absolute', top: 2, right: 5, fontSize: 10 },
   cdText: { position: 'absolute', top: 3, left: 5, fontSize: 11 },
   key: { position: 'absolute', bottom: 2, right: 5, fontSize: 9 },
@@ -151,6 +151,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     zIndex: 20,
   },
-  descName: { fontFamily: 'IM Fell English SC' },
+  descName: { fontFamily: fonts.display },
   descBody: { fontSize: 13 },
 });

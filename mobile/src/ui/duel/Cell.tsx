@@ -17,7 +17,7 @@ import { SvgUri } from 'react-native-svg';
 import { ROW_OF, COL_OF, BOX_OF } from '@shared/config';
 import { duelSvgs } from './duelAssets';
 import { FLOOD_CELL_MS, FLOOD_ANIM_MS } from '@/game/fx';
-import { palette, type Theme } from '@/theme/tokens';
+import { fonts, palette, type Theme } from '@/theme/tokens';
 
 export interface CellProps {
   /** the cell index, 0..80 */
@@ -96,11 +96,12 @@ function CellImpl({
           backgroundColor:
             ownedSettle ??
             (isSel
-              ? 'rgba(165, 136, 73, 0.28)'
+              ? theme.cellSelected
               : sameDigit
-                ? 'rgba(165, 136, 73, 0.20)'
+                ? theme.cellSameDigit
                 : undefined),
-          borderColor: isSel ? palette.brass : 'rgba(26, 20, 16, 0.35)',
+          // web `.cell` draws an OPAQUE 1px var(--ink) grid line — the hairline was 2× too faint
+          borderColor: isSel ? palette.brass : palette.ink,
           borderWidth: isSel ? 2 : StyleSheet.hairlineWidth,
         },
         BOX_OF(c) % 2 === 0 && !ownedSettle && !isSel && !sameDigit && styles.boxEven,
@@ -116,7 +117,11 @@ function CellImpl({
 
       {v !== 0 && !smudged ? (
         <Text
-          style={[styles.digit, { color: palette.ink, fontWeight: isGiven ? '700' : '400' }]}
+          style={[
+            styles.digit,
+            isGiven && { fontFamily: fonts.digitBold },
+            { color: palette.ink, fontWeight: isGiven ? '700' : '400' },
+          ]}
           allowFontScaling={false}
         >
           {v}
@@ -255,7 +260,7 @@ const styles = StyleSheet.create({
   boxEven: { opacity: 0.97 },
   thickBottom: { borderBottomWidth: 2, borderBottomColor: palette.ink },
   thickRight: { borderRightWidth: 2, borderRightColor: palette.ink },
-  digit: { fontSize: 22, fontFamily: 'Libre Caslon Text', color: palette.ink },
+  digit: { fontSize: 22, fontFamily: fonts.digit, color: palette.ink },
   notes: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     flexDirection: 'row',

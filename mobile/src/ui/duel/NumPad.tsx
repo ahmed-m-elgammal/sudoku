@@ -18,7 +18,7 @@ import type { DuelRuntime } from '@/game/duelRuntime';
 import type { Digit } from '@shared/config';
 import { duelSvgs } from './duelAssets';
 import { i18n, tf } from '@/i18n';
-import { layout, type Theme } from '@/theme/tokens';
+import { fonts, layout, type Theme } from '@/theme/tokens';
 
 export interface NumPadProps {
   duel: DuelRuntime;
@@ -155,9 +155,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   complete: { opacity: 0.38 },
-  digit: { fontFamily: 'Libre Caslon Text', fontSize: 22 },
+  digit: { fontFamily: fonts.digit, fontSize: 22 },
   count: { position: 'absolute', bottom: 2, right: 4, fontSize: 9 },
   warm: { borderRadius: layout.radius },
   hush: { alignItems: 'center', justifyContent: 'center', gap: 4 },
-  hushText: { fontFamily: 'IM Fell English SC', letterSpacing: 1 },
+  hushText: { fontFamily: fonts.display, letterSpacing: 1 },
 });

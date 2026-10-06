@@ -6,13 +6,14 @@
 // longer row (the web build grew `max` past 7 for exactly that reason).
 
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Svg, Circle, SvgUri } from 'react-native-svg';
 import type { DuelRuntime } from '@/game/duelRuntime';
 import { orderMeta } from '@shared/orders';
 import { images, orderPortraits } from '@/theme/assets';
 import { duelSvgs, statusSvg } from './duelAssets';
 import { i18n } from '@/i18n';
-import type { Theme } from '@/theme/tokens';
+import { fonts, type Theme } from '@/theme/tokens';
 
 export interface HudHeaderProps {
   duel: DuelRuntime;
@@ -25,12 +26,15 @@ const CHIP_C = 2 * Math.PI * CHIP_R;
 
 export default function HudHeader({ duel, theme }: HudHeaderProps) {
   const st = duel.state;
+  // web `.hud` pads the clock row with `calc(var(--safe-top) + 6px)` — the hardcoded 44
+  // sat UNDER the camera on 59pt Dynamic-Island phones and left a dead band on Android.
+  const insets = useSafeAreaInsets();
   const [me, foe] = st.players;
   const mins = Math.floor(st.clockMs / 60000);
   const medallion = mins <= 10 ? ROMAN_MIN[mins] : 'X';
 
   return (
-    <View style={[styles.hud, { paddingTop: 44 }]}>
+    <View style={[styles.hud, { paddingTop: insets.top + 6 }]}>
       <View style={styles.side}>
         <Portrait order={me.order} you theme={theme} />
         <SealPips n={me.seals} max={7} you theme={theme} />
@@ -149,7 +153,7 @@ const styles = StyleSheet.create({
   side: { flex: 1, alignItems: 'center', gap: 4 },
   center: { alignItems: 'center', paddingTop: 4 },
   medallionWrap: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
-  medallionText: { position: 'absolute', fontFamily: 'IM Fell English SC', fontSize: 17 },
+  medallionText: { position: 'absolute', fontFamily: fonts.display, fontSize: 17 },
   portrait: {
     width: 40,
     height: 40,
@@ -160,7 +164,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   portraitImg: { width: '100%', height: '100%' },
-  portraitFallback: { fontFamily: 'IM Fell English SC', fontSize: 14 },
+  portraitFallback: { fontFamily: fonts.display, fontSize: 14 },
   pips: { flexDirection: 'row', flexWrap: 'wrap', gap: 3, justifyContent: 'center' },
   pip: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 3, justifyContent: 'center', maxWidth: 132 },

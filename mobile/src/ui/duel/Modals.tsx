@@ -16,7 +16,7 @@ import { Svg, Circle } from 'react-native-svg';
 import { orderMeta } from '@shared/orders';
 import { images, orderPortraits } from '@/theme/assets';
 import { i18n, tf } from '@/i18n';
-import { layout, type Theme } from '@/theme/tokens';
+import { fonts, layout, type Theme } from '@/theme/tokens';
 
 const RING_R = 30;
 const RING_C = 2 * Math.PI * RING_R;
@@ -222,13 +222,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: layout.radiusLg,
   },
-  title: { fontFamily: 'IM Fell English SC', fontSize: 22, marginBottom: 8 },
+  title: { fontFamily: fonts.display, fontSize: 22, marginBottom: 8 },
   body: { fontSize: 15, marginBottom: 14 },
   actions: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
   btn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: layout.radius, minHeight: layout.touch, justifyContent: 'center' },
-  btnText: { fontFamily: 'IM Fell English SC', fontSize: 15 },
+  btnText: { fontFamily: fonts.display, fontSize: 15 },
   ringWrap: { alignSelf: 'center', width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
-  count: { position: 'absolute', fontFamily: 'Libre Caslon Text', fontSize: 20 },
+  count: { position: 'absolute', fontFamily: fonts.digit, fontSize: 20 },
   swap: {
     position: 'absolute',
     alignSelf: 'center',
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   sigilNew: { opacity: 1 },
   sigilImg: { width: '100%', height: '100%' },
   arrow: { fontSize: 20 },
-  swapTitle: { fontFamily: 'IM Fell English SC', fontSize: 18 },
+  swapTitle: { fontFamily: fonts.display, fontSize: 18 },
   swapBody: { fontSize: 14, textAlign: 'center', marginTop: 4 },
   swapNote: { fontSize: 12, textAlign: 'center', marginTop: 6, fontStyle: 'italic' },
 });
