@@ -23,6 +23,9 @@ export const palette = {
   verdigris: '#3e6b5a',
   gilt: '#c9a962',
   ash: '#8d8a82',
+  /** J4 — the warm brass the heat law mixes the board's ink border toward
+   *  (web `.boardWrap`: color-mix(in srgb, var(--ink), #c49742 heat*55%)) */
+  warmBrass: '#c49742',
 } as const;
 
 export type Theme = {

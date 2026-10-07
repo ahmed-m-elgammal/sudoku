@@ -16,8 +16,14 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-nativ
 import { SvgUri } from 'react-native-svg';
 import { ROW_OF, COL_OF, BOX_OF } from '@shared/config';
 import { duelSvgs } from './duelAssets';
-import { FLOOD_CELL_MS, FLOOD_ANIM_MS } from '@/game/fx';
+import { floodDelayMs } from './motionLaw';
+import { FLOOD_ANIM_MS } from '@/game/fx';
+import { useMotionReduced } from '@/platform/display';
 import { fonts, palette, type Theme } from '@/theme/tokens';
+
+// The push and the wash animate the cell itself, so the pressable is the animated host.
+// Created at module level: a fresh component type per render would remount every cell.
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export interface CellProps {
   /** the cell index, 0..80 */
@@ -38,6 +44,10 @@ export interface CellProps {
   notes: readonly number[];
   /** J1 — this cell's index in the current flood cascade, or -1 */
   floodIndex: number;
+  /** J1 — the flood's event seq; the retrigger identity (the web's A/B nonce parity) */
+  floodSeq: number;
+  /** J3 — the verdict beat: the cascade delay stretches by FLOOD_SLOW */
+  floodSlow: boolean;
   /** J1 — who owns the flooding unit (the tint source) */
   floodPlayer: 0 | 1 | null;
   /** J4 — the viewer is behind: their ink desaturates */
@@ -70,16 +80,44 @@ export function cellAria(c: number, v: number, isGiven: boolean, chained: boolea
 
 function CellImpl({
   c, v, isGiven, isSel, sameDigit, chained, smudged, miasma,
-  wrongNow, wrongVariant, notes, floodIndex, floodPlayer, cold, ownedSettle,
-  pushIndex, pushOrigin, frozen, theme, onPress,
+  wrongNow, wrongVariant, notes, floodIndex, floodPlayer, floodSeq, floodSlow,
+  cold, ownedSettle, pushIndex, pushOrigin, frozen, theme, onPress,
 }: CellProps) {
+  const motionReduced = useMotionReduced();
   const canSelect = !isGiven && !chained;
   const r = ROW_OF(c);
   const col = COL_OF(c);
   const flooding = floodIndex >= 0 && floodPlayer !== null;
 
+  // J3 — the hit-stop push rides on the CELL ITSELF. The web build put `unitPush`
+  // (100 ms ease-out: scale 1 -> 1.04 at 35% -> back to 1, around the unit's centroid)
+  // on the <button>; the first port scaled an empty overlay instead, which is why the
+  // push never showed on real content. JS-driven on purpose: 100 ms on nine cells is
+  // nothing, and the JS pipeline is what composes `transformOrigin` reliably.
+  const [pushAnim] = useState(() => new Animated.Value(0));
+  // The origin NUMBERS are the retrigger identity — pushOrigin's object identity
+  // churns on every Board push, the values only move when the pushed unit moves.
+  const pushKey = pushOrigin ? `${pushIndex}:${pushOrigin.x}:${pushOrigin.y}` : 'rest';
+  useEffect(() => {
+    if (motionReduced || pushKey === 'rest') return; // kill-list: no push, settled at scale 1
+    pushAnim.setValue(0);
+    const timing = Animated.timing(pushAnim, {
+      toValue: 1,
+      duration: 100,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: false,
+    });
+    timing.start();
+    return () => timing.stop();
+  }, [pushAnim, pushKey, motionReduced]);
+  const pushScale = pushAnim.interpolate({ inputRange: [0, 0.35, 1], outputRange: [1, 1.04, 1] });
+  const pushStyle =
+    !motionReduced && pushOrigin
+      ? { transformOrigin: `${pushOrigin.x}% ${pushOrigin.y}%`, transform: [{ scale: pushScale }] }
+      : null;
+
   return (
-    <Pressable
+    <AnimatedPressable
       // PLATFORM TRANSLATION: the web cell was `<button role="gridcell">`. RN's
       // AccessibilityRole has no `gridcell`, so the button role is kept — which is what
       // it actually was — and the `cellAria` label carries the gridcell's position and
@@ -107,13 +145,12 @@ function CellImpl({
         BOX_OF(c) % 2 === 0 && !ownedSettle && !isSel && !sameDigit && styles.boxEven,
         r % 3 === 2 && r < 8 && styles.thickBottom,
         col % 3 === 2 && col < 8 && styles.thickRight,
+        pushStyle,
       ]}
     >
       {flooding && floodPlayer !== null ? (
-        <FloodWash index={floodIndex} player={floodPlayer} cold={cold} theme={theme} />
+        <FloodWash index={floodIndex} seq={floodSeq} slow={floodSlow} player={floodPlayer} cold={cold} theme={theme} />
       ) : null}
-
-      {pushIndex >= 0 && pushOrigin ? <PushWash index={pushIndex} origin={pushOrigin} /> : null}
 
       {v !== 0 && !smudged ? (
         <Text
@@ -172,33 +209,46 @@ function CellImpl({
           <SvgUri width="100%" height="100%" uri={duelSvgs.overlayMiasma} />
         </View>
       ) : null}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 /**
  * J1 — the ink flood. Animates `backgroundColor` strong -> settle over 460 ms, delayed
- * by `index * 30 ms`, which is exactly the CSS `inkFlood` keyframes plus the
- * `--flood-i * 30ms * --flood-slow` cascade delay.
+ * by `floodDelayMs(index, slow)` — the port of the CSS `inkFlood` keyframes plus the
+ * `--flood-i * 30ms * --flood-slow` cascade delay (`slow` = the J3 verdict beat).
+ *
+ * `seq` is the retrigger identity, the port of the web's floodCellA/floodCellB nonce
+ * parity: two overlapping floods (the cue replaces its value, no null gap) must BOTH
+ * play on a cell they share, and only the seq proves a second flood arrived.
  *
  * RN's built-in Animated is deliberate here, not Reanimated: this is a backgroundColor
  * interpolation, which Animated does without a worklet, and nine 460 ms views are not a
  * graph. Reanimated is reserved for the transform layers.
  */
 const FloodWash = memo(function FloodWash({
-  index, player, cold, theme,
-}: { index: number; player: 0 | 1; cold: boolean; theme: Theme }) {
+  index, seq, slow, player, cold, theme,
+}: { index: number; seq: number; slow: boolean; player: 0 | 1; cold: boolean; theme: Theme }) {
+  const motionReduced = useMotionReduced();
   const [anim] = useState(() => new Animated.Value(0));
   useEffect(() => {
+    if (motionReduced) return; // kill-list: no cascade
     anim.setValue(0);
-    Animated.timing(anim, {
+    const timing = Animated.timing(anim, {
       toValue: 1,
       duration: FLOOD_ANIM_MS,
-      delay: index * FLOOD_CELL_MS,
+      delay: floodDelayMs(index, slow),
       easing: Easing.out(Easing.ease),
       useNativeDriver: false,
-    }).start();
-  }, [anim, index]);
+    });
+    timing.start();
+    return () => timing.stop();
+  }, [anim, index, seq, slow, motionReduced]);
+
+  // The web kill-list law: reduced motion lands the cascade on its settled state —
+  // which here is the cell's own `ownedSettle` tint (the port of the .owned* classes),
+  // applied instantly. The wash overlay simply never mounts.
+  if (motionReduced) return null;
 
   const strong = player === 0
     ? (cold ? theme.floodYouCold : theme.floodYou)
@@ -213,35 +263,6 @@ const FloodWash = memo(function FloodWash({
       style={[
         StyleSheet.absoluteFill,
         { backgroundColor: anim.interpolate({ inputRange: [0, 0.55, 1], outputRange: [strong, strong, settle] }) },
-      ]}
-    />
-  );
-});
-
-/** J3 — the ~4 % push toward the viewer, around the unit's centroid. Transform only. */
-const PushWash = memo(function PushWash({
-  index, origin,
-}: { index: number; origin: { x: number; y: number } }) {
-  const [anim] = useState(() => new Animated.Value(0));
-  useEffect(() => {
-    anim.setValue(0);
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 100,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start();
-  }, [anim, index]);
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        StyleSheet.absoluteFill,
-        {
-          transformOrigin: `${origin.x}% ${origin.y}%`,
-          transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }],
-        },
       ]}
     />
   );

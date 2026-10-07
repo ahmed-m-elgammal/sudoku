@@ -359,6 +359,8 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         hitStop={hitStop}
         frozen={frozen}
         cold={cold}
+        slowInk={slowInk}
+        heat={heatValue}
         theme={theme}
         size={boardSize > 50 ? boardSize : undefined}
       />

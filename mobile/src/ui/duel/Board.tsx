@@ -13,12 +13,14 @@
 // a 20px bottom gutter for the claim stamps. That is reproduced with a 9/9 grid plus two
 // absolute gutter strips, so the cells stay a clean 9x9 for the cascade arithmetic.
 
-import { useCallback, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Circle, Ellipse, Svg, SvgUri } from 'react-native-svg';
 import type { DuelRuntime } from '@/game/duelRuntime';
 import { cellsOfFlood, centroidOfUnit, ownerOfCell } from '@/game/fx';
 import Cell from './Cell';
+import { boardWarmthMix } from './motionLaw';
+import { useMotionReduced } from '@/platform/display';
 import { duelSvgs } from './duelAssets';
 import { palette, type Theme } from '@/theme/tokens';
 
@@ -30,6 +32,10 @@ export interface BoardProps {
   frozen: boolean;
   /** J4 — the viewer is behind by >= COLD_GAP Seals: their ink desaturates */
   cold: boolean;
+  /** J3 — the verdict beat: the final cascade stretches by FLOOD_SLOW */
+  slowInk: boolean;
+  /** J4 — 0..1 from `heatFromState`; warms the board's ink border */
+  heat: number;
   theme: Theme;
   size?: number;
 }
@@ -37,7 +43,8 @@ export interface BoardProps {
 const GUTTER = 20;
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
 
-export default function Board({ duel, flood, hitStop, frozen, cold, theme, size }: BoardProps) {
+export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, heat, theme, size }: BoardProps) {
+  const motionReduced = useMotionReduced();
   const st = duel.state;
   const me = st.players[0];
   const flags = duel.flags();
@@ -67,6 +74,29 @@ export default function Board({ duel, flood, hitStop, frozen, cold, theme, size 
   const wrongClear = duel.lastWrongClearAt > st.clockMs;
   const quarantined = flags.quarantinedUnits;
 
+  // J4 — the web `.boardWrap` border law: `color-mix(in srgb, var(--ink), warmBrass
+  // heat*55%)` over a 240 ms ease. The mix RATIO is the pure law in motionLaw.ts; this
+  // only interpolates between the two palette endpoints. Reduced motion lands it
+  // instantly — the warmth is a state, never a swell (the web kill-list kills the
+  // transition, not the warmth).
+  const [warmth] = useState(() => new Animated.Value(boardWarmthMix(heat)));
+  useEffect(() => {
+    const target = boardWarmthMix(heat);
+    if (motionReduced) {
+      warmth.setValue(target);
+      return;
+    }
+    const timing = Animated.timing(warmth, {
+      toValue: target,
+      duration: 240,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: false, // colour interpolation is JS-side by design
+    });
+    timing.start();
+    return () => timing.stop();
+  }, [warmth, heat, motionReduced]);
+  const borderColor = warmth.interpolate({ inputRange: [0, 1], outputRange: [palette.ink, palette.warmBrass] });
+
   // ONE stable callback for all 81 cells. Without this the map below would mint 81 fresh
   // closures every push and defeat Cell's memoisation entirely (risk R4).
   const onSelect = useCallback((cell: number) => {
@@ -90,27 +120,10 @@ export default function Board({ duel, flood, hitStop, frozen, cold, theme, size 
     // unlabelled-as-a-role and every CELL carries the real information via its
     // `cellAria` label. Nothing is lost — the grid semantics on web existed to make the
     // cell labels navigable, which the labels still do here.
-    <View style={[styles.wrap, size ? { width: size, height: size } : null]}>
+    <Animated.View style={[styles.wrap, size ? { width: size, height: size } : null, { borderColor }]}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <SvgUri width="100%" height="100%" uri={duelSvgs.parchmentVellum} />
       </View>
-
-      {/* J1 — one matte ink splash per resolved claim, at the unit's centroid */}
-      {flood && splash ? (
-        <View
-          key={flood.seq}
-          pointerEvents="none"
-          style={[
-            styles.splash,
-            {
-              left: `${splash.cx * 100}%`,
-              top: `${splash.cy * 100}%`,
-              borderColor: flood.player === 0 ? theme.accent : theme.fgDim,
-              transform: [{ rotate: `${(flood.seq * 37) % 360}deg` }],
-            },
-          ]}
-        />
-      ) : null}
 
       {/* ---- the 81 cells: 9 rows of 9 cells */}
       <View style={styles.grid} pointerEvents="box-none">
@@ -138,6 +151,8 @@ export default function Board({ duel, flood, hitStop, frozen, cold, theme, size 
                   notes={duel.notes.get(c) ? [...duel.notes.get(c)!] : EMPTY}
                   floodIndex={fi}
                   floodPlayer={fi >= 0 && flood ? flood.player : null}
+                  floodSeq={fi >= 0 && flood ? flood.seq : -1}
+                  floodSlow={slowInk}
                   cold={cold}
                   ownedSettle={settleFor(c)}
                   pushIndex={pi}
@@ -157,6 +172,21 @@ export default function Board({ duel, flood, hitStop, frozen, cold, theme, size 
             })}
           </View>
         ))}
+      </View>
+
+      {/* J1 — one matte ink splash per resolved claim, at the unit's centroid. Anchored
+          to the CELL area (wrap minus the two 20px claim gutters), which is the web's
+          `calc((100% - 20px) * cx)`; it paints ABOVE the grid like the web's z-index 4. */}
+      <View style={[StyleSheet.absoluteFill, styles.cellArea]} pointerEvents="none">
+        {flood && splash ? (
+          <InkBurst
+            key={flood.seq}
+            cx={splash.cx}
+            cy={splash.cy}
+            rotate={(flood.seq * 37) % 360}
+            color={flood.player === 0 ? palette.oxblood : palette.ash}
+          />
+        ) : null}
       </View>
 
       {/* ---- box stamps at the nine box corners */}
@@ -228,7 +258,63 @@ export default function Board({ duel, flood, hitStop, frozen, cold, theme, size 
           );
         })}
       </View>
-    </View>
+    </Animated.View>
+  );
+}
+
+/**
+ * J1 — the splash. The web build's `InkSplash` droplet SVG plus its `inkBurst`
+ * keyframes, ported whole: 700 ms ease-out — scale 0.35 -> 1.05 (60%) -> 1.2, opacity
+ * 0 -> 0.8 (16%) -> 0.45 (60%) -> 0. A matte burst that ENDS GONE, never a persistent
+ * mark. The kill-list hides it entirely (`[data-motion='reduced'] .inkSplash { display:
+ * none }`); `key={flood.seq}` retriggers consecutive claims exactly like the web remount.
+ */
+function InkBurst({ cx, cy, rotate, color }: { cx: number; cy: number; rotate: number; color: string }) {
+  const motionReduced = useMotionReduced();
+  const [anim] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (motionReduced) return;
+    const timing = Animated.timing(anim, {
+      toValue: 1,
+      duration: 700,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true, // transform + opacity only — zero layout
+    });
+    timing.start();
+    return () => timing.stop();
+  }, [anim, motionReduced]);
+
+  if (motionReduced) return null;
+
+  const scale = anim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.35, 1.05, 1.2] });
+  const opacity = anim.interpolate({ inputRange: [0, 0.16, 0.6, 1], outputRange: [0, 0.8, 0.45, 0] });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[
+        styles.splash,
+        {
+          left: `${cx * 100}%`,
+          top: `${cy * 100}%`,
+          opacity,
+          transform: [{ rotate: `${rotate}deg` }, { scale }],
+        },
+      ]}
+    >
+      <Svg viewBox="0 0 68 68" width={68} height={68}>
+        <Ellipse cx="34" cy="34" rx="13" ry="11" fill={color} />
+        <Ellipse cx="12" cy="26" rx="4.5" ry="3.6" fill={color} transform="rotate(-24 12 26)" />
+        <Ellipse cx="56" cy="20" rx="3.8" ry="3.1" fill={color} transform="rotate(18 56 20)" />
+        <Ellipse cx="55" cy="50" rx="4.6" ry="3.7" fill={color} transform="rotate(-40 55 50)" />
+        <Ellipse cx="20" cy="54" rx="3.4" ry="2.8" fill={color} transform="rotate(30 20 54)" />
+        <Ellipse cx="34" cy="8" rx="3" ry="2.5" fill={color} />
+        <Circle cx="63" cy="35" r="2.2" fill={color} />
+        <Circle cx="6" cy="42" r="2" fill={color} />
+      </Svg>
+    </Animated.View>
   );
 }
 
@@ -242,10 +328,10 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: palette.ink,
     backgroundColor: palette.parchment,
     borderRadius: 3,
   },
+  cellArea: { right: GUTTER, bottom: GUTTER },
   grid: {
     ...FILL,
     right: GUTTER,
@@ -258,13 +344,10 @@ const styles = StyleSheet.create({
   },
   splash: {
     position: 'absolute',
-    width: 26,
-    height: 26,
-    marginLeft: -13,
-    marginTop: -13,
-    borderRadius: 13,
-    borderWidth: 5,
-    opacity: 0.34,
+    width: 68,
+    height: 68,
+    marginLeft: -34,
+    marginTop: -34,
   },
   boxStamp: { position: 'absolute', width: '12%', height: '12%', alignItems: 'center', justifyContent: 'center' },
   rowGutter: {

@@ -18,6 +18,7 @@
 import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SHAKE_MS, type Shake } from '@/game/fx';
+import { useMotionReduced } from '@/platform/display';
 import type { Theme } from '@/theme/tokens';
 
 export interface ShakeLayerProps {
@@ -27,13 +28,16 @@ export interface ShakeLayerProps {
 
 /**
  * J2 — the tiered shake. A/B nonce parity retriggers consecutive shakes without a remount,
- * which is exactly what the web CSS keyframe pairs did.
+ * which is exactly what the web CSS keyframe pairs did. The kill-list law: reduced motion
+ * never shakes the Tablet — the children render plain, which IS the settled state
+ * (`:root[data-motion='reduced'] .shakeT2A/.shakeT3A/... { animation: none }`).
  */
 export function ShakeLayer({ shake, children }: ShakeLayerProps) {
+  const motionReduced = useMotionReduced();
   const [anim] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    if (!shake) return;
+    if (!shake || motionReduced) return;
     const frames = shake.tier === 3 ? SHAKE_MS[3] : SHAKE_MS[2];
     anim.setValue(0);
     const anim2 = Animated.timing(anim, {
@@ -45,9 +49,9 @@ export function ShakeLayer({ shake, children }: ShakeLayerProps) {
     anim2.start();
     return () => anim2.stop();
     // `nonce` is the dependency that matters: two shakes in a row must both play.
-  }, [anim, shake]);
+  }, [anim, shake, motionReduced]);
 
-  if (!shake) return <>{children}</>;
+  if (!shake || motionReduced) return <>{children}</>;
 
   const amp = shake.tier === 3 ? 6 : 3;
   // The web build's keyframe percentages and offsets, copied across. T2 is the short
@@ -101,19 +105,28 @@ export interface HeatVignetteProps {
 /**
  * J4 — the vignette. An inset box-shadow cannot exist in RN, so the depth is reproduced
  * with four stacked edge gradients driven by the same `--heat` value. Opacity only.
+ * The web kill-list kills the vignette's 240 ms transition, not the vignette: reduced
+ * motion lands the depth INSTANTLY (a state, never a swell).
  */
 export function HeatVignette({ heat, theme }: HeatVignetteProps) {
   const { width, height } = useWindowDimensions();
+  const motionReduced = useMotionReduced();
   const [anim] = useState(() => new Animated.Value(heat));
 
   useEffect(() => {
-    Animated.timing(anim, {
+    if (motionReduced) {
+      anim.setValue(heat);
+      return;
+    }
+    const timing = Animated.timing(anim, {
       toValue: heat,
       duration: 240,
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
-    }).start();
-  }, [anim, heat]);
+    });
+    timing.start();
+    return () => timing.stop();
+  }, [anim, heat, motionReduced]);
 
   const edge = Math.round(Math.min(width, height) * 0.22);
 
