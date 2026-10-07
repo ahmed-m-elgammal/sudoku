@@ -149,6 +149,9 @@ export default function Antechamber() {
               preserveAspectRatio="xMidYMid slice"
               style={StyleSheet.absoluteFill}
             />
+            {/* web .panel::before — the engraved inner ring paints above the parchment,
+                exactly where the positioned pseudo-element lands in the web's paint order */}
+            <View style={[styles.panelRing, { borderColor: theme.line }]} pointerEvents="none" />
             <Text style={[styles.heroTitle, { color: palette.ink, fontSize: fs.xl, letterSpacing: 0.02 * fs.xl }]}>
               {i18n.hub.enter}
             </Text>
@@ -249,6 +252,8 @@ function HubCard({
         { backgroundColor: theme.bgRaised, borderColor: theme.lineStrong, opacity: pressed ? 0.85 : 1 },
       ]}
     >
+      {/* web .panel::before — the engraved inner ring, inset 4, 1px --line */}
+      <View style={[styles.panelRing, { borderColor: theme.line }]} pointerEvents="none" />
       {icon}
       <Text style={[styles.cardTitle, { color: theme.fg, fontSize: fs.md, letterSpacing: 0.02 * fs.md }]}>{title}</Text>
       <Text style={[styles.cardSub, { color: theme.fgDim, fontSize: fs.xs }]}>{sub}</Text>
@@ -299,6 +304,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 4,
   },
+  // web .panel::before: absolute inset 4, 1px var(--line), radius 2
+  panelRing: { position: 'absolute', top: 4, left: 4, right: 4, bottom: 4, borderWidth: 1, borderRadius: 2 },
   cardTitle: { fontFamily: fonts.display, marginTop: 2 },
   cardSub: { fontFamily: fonts.body, marginTop: 2 },
 });

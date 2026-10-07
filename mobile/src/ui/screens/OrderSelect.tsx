@@ -112,6 +112,8 @@ export default function OrderSelect() {
                   },
                 ]}
               >
+                {/* web .panel::before — the engraved inner ring, inset 4, 1px --line */}
+                <View style={[styles.panelRing, { borderColor: theme.line }]} pointerEvents="none" />
                 <View style={[styles.portraitFrame, { borderColor: theme.lineStrong }]}>
                   {portrait ? (
                     <Image
@@ -204,6 +206,8 @@ const styles = StyleSheet.create({
     borderRadius: layout.radius,
     alignItems: 'center',
   },
+  // web .panel::before: absolute inset 4, 1px var(--line), radius 2
+  panelRing: { position: 'absolute', top: 4, left: 4, right: 4, bottom: 4, borderWidth: 1, borderRadius: 2 },
   // web img 200x250, borderRadius 3, 1px line-strong
   portraitFrame: { width: 200, height: 250, borderRadius: 3, borderWidth: 1, overflow: 'hidden' },
   portrait: { width: '100%', height: '100%' },
