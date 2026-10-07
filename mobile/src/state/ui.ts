@@ -56,7 +56,8 @@ interface UiStore {
   pendingFoe: { name: string; order: string; shade: boolean; standing: number; tier?: string; range?: [number, number] } | null;
   serverDuel: ServerDuelInit | null;
   go: (s: Screen, payload?: Partial<UiStore>) => void;
-  goBack: () => void;
+  /** pops to `prev`; true when it consumed the gesture, false at a root screen */
+  goBack: () => boolean;
   boot: () => void;
 }
 
@@ -78,14 +79,16 @@ export const useUi = create<UiStore>((set, get) => ({
     const cur = get();
     set({ screen: s, prev: cur.screen, direction: cur.direction * -1, ...payload });
   },
-  // Android hardware back / iOS swipe-back: pop to `prev`. At the root, do nothing —
-  // the OS then closes the app, which is the correct behaviour at a root screen.
+  // Android hardware back / iOS swipe-back: pop to `prev`. Pop ONCE and clear `prev` —
+  // the old `prev: cur.prev` kept the previous screen under itself, so the second back
+  // re-set the same screen forever (a page-turn loop that never exits). At a root
+  // screen return false so the OS handles the event — i.e. actually closes the app.
   goBack: () => {
     const { prev } = get();
-    if (!prev) return;
+    if (!prev) return false;
     audio.pageTurn();
-    const cur = get();
-    set({ screen: prev, prev: cur.prev, direction: cur.direction * -1 });
+    set({ screen: prev, prev: null, direction: get().direction * -1 });
+    return true;
   },
   // Spec R1: boot lands straight in the tutorial duel. No menu, no login.
   boot: () => set({ screen: 'tutorial', duelMode: 'tutorial' }),

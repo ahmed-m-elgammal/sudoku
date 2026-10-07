@@ -65,6 +65,19 @@ export class LocalDuel implements DuelRuntime {
   private listeners = new Set<() => void>();
   private lastNotifyAt = 0;
   version = 0;
+  /**
+   * The value `getSnapshot()` serves React. `version` advances on EVERY mutation AND
+   * every rAF frame (~60/s), while listeners are notified at ~15fps. useSyncExternalStore
+   * re-checks the snapshot in a passive effect after EVERY commit and force-re-renders
+   * when it moved — so a raw-version snapshot chains render → stale → force-render →
+   * stale → … as fast as React can loop. On a desktop that spiral usually settles inside
+   * one 16ms frame; on a phone it pegs the JS thread and touch handlers starve, which
+   * reads as “the whole duel ignores taps”. The snapshot therefore advances ONLY when
+   * listeners fire: stable between notifications, fresh on each one. Data is never stale
+   * — every render reads the live `duel.state` objects directly; `version` remains the
+   * fine-grained counter for the fx/memo layers (Board's useMemo deps).
+   */
+  private notifiedVersion = 0;
   ended = false;
   paused = false;
 
@@ -138,11 +151,12 @@ export class LocalDuel implements DuelRuntime {
     const now = performance.now();
     if (immediate || now - this.lastNotifyAt >= 66) {
       this.lastNotifyAt = now;
+      this.notifiedVersion = this.version;
       this.listeners.forEach((l) => l());
     }
   }
 
-  getSnapshot = () => this.version;
+  getSnapshot = () => this.notifiedVersion;
   bumpPublic() { this.bump(); }
 
   start() {
@@ -165,7 +179,7 @@ export class LocalDuel implements DuelRuntime {
   }
 
   destroy() {
-    cancelAnimationFrame(this.raf);
+    if (this.raf) cancelAnimationFrame(this.raf);
     if (this.shadeTimer) clearTimeout(this.shadeTimer);
     this.listeners.clear();
   }

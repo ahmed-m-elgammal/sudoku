@@ -13,15 +13,20 @@
 //   3. FileSystem-backed memory tier (works in Expo Go where Nitro is absent,
 //      persisting saves across reloads via expo-file-system).
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import type AsyncStorageType from '@react-native-async-storage/async-storage';
 import type { MMKV } from 'react-native-mmkv';
 import * as ExpoSecureStore from 'expo-secure-store';
-import type { PlatformStorage, SecureStore, StoreName } from './types';
+import { STORES, type PlatformStorage, type SecureStore, type StoreName } from './types';
 
 export type StorageBackend = 'mmkv' | 'asyncstorage' | 'fs';
 
 let backend: StorageBackend | null = null;
 let mmkv: MMKV | null = null;
+// The tier-2 module is resolved dynamically inside the probe (the report's P2 finding):
+// a Nitro-based build of AsyncStorage may throw at MODULE EVALUATION where Nitro is
+// absent, and a static top-level import would take this whole file — and every state
+// module behind it — down before the fallback chain ever got its chance.
+let asyncStorage: typeof AsyncStorageType | null = null;
 let mmkvFailed = false;
 let asyncStorageFailed = false;
 
@@ -71,6 +76,22 @@ async function persistFsStorage(): Promise<void> {
 }
 
 /**
+ * True when running inside the Expo Go client. Expo Go ships the Expo SDK's native
+ * modules ONLY — react-native-mmkv and NitroModules are not among them, so probing
+ * them there is guaranteed to fail and (on some Nitro versions) logs a scary native
+ * ERROR banner before our try/catch even runs. Detect the client once and walk
+ * straight to the FS tier; dev/production builds still probe the fast tiers.
+ */
+async function runningInExpoGo(): Promise<boolean> {
+  try {
+    const Constants = (await import('expo-constants')).default;
+    return Constants.executionEnvironment === 'storeClient' || Constants.appOwnership === 'expo';
+  } catch {
+    return false; // constants unavailable → probe the normal way
+  }
+}
+
+/**
  * Resolve the fastest available backend ONCE, and remember the verdict.
  * Probes MMKV -> AsyncStorage -> FileSystem. In Expo Go where Nitro modules
  * throw, safely falls back to FileSystem-backed memory tier.
@@ -78,6 +99,13 @@ async function persistFsStorage(): Promise<void> {
 function resolveBackend(): Promise<StorageBackend> {
   if (probe) return probe;
   probe = (async () => {
+    // Expo Go has no Nitro at all — skip straight to the FS tier (no probe, no native
+    // error banner, no wasted bundling of the Nitro chunk).
+    if (await runningInExpoGo()) {
+      mmkvFailed = true;
+      asyncStorageFailed = true;
+    }
+
     // 1. Probe MMKV
     if (!mmkvFailed) {
       try {
@@ -102,17 +130,20 @@ function resolveBackend(): Promise<StorageBackend> {
     // 2. Probe AsyncStorage
     if (!asyncStorageFailed) {
       try {
-        if (AsyncStorage && typeof AsyncStorage.setItem === 'function') {
-          await AsyncStorage.setItem('__probe', '1');
-          const ok = (await AsyncStorage.getItem('__probe')) === '1';
-          await AsyncStorage.removeItem('__probe');
+        const AS = (await import('@react-native-async-storage/async-storage')).default;
+        if (AS && typeof AS.setItem === 'function') {
+          await AS.setItem('__probe', '1');
+          const ok = (await AS.getItem('__probe')) === '1';
+          await AS.removeItem('__probe');
           if (ok) {
+            asyncStorage = AS;
             backend = 'asyncstorage';
             return backend;
           }
         }
       } catch {
         asyncStorageFailed = true;
+        asyncStorage = null;
       }
     }
 
@@ -137,7 +168,7 @@ export const storage: PlatformStorage = {
       if (b === 'mmkv') {
         raw = mmkv!.getString(mmkvKey(store, key));
       } else if (b === 'asyncstorage') {
-        raw = await AsyncStorage.getItem(mmkvKey(store, key));
+        raw = await asyncStorage!.getItem(mmkvKey(store, key));
       } else {
         await initFsStorage();
         raw = memStore.get(mmkvKey(store, key));
@@ -155,7 +186,7 @@ export const storage: PlatformStorage = {
     if (b === 'mmkv') {
       mmkv!.set(mmkvKey(store, key), raw);
     } else if (b === 'asyncstorage') {
-      await AsyncStorage.setItem(mmkvKey(store, key), raw);
+      await asyncStorage!.setItem(mmkvKey(store, key), raw);
     } else {
       await initFsStorage();
       memStore.set(mmkvKey(store, key), raw);
@@ -168,7 +199,7 @@ export const storage: PlatformStorage = {
     if (b === 'mmkv') {
       mmkv!.remove(mmkvKey(store, key));
     } else if (b === 'asyncstorage') {
-      await AsyncStorage.removeItem(mmkvKey(store, key));
+      await asyncStorage!.removeItem(mmkvKey(store, key));
     } else {
       await initFsStorage();
       memStore.delete(mmkvKey(store, key));
@@ -182,14 +213,19 @@ export const storage: PlatformStorage = {
       mmkv!.clearAll();
       return;
     }
+    // Keys are namespaced `${store}/${key}` (identity/, save/, duels/, notes/) — the old
+    // `startsWith('assize')` filter matched NOTHING, so the Settings wipe silently
+    // wiped zero keys on both of these tiers (the MMKV tier only worked because its
+    // whole instance is named 'assize').
+    const owned = (k: string) => STORES.some((s) => k.startsWith(`${s}/`));
     if (b === 'asyncstorage') {
-      const all = await AsyncStorage.getAllKeys();
-      await AsyncStorage.removeMany(all.filter((k) => k.startsWith('assize')));
+      const all = await asyncStorage!.getAllKeys();
+      await asyncStorage!.removeMany(all.filter(owned));
       return;
     }
     await initFsStorage();
     for (const k of Array.from(memStore.keys())) {
-      if (k.startsWith('assize')) memStore.delete(k);
+      if (owned(k)) memStore.delete(k);
     }
     void persistFsStorage();
   },
@@ -205,7 +241,7 @@ export const storage: PlatformStorage = {
         .sort();
     }
     if (b === 'asyncstorage') {
-      const all = await AsyncStorage.getAllKeys();
+      const all = await asyncStorage!.getAllKeys();
       return all.filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length)).sort();
     }
     await initFsStorage();
