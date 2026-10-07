@@ -191,6 +191,16 @@ setInterval(() => {
       startHumanDuel(p, o);
       continue;
     }
+    // Friend codes wait for a HUMAN (specs/17 4.6 — "two parties pair on the code").
+    // A Shade fallback here dragged the host into a RATED duel while their friend was
+    // still typing the code, so the pairing only worked if the guest arrived inside
+    // 4 s. Friend entries linger until their partner joins, the client's leave_queue
+    // (screen unmount), or the dead-socket reap below; ranked entries keep the 4 s
+    // fallback (spec §7) untouched.
+    if (p.friendCode) {
+      if (!io.sockets.sockets.has(p.socketId)) queue.splice(i, 1);
+      continue;
+    }
     if (waited >= SHADE_FALLBACK_MS) {
       queue.splice(i, 1);
       startShadeDuel(p);

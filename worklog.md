@@ -277,3 +277,24 @@ Stage Summary:
 - T9: every heavy PNG master shrank ~72-84% (35.6 MB total), the pass is repeatable and self-recorded, and the SW cache bumps so clients actually get the bytes
 - T13: the server keeps an honest, bounded, replay-proof mirror of Ink — verified where the duel log proves it, capped where it cannot, dropped when replayed — and recovery now restores it; Ink stays cosmetic and offline-safe by design
 - Next candidates: T1 Playwright smoke suite, T5 Stripe mock, T8 telemetry sync, anonymous echo pool, parked juice J5-J10
+
+---
+Task ID: 4.6
+Agent: Super Z (main)
+Task: Port FriendScreen (specs/17 phase 4.6) — create/join a code, unrated; two parties pair on the code
+
+Work Log:
+- Reviewed specs/ (17/16/15/14) + the web FriendScreen/Matchmaking/Versus + the 4.4 serverDuel port + the mini-services queue before coding
+- SERVER DEFECT (blocker): the matchmaking interval applied SHADE_FALLBACK_MS to friendCode entries — a host whose friend took >4 s was dragged into a RATED Shade duel, so pairing only worked inside a 4 s window. Fix (mini-services/assize-server/index.ts): friend entries never Shade-fallback; they linger until paired / leave_queue / dead-socket reap (ranked fallback untouched)
+- friendLaw.ts: FRIEND_TIER (the web's verbatim 'Friend duel'), normalizeCode (uppercase+trim, 16-char paste cap), isJoinableCode, isFriendMatch (fail-closed Shade/hostile guard), friendMatchedToNav (unrated plate: range [0,0], ServerDuelInit build)
+- FriendScreen.tsx + friendPanels.tsx (231+205 lines, the no-god-files law): button-driven create/join flows with the 4.4 queue laws — exactly-one live queue entry (leave_queue before re-queue + on unmount), exactly-one matched listener (off on settle/unmount), cancelled/settled guards after every await, fresh save via getState() at each await, secret stays in the Keychain identity (no localStorage duplication)
+- WEB DEFECTS reported (kept on the web build, fixed here): (a) host's matched listener never off()ed — stale navigation risk + ghost queue entry; (b) empty join code sent friendCode:'' — the server's falsy check silently RANKED-queued the guest (Begin disabled until non-empty); (c) offline create minted an unpairable LOCAL- code with an eternal waiting lie (honest error + retry instead); (d) create-path connect failure showed nothing (error note now); (e) join-path error rendered in the CREATE panel (per-panel error state); (f) "Break a seal" h2 / aria-label / placeholder were copy outside i18n (additive mobile keys); (g) the shared ?duel= link is dead in both clients (the CODE is the join token — shareCode key + clipboard carries the code)
+- i18n additions (mobile en.json, strictly additive): friend.joinTitle/shareCode/codeLabel/codePlaceholder
+- Tests: friendLaw.test.ts (9: code hygiene incl. the ranked-leak pin, the unrated mapping both seats, the fail-closed guard) + FriendScreen.test.tsx (8 FLOW component tests, react-test-renderer: copy lands, create→queue with code+Keychain secret, matched→versus handoff (the three-screen Friend→Versus→Duel payload), Shade/hostile refusal, unmount teardown (leave_queue + off + late-match immunity), empty-code disabled Begin, honest create failure, per-panel join error)
+- scripts/friend-pair-probe.mjs: live-server E2E (bun) — 8/8: lone host NOT Shade-fallbacked at 5.5 s; real pairing on the code (same duelId, seats 0/1, foe.shade false both, mirrored plates); leave_queue hygiene; dead-socket reap; ranked 4 s fallback regression control (matched at 4.24 s)
+- Gate: mobile tsc clean; eslint clean (0 errors/warnings); vitest 537/537 across 24 files (+17); expo export --platform all clean (iOS+Android 3.6 MB hbc)
+
+Stage Summary:
+- Phase 4.6 done end to end: FriendScreen → Versus → DuelScreen run on real paired sockets, with loading/error/waiting states honest and no stale screen state
+- The pairing law is now server-guaranteed: a friend code waits for a human, never a Shade, and never leaks into the ranked queue
+- shared/ untouched; web build untouched (defects reported, not fixed); engine suites still green inside the mobile gate

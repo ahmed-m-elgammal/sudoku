@@ -468,7 +468,11 @@
     "share": "Send this link: {url}",
     "copied": "Copied to the wax",
     "waiting": "Waiting for your friend to break the seal…",
-    "pickOrder": "Both pick Orders. Unrated, unruffled."
+    "pickOrder": "Both pick Orders. Unrated, unruffled.",
+    "joinTitle": "Break a seal",
+    "shareCode": "Send this seal to your friend: {code}",
+    "codeLabel": "Duel code",
+    "codePlaceholder": "CODE"
   },
   "practice": {
     "title": "Practice",
