@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { LocalDuel } from '@/game/localDuel';
+import { ServerDuel } from '@/game/serverDuel';
 import type { DuelRuntime, DuelSessionSpec, LocalDuelOpts, DuelEvent } from '@/game/duelRuntime';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
@@ -43,6 +44,10 @@ export interface DuelFxState {
 }
 export function useDuelSession(spec: DuelSessionSpec | null) {
   const lastSeqRef = useRef(0);
+  // specs/17 phase 4.4 — a server-authoritative duel (ranked / friend / server Shade)
+  // carries its own init in the screen machine; when present it REPLACES the local spec
+  // (the web build's effect order: serverDuel first, spec second).
+  const serverInit = useUi((s) => s.serverDuel);
 
   // ---- fx state. Every one of these is driven by a self-cleaning Cue: the timer is the
   //      ONLY cleaner, so a stuck shake or a permanently flooded cell is structurally
@@ -71,26 +76,28 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
     shakeCue.current?.set({ tier, nonce: fxNonce.current++ });
   }, []);
 
-  const [prevSpec, setPrevSpec] = useState(spec);
-  const [duel, setDuel] = useState<DuelRuntime | null>(() => {
-    if (!spec) return null;
-    return new LocalDuel({
-      ...spec,
-      onPhase: () => fireShake(3), // J2 — a boss phase ENTRY shakes T3
-    });
-  });
+  const makeDuel = useCallback(
+    (init: typeof serverInit, s: DuelSessionSpec | null): DuelRuntime | null =>
+      init
+        ? new ServerDuel(init)
+        : s
+          ? new LocalDuel({
+              ...s,
+              onPhase: () => fireShake(3), // J2 — a boss phase ENTRY shakes T3
+            })
+          : null,
+    [fireShake],
+  );
 
-  if (spec !== prevSpec) {
+  const [prevSpec, setPrevSpec] = useState(spec);
+  const [prevServer, setPrevServer] = useState(serverInit);
+  const [duel, setDuel] = useState<DuelRuntime | null>(() => makeDuel(serverInit, spec));
+
+  if (spec !== prevSpec || serverInit !== prevServer) {
     setPrevSpec(spec);
+    setPrevServer(serverInit);
     if (duel) duel.destroy();
-    setDuel(
-      spec
-        ? new LocalDuel({
-            ...spec,
-            onPhase: () => fireShake(3),
-          })
-        : null,
-    );
+    setDuel(makeDuel(serverInit, spec));
   }
 
   useEffect(() => {
@@ -119,7 +126,7 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
 
   // The web build throttled this to ~66 ms (~15 fps) on purpose. RN's reconciler is
   // slower than the DOM's, so the cap is a FEATURE here — but every board cell must be
-  // memoised or 81 cells x 15 fps will jank (risk R4).
+  // memoised or 81 cells x 15 fps will jank (risk R4). Both runtimes keep the same law.
   const version = useSyncExternalStore(
     (cb) => (duel ? duel.subscribe(cb) : () => {}),
     () => duel?.getSnapshot() ?? 0,

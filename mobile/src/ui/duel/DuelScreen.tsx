@@ -257,14 +257,19 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         if (firstWin) s.unlockAchievement('weekly-sat');
       }
 
-      // The single ledger entry for this duel.
+      // The single ledger entry for this duel. Ranked/friend carry the SERVER's duel id
+      // (specs/17 4.4 + the shared/inkLedger verdict law): the ledger must join the duel
+      // log the server wrote, or /api/ink drops the entry as a fabricated pvp id.
       {
         const ts = Date.now().toString(36);
-        const lid =
-          ui.duelMode === 'daily' && dailyKey ? `daily-${dailyKey}-${ts}`
-          : ui.duelMode === 'endless' && endlessRungFought !== null ? `endless-${endlessRungFought}-${ts}`
-          : ui.duelMode === 'weekly' && weekIdx !== null ? `weekly-${weekIdx}-${ts}`
-          : `${ui.duelMode}-${ts}-${Math.floor(Math.random() * 46656).toString(36)}`;
+        let lid = '';
+        if (ui.duelMode === 'ranked' || ui.duelMode === 'friend') {
+          const sd = duel as unknown as { opts?: { duelId?: unknown } };
+          if (sd.opts && typeof sd.opts.duelId === 'string' && sd.opts.duelId) lid = sd.opts.duelId;
+        } else if (ui.duelMode === 'daily' && dailyKey) lid = `daily-${dailyKey}-${ts}`;
+        else if (ui.duelMode === 'endless' && endlessRungFought !== null) lid = `endless-${endlessRungFought}-${ts}`;
+        else if (ui.duelMode === 'weekly' && weekIdx !== null) lid = `weekly-${weekIdx}-${ts}`;
+        else lid = `${ui.duelMode}-${ts}-${Math.floor(Math.random() * 46656).toString(36)}`;
         if (lid && ledgerDelta > 0) recordInk({ duelId: lid, mode: ui.duelMode, delta: ledgerDelta });
       }
 

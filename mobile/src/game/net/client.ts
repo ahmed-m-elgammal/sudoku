@@ -198,6 +198,9 @@ export const proto = {
   pencil: (duelId: string, cell: number, digits: number[]) => net.send('pencil', { duelId, cell, digits }),
   concede: (duelId: string) => net.send('concede', { duelId }),
   reconnect: (duelId: string, secret: string) => net.send('reconnect', { duelId, secret }),
-  joinDuel: (duelId: string, secret: string) => net.send('join_duel', { duelId, secret }),
+  // The server's join_duel handler authenticates accountId + secret; the web build sent
+  // only the secret, so every re-join (the S08 reconnect path) failed server-side and a
+  // reconnected duel froze. ServerDuel passes both (reported web defect, fixed here).
+  joinDuel: (duelId: string, secret: string, accountId?: string) => net.send('join_duel', { duelId, secret, accountId }),
   leaveQueue: () => net.send('leave_queue', {}),
 };
