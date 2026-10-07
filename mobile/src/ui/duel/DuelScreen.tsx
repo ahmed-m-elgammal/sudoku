@@ -30,6 +30,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { recordInk } from '@/state/inkLedger';
+import { loadIdentity } from '@/state/identity';
+import { net } from '@/game/net/client';
 import { audio } from '@/platform/audio';
 import { useDisplaySettings } from '@/platform/display';
 import { fonts, layout, themeFor } from '@/theme/tokens';
@@ -213,6 +215,16 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
             times: { ...cur.daily.times, [key]: Math.min(cur.daily.times[key] ?? Infinity, timeMs) },
           },
         }));
+        // PORT of src/app/game/DuelScreen.tsx:157-160 — the fire-and-forget result
+        // POST the server leaderboard is fed by. The Phase 1 port dropped it; net
+        // never rejects on mobile (it catches inside), and the identity read is
+        // guarded here the same way — a failed POST must never break finish().
+        void (async () => {
+          try {
+            const id = await loadIdentity();
+            await net.dailyResult({ id: id.id, secret: id.secret, dateKey: key, timeMs, mistakes: me.mistakes });
+          } catch { /* best effort — the save already recorded the result locally */ }
+        })();
       }
 
       // A Reliquary every 3rd win, and only against a human or the ladder.

@@ -66,6 +66,8 @@ export type Theme = {
   worldDimDeep: string;
   /** the confirm-dialog scrim (web `.modal-backdrop` background) */
   modalScrim: string;
+  /** the daily leaderboard's "you" row wash (web DailyScreen's inline brass-at-12%) */
+  youRowWash: string;
   /** the wax stamp's ink ring on the Mirror strip (the web's 1px `box-shadow` ring) */
   stampRing: string;
   /** the engraved tile grounds (num tile, ability tile) sit at this opacity */
@@ -110,6 +112,9 @@ const base = {
   // The blocking-dialog scrim, lifted verbatim from global.css `.modal-backdrop`
   // (rgba(10, 10, 11, 0.72)). Lives here so no screen ever writes a colour literal.
   modalScrim: 'rgba(10, 10, 11, 0.72)',
+  // The daily leaderboard's "you" row wash, lifted verbatim from DailyScreen.tsx:100
+  // (rgba(165,136,73,0.12) — brass at 12%). Lives here so no screen writes a colour literal.
+  youRowWash: 'rgba(165, 136, 73, 0.12)',
   stampRing: 'rgba(14, 14, 15, 0.65)',
   tileArtAlpha: 0.28,
 };

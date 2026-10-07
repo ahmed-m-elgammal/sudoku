@@ -119,6 +119,10 @@ vi.mock('react-native', async () => {
       exitApp: () => {},
     },
 
+    // the Daily's Offer-a-Candle note rides Alert.alert (the web's alert());
+    // recorded so a render test can assert the press without native dialog chrome.
+    Alert: { alert: vi.fn() },
+
     AppState: {
       currentState: 'active',
       addEventListener: () => noopSubscription,
