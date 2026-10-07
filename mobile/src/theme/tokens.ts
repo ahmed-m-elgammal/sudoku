@@ -64,6 +64,8 @@ export type Theme = {
   /** J3 — the hit-stop / verdict dim veils (web `.worldDim` / `.worldDimDeep`) */
   worldDim: string;
   worldDimDeep: string;
+  /** the confirm-dialog scrim (web `.modal-backdrop` background) */
+  modalScrim: string;
   /** the wax stamp's ink ring on the Mirror strip (the web's 1px `box-shadow` ring) */
   stampRing: string;
   /** the engraved tile grounds (num tile, ability tile) sit at this opacity */
@@ -105,6 +107,9 @@ const base = {
   // J3 dim veils, lifted verbatim from Duel.module.css (`.worldDim`, `.worldDimDeep`).
   worldDim: 'rgba(10, 6, 4, 0.28)',
   worldDimDeep: 'rgba(8, 5, 4, 0.42)',
+  // The blocking-dialog scrim, lifted verbatim from global.css `.modal-backdrop`
+  // (rgba(10, 10, 11, 0.72)). Lives here so no screen ever writes a colour literal.
+  modalScrim: 'rgba(10, 10, 11, 0.72)',
   stampRing: 'rgba(14, 14, 15, 0.65)',
   tileArtAlpha: 0.28,
 };
