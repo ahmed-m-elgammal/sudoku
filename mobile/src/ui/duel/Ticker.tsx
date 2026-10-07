@@ -12,7 +12,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { DuelRuntime } from '@/game/duelRuntime';
 import { i18n, tf } from '@/i18n';
-import { type Theme } from '@/theme/tokens';
+import { type Theme, fonts } from '@/theme/tokens';
 
 export interface TickerProps {
   duel: DuelRuntime;
@@ -123,5 +123,7 @@ function orderName(id: string): string {
 
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 12, paddingVertical: 2, minHeight: 22 },
-  text: { fontStyle: 'italic', fontSize: 13, textAlign: 'center' },
+  // tokens.ts law: italics come from the registered italic FAMILY, not fontStyle —
+  // RN cannot synthesize italics for custom-loaded faces (web: IM Fell DW Pica Italic).
+  text: { fontFamily: fonts.bodyItalic, fontSize: 13, textAlign: 'center' },
 });

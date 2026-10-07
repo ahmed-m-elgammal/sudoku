@@ -32,7 +32,7 @@ import { useSave } from '@/state/save';
 import { recordInk } from '@/state/inkLedger';
 import { audio } from '@/platform/audio';
 import { useDisplaySettings } from '@/platform/display';
-import { fonts, themeFor } from '@/theme/tokens';
+import { fonts, layout, themeFor } from '@/theme/tokens';
 import { storyJson, i18n } from '@/i18n';
 import { SLOW_INK_MS } from '@/game/fx';
 import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
@@ -409,22 +409,18 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.bg }]} data-cold={cold ? 'y' : undefined}>
-      <HeatVignette heat={heatValue} theme={theme} />
-      <WorldDim hit={hitStop !== null} slow={slowInk} theme={theme} />
+    <View style={[styles.root, { backgroundColor: theme.bg }]}>
+      <HudHeader duel={duel} theme={theme} />
 
-      <ShakeLayer shake={shake}>
-        <HudHeader duel={duel} theme={theme} />
-
-        <View style={[styles.main, landscape && styles.mainLandscape]}>
-          <View style={styles.left}>
-            <MirrorStrip duel={duel} theme={theme} />
-            <Ticker duel={duel} theme={theme} />
-          </View>
-          {board}
-          {controls}
+      <View style={[styles.main, landscape && styles.mainLandscape]}>
+        <View style={styles.left}>
+          <MirrorStrip duel={duel} theme={theme} />
+          <Ticker duel={duel} theme={theme} />
         </View>
-      </ShakeLayer>
+        {/* J2 — the web shakes `.boardWrap` ONLY: the HUD, pad and rites hold still. */}
+        <ShakeLayer shake={shake}>{board}</ShakeLayer>
+        {controls}
+      </View>
 
       {tutorialNote ? (
         <>
@@ -456,13 +452,18 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         </>
       ) : null}
 
+      {/* J4/J3 — the vignette (web z-60) and the world dim (web z-80) paint OVER the
+        duel room, under the banners (web z-90/110) and the RN modals (top layer). */}
+      <HeatVignette heat={heatValue} theme={theme} />
+      <WorldDim hit={hitStop !== null} slow={slowInk} theme={theme} />
+
+      {swap ? <SwapBanner banner={swap} foeName={duel.state.players[1].name} theme={theme} /> : null}
+
       {duel.selfOffline && !dc ? (
         <View accessibilityRole="text" style={[styles.offline, { top: insets.top + 8, backgroundColor: theme.bgRaised, borderColor: theme.lineStrong }]}>
           <Text style={{ color: theme.fg }}>{i18n.duel.disconnect.youOffline}</Text>
         </View>
       ) : null}
-
-      {swap ? <SwapBanner banner={swap} foeName={duel.state.players[1].name} theme={theme} /> : null}
 
       {paused ? (
         <PauseModal
@@ -513,12 +514,12 @@ const styles = StyleSheet.create({
   left: { alignItems: 'center', paddingVertical: 2 },
   boardArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
   toolbar: { flexDirection: 'row', gap: 6, justifyContent: 'center', paddingVertical: 4 },
-  toolBtn: { flex: 1, paddingVertical: 6, borderWidth: 1, borderRadius: 3, minHeight: 38, alignItems: 'center', justifyContent: 'center' },
+  toolBtn: { flex: 1, paddingVertical: 6, borderWidth: 1, borderRadius: 3, minHeight: layout.touch, alignItems: 'center', justifyContent: 'center' },
   toolText: { fontFamily: fonts.display, fontSize: 13, letterSpacing: 0.5 },
   skeleton: { width: 200, height: 12, marginTop: '40%', alignSelf: 'center' },
   // top/right/bottom offsets are injected inline from useSafeAreaInsets / window height
   // (web: top calc(safe-top + 3px), right 8px)
-  skip: { position: 'absolute', paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderRadius: 3, minHeight: 28, justifyContent: 'center', zIndex: 10 },
+  skip: { position: 'absolute', paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderRadius: 3, minHeight: layout.touch, justifyContent: 'center', zIndex: 10 },
   skipText: { fontSize: 11, textDecorationLine: 'underline' },
   marginNote: { position: 'absolute', left: '6%', right: '6%', borderWidth: 1, borderRadius: 3, padding: 8, zIndex: 10 },
   marginNoteText: { fontSize: 13, textAlign: 'center' },

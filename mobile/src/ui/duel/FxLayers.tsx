@@ -83,7 +83,11 @@ export interface WorldDimProps {
   theme: Theme;
 }
 
-/** J3 — the freeze veil. `hit` dims; `slow` dims deeper. */
+/**
+ * J3 — the freeze veil. `hit` dims; `slow` dims deeper. Colours are the web build's
+ * `.worldDim` / `.worldDimDeep` verbatim (via `theme.worldDim*`) — a warm ink veil at
+ * 0.28 / 0.42, NOT the app background at a higher opacity the first pass shipped.
+ */
 export function WorldDim({ hit, slow, theme }: WorldDimProps) {
   if (!hit && !slow) return null;
   return (
@@ -91,7 +95,7 @@ export function WorldDim({ hit, slow, theme }: WorldDimProps) {
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[StyleSheet.absoluteFill, styles.dim, { backgroundColor: theme.bg }, slow && styles.dimDeep]}
+      style={[StyleSheet.absoluteFill, { backgroundColor: slow ? theme.worldDimDeep : theme.worldDim }]}
     />
   );
 }
@@ -141,8 +145,6 @@ export function HeatVignette({ heat, theme }: HeatVignetteProps) {
 }
 
 const styles = StyleSheet.create({
-  dim: { opacity: 0.45 },
-  dimDeep: { opacity: 0.72 },
   vignette: {},
   edge: { position: 'absolute', opacity: 0.9 },
 });

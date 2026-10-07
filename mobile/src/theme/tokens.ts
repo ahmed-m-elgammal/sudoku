@@ -61,6 +61,9 @@ export type Theme = {
   cellSelected: string;
   /** J1 — the same-digit highlight wash (web `.sameDigit` background) */
   cellSameDigit: string;
+  /** J3 — the hit-stop / verdict dim veils (web `.worldDim` / `.worldDimDeep`) */
+  worldDim: string;
+  worldDimDeep: string;
   /** the wax stamp's ink ring on the Mirror strip (the web's 1px `box-shadow` ring) */
   stampRing: string;
   /** the engraved tile grounds (num tile, ability tile) sit at this opacity */
@@ -99,6 +102,9 @@ const base = {
   // colour literal.
   cellSelected: 'rgba(165, 136, 73, 0.14)',
   cellSameDigit: 'rgba(165, 136, 73, 0.22)',
+  // J3 dim veils, lifted verbatim from Duel.module.css (`.worldDim`, `.worldDimDeep`).
+  worldDim: 'rgba(10, 6, 4, 0.28)',
+  worldDimDeep: 'rgba(8, 5, 4, 0.42)',
   stampRing: 'rgba(14, 14, 15, 0.65)',
   tileArtAlpha: 0.28,
 };

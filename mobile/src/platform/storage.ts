@@ -55,7 +55,10 @@ async function initFsStorage(): Promise<void> {
       }
     }
   } catch {
-    // Pure in-memory fallback
+    // Transient init failure (FS not yet ready, decode error): UNLATCH so the next
+    // access retries. Latching here would strand the session in pure-memory mode —
+    // exactly the data-loss mode this tier exists to prevent.
+    fsInitialized = false;
   }
 }
 

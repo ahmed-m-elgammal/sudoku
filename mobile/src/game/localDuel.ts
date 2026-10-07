@@ -395,8 +395,9 @@ export class LocalDuel implements DuelRuntime {
       // T20 - a cross-Order boss phase: the arc sets one Order aside mid-duel.
       // The engine's swapOrder is the same atomic primitive T4 proved; the brass
       // callout, sting and haptics are the T4 presentation, reused verbatim.
+      const from = this.state.players[1].order;
       if (swapOrder(this.state, 1, act.to)) {
-        this.swapFlash = { from: this.state.players[1].order, to: act.to };
+        this.swapFlash = { from, to: act.to };
         this.swapFlashAt = performance.now();
         audio.orderSwap();
         if (this.opts.settingsHaptics?.() ?? true) haptics.orderSwap();

@@ -195,7 +195,9 @@ function CellImpl({
               <Text
                 key={i}
                 allowFontScaling={false}
-                style={[styles.note, { color: on ? theme.fg : theme.fgDim }, on && styles.noteOn]}
+                // web law: `.notes i:not(.noteOn) { opacity: 0 }` — an unset pencil
+                // mark is INVISIBLE, not dimmed.
+                style={[styles.note, { color: theme.fg, opacity: on ? 1 : 0 }, on && styles.noteOn]}
               >
                 {i + 1}
               </Text>

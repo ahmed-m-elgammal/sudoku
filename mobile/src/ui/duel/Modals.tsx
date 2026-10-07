@@ -247,5 +247,6 @@ const styles = StyleSheet.create({
   arrow: { fontSize: 20 },
   swapTitle: { fontFamily: fonts.display, fontSize: 18 },
   swapBody: { fontSize: 14, textAlign: 'center', marginTop: 4 },
-  swapNote: { fontSize: 12, textAlign: 'center', marginTop: 6, fontStyle: 'italic' },
+  // tokens.ts law: italics come from the registered italic FAMILY (web: IM Fell DW Pica Italic)
+  swapNote: { fontFamily: fonts.bodyItalic, fontSize: 12, textAlign: 'center', marginTop: 6 },
 });
