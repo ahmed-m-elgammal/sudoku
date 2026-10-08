@@ -11,11 +11,26 @@
 //   SET-2  pressing it routes: tutorial mode, bumped nonce, no stale verdict
 //   SET-3  it presses again — and again: the lesson is RE-playable, every entry
 //          remounts a fresh duel (the G13 acceptance: "replay works")
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type React from 'react';
 import { useUi } from '@/state/ui';
+import { useSave } from '@/state/save';
+import { storage, __resetStorageBackends } from '@/platform/storage';
 import { i18n } from '@/i18n';
 import SettingsScreen from '@/ui/screens/SettingsScreen';
+
+// the full settings port (5.7) mounts the Ribbon and reads the safe-area insets —
+// both Metro/native seams every other hub-screen test doubles (Cabinet,
+// SeasonLedger, LedgerProfile). This file's assertions are untouched.
+vi.mock('@/ui/Ribbon', async () => {
+  const React = await import('react');
+  const { View } = await import('react-native');
+  return { default: () => React.createElement(View, null) };
+});
+
+vi.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 
 /** the store's own state type — UiStore itself is not exported */
 type UiState = ReturnType<typeof useUi.getState>;
@@ -48,15 +63,20 @@ function findAllText(tree: unknown, out: string[] = []): string[] {
   return out;
 }
 
-function renderScreen(): { toJSON: () => unknown; unmount: () => void } {
+async function renderScreen(): Promise<{ toJSON: () => unknown; unmount: () => void }> {
   let tree: ReturnType<typeof renderer.create> | null = null;
-  renderer.act(() => {
+  await renderer.act(async () => {
     tree = renderer.create(<SettingsScreen />);
   });
   return tree as unknown as { toJSON: () => unknown; unmount: () => void };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  // the full settings port reads the REAL save store and returns null until it is
+  // loaded (the stub was a bare label; every other screen test loads the save)
+  __resetStorageBackends();
+  await storage.clearAll();
+  await useSave.getState().load();
   // a dirty session that must survive nothing: mode/endless verdict, stale nonce
   useUi.setState({
     screen: 'settings',
@@ -68,7 +88,7 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
   useUi.setState({
     screen: 'boot', prev: null, duelMode: 'tutorial', duelNonce: 0,
     lastResult: null, serverDuel: null,
@@ -76,8 +96,8 @@ afterEach(() => {
 });
 
 describe('SettingsScreen · the G13 replay entry', () => {
-  it('SET-1 renders the replay row from the dictionary (never a literal)', () => {
-    const tree = renderScreen();
+  it('SET-1 renders the replay row from the dictionary (never a literal)', async () => {
+    const tree = await renderScreen();
     const text = findAllText(tree.toJSON());
     expect(text).toContain(i18n.tutorial.relearn);
     const row = find(tree.toJSON(), i18n.tutorial.relearn);
@@ -85,7 +105,7 @@ describe('SettingsScreen · the G13 replay entry', () => {
   });
 
   it('SET-2 pressing the row lands in a clean tutorial duel (mode, nonce, no verdict)', async () => {
-    const tree = renderScreen();
+    const tree = await renderScreen();
     const row = find(tree.toJSON(), i18n.tutorial.relearn)!;
     await renderer.act(async () => {
       await (row.props.onPress as () => void)();
@@ -100,7 +120,7 @@ describe('SettingsScreen · the G13 replay entry', () => {
   });
 
   it('SET-3 it replays again after again — every entry bumps a fresh duel', async () => {
-    const tree = renderScreen();
+    const tree = await renderScreen();
     for (let i = 0; i < 3; i++) {
       const row = find(tree.toJSON(), i18n.tutorial.relearn)!;
       await renderer.act(async () => {

@@ -129,7 +129,32 @@ vi.mock('react-native', async () => {
       removeEventListener: () => {},
     },
 
-    Animated: { View: host('Animated.View'), Text: host('Animated.Text') },
+    // the Settings toggle's knob slide rides RN's core Animated (5.7): a timing
+    // that lands synchronously and a Value whose interpolate passes the range
+    // through — the render test pins the SETTING, the animation is chrome.
+    Animated: {
+      View: host('Animated.View'),
+      Text: host('Animated.Text'),
+      Value: class {
+        _value: number;
+        constructor(v: number) { this._value = v; }
+        setValue(v: number) { this._value = v; }
+        interpolate(cfg: { outputRange: number[] }) { return cfg.outputRange[1]; }
+      },
+      timing: (v: { setValue: (n: number) => void }, cfg: { toValue: number }) => ({
+        start: (cb?: (r: { finished: boolean }) => void) => {
+          v.setValue(cfg.toValue);
+          cb?.({ finished: true });
+        },
+      }),
+    },
+    // the Settings sliders are PanResponder-based rebuilds of the web's
+    // <input type="range"> (5.7 — no Slider in the stack). The double hands the
+    // empty panHandlers through so the tree mounts; the gesture math is pinned by
+    // sliderLaw.test.ts without native chrome.
+    PanResponder: {
+      create: () => ({ panHandlers: {} }),
+    },
     PixelRatio: { get: () => 3, roundToNearestPixel: (n: number) => Math.round(n) },
   };
 });
