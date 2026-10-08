@@ -1,6 +1,6 @@
 # ASSIZE Mobile — Tutorial Optimization Plan
 
-**Status:** Proposal for owner review · **Scope:** `mobile/` (primary), `shared/` (script v2, spec'd change), `src/` (web parity, follow-up) · **Author:** tutorial analysis pass, 2026-10-08 · **Amended 2026-10-08 (§11):** M2 reframed from "kid-first" to **universally clear** per owner decision — documentation only, no code
+**Status:** Proposal for owner review · **Scope:** `mobile/` (primary), `shared/` (script v2, spec'd change), `src/` (web parity, follow-up) · **Author:** tutorial analysis pass, 2026-10-08 · **Amended 2026-10-08 (§11):** M2 reframed from "kid-first" to **universally clear** per owner decision — documentation only, no code · **Amended 2026-10-08 (§12):** post-M2 field evidence from the owner's device — defect register G14–G22 + M2.1 field-fix pass; documentation only, no code
 
 ---
 
@@ -8,12 +8,13 @@
 
 The tutorial's problems are not cosmetic. The code contains **hard bugs that make the teaching notes literally glitch on screen**, and the pedagogy underneath them was built for players who already know both sudoku and the game's fiction. A child opening ASSIZE today is dropped into a full competitive duel — Roman-numeral clock, wax Seal pips, an opponent racing them at 4.2–6.8 s per digit — with nothing but seven one-line archaic sentences floating over the board. The single most important rule of sudoku (**each digit 1–9 appears once per row, column, and box**) is **never taught at all**.
 
-This plan ships in three milestones:
+This plan ships in four milestones (M2.1 added by the §12 field-evidence amendment):
 
 | Milestone | What | Effort | Outcome |
 |---|---|---|---|
 | **M1 — Hotfix** | Kill the 8 glitches (note flash, note regression, overlays over the board, skip/loss traps, Q/W/E on touch, ticker truncation) + make the tutorial impossible to lose | ~2 dev-days | Tutorial stops feeling broken *today* |
 | **M2 — Rebuild** | Phased, gated, spotlight-driven interactive lessons; sudoku basics taught first; Shade script v2 (pausable race, no unfair damage, safe-to-fail); plain-language copy layer; replay entry points | ~8–10 dev-days | A first-timer of **any age** finishes it unaided (amended §11 — universally clear, not kid-first) |
+| **M2.1 — Field-fix pass** (§12) | Kill the post-M2 device-verified defects: banner truncation, ticker grammar, spotlight truth-up, legibility of the dimmed room, competing glows | ~1–1.5 dev-days | The shipped lesson reads fully, points where it teaches, keeps the room legible |
 | **M3 — Polish & measure** | Demo animations ("ghost hand"), assist options, telemetry hooks, full device QA matrix, web parity port | ~3–4 dev-days | Shippable, measurable, consistent on both platforms |
 
 Full rationale, code-level root causes, phase-by-phase design spec, file-by-file change list, test matrix, and risks follow.
@@ -390,6 +391,147 @@ The rebuild is deliberately structured as **slots**, so story can be incremented
 ### 11.5 Explicitly unchanged
 
 No HUD redesign, no engine edits, no economy changes, no router, no new assets, scope bounded to tutorial mode (§8). This amendment ships documentation only; M2 implementation awaits the owner's greenlight.
+
+---
+
+## 12. Field evidence & defect register — post-M2 device run (2026-10-08, docs-only)
+
+Three screenshots from the owner's Android phone (08:18–08:19) capture the **shipped M2 lesson** mid-run — steps t1 ("This is the Tablet…"), t3 ("Tap the glowing cell.") and t5 ("Now set a wrong number on purpose."). S1 = the t1 Tablet step (08:18), S2 = the t3 glowing-cell step (08:19), S3 = the t5 wrong-number step (08:19), as referenced throughout this section. The M2 skeleton is visibly working: the docked banner with 9 progress dots, plain-first copy, flavor second, the skip chip, the spotlight scrim, the frozen Shade. What the screenshots also show is a set of **device-verified defects** in the layer above that skeleton. This section registers them (G14–G22), pins every root cause that static reading can prove (file:line, read-only — **no code was changed for this amendment**), and defines the fix pass as milestone **M2.1**. The §11 discipline (tokens, i18n, no god files, story safety) carries over verbatim.
+
+### 12.1 Build provenance — read this first
+
+The screenshots' copy reads "The brass edge marks your **band**, Clerk" and "a false **band** breaks a wax Seal". The phrase "band, Clerk" **does not exist in any commit on any branch of this repository** (`git log -S` across `--all` returns nothing); origin/main @ `1603c04` says "**hand**" in both keys (`mobile/src/i18n/en.json`, `t3Flavor`/`t5Flavor`). Everything else in the screenshots — the 9-dot progress row, the t1/t3/t5 plain+flavor structure, the Continue/Skip CTAs, the t1 truncation shape — matches the shipped M2 build exactly.
+
+Consequence: **the installed build on the test phone was not built from origin/main** (an older export, uncommitted local copy edits, or a side branch). Therefore:
+
+- **Step 0 of the fix pass is a clean rebuild from origin/main and a retest of the same three steps.** Any symptom that disappears was build drift, not a defect; anything that survives is registered below.
+- Every defect below is registered with its proof **against main's current source**, so the register stays valid regardless of which build the screenshots came from.
+
+### 12.2 Defect register (G14–G22)
+
+| ID | Observed (screenshot) | Severity | Status on main |
+|---|---|---|---|
+| G14 | Banner copy truncates mid-word: "Eighty-o…", "as the Assize …", "breaks a wax Seal. …" (S1, S3) | **Critical** — the lesson is literally unreadable | Proven: hard caps in code |
+| G15 | Ticker grammar: "You sets a digit." (S3) | High — the room's voice stutters in the lesson | Proven: template bug |
+| G16 | Spotlight hole rings the caption text instead of the taught cell (S2) | **Critical** — the coach points at nothing | Real risk on main: two sources of truth |
+| G17 | Stray second brass outline over the Shade's mirror (S3) | High — reads as a glitch | Not producible by main's code (build drift suspect) |
+| G18 | Untaught room washed to illegibility (S1–S3) | High — "not clear at all" | Proven: `opacity: 0.4` literal |
+| G19 | "Unmute" glows brass, competing with "Tap the glowing cell" (S1–S3) | Medium | Proven: `pressed={muted}` paints focus accent |
+| G20 | Ticker band crowds the board; no visible "Step n of 9" (S1) | Medium | Proven: spacing + a11y-only label |
+| G21 | Unidentified cog-shaped glyph floats over the board's top-left cells (S1–S3) | Medium — invites a tap that does nothing | No matching control exists in main's duel UI |
+| G22 | Spotlight layout constants hand-duplicated from the pad/rites components | Latent | Proven: two sources of truth |
+
+#### G14 — Banner copy truncates mid-word (the lesson is unreadable)
+
+**Observed.** S1: plain line "This is the Tablet — the puzzle board. Eighty-o…", flavor "Nine by nine, as the Assize …". S3: flavor "Elsewhere a false band breaks a wax Seal. …". The player cannot finish a single sentence of the lesson — including the step that introduces the board itself.
+
+**Root cause (proven).** `mobile/src/ui/duel/tutorial/TutorialBanner.tsx:64` hard-caps the plain line at `numberOfLines={2}` and `:70` caps the flavor at `numberOfLines={1}`. Worse, the text column is `flex: 1` inside a single row (`styles.row`) squeezed between the CTA chip and the Skip chip, so on a ~1080 px-wide phone the lesson text gets roughly half the banner before the caps ellipsize it. The v1 ticker carries the same pattern (`Ticker.tsx:45`, `numberOfLines={tutorial ? 2 : 1}`).
+
+**Fix (M2.1).** A **no-ellipsis law** for lesson copy: remove the line caps on the banner's plain and flavor lines; let the banner grow to its text (it is in flow below the board — growing costs board area, never covers a cell, same law as COACH-7/TUTORIAL-B). On narrow widths the CTA + Skip chips drop to their own row beneath the full-width text block. Copy length stays governed at the dictionary level (§5.6 guidance: plain ≤ ~70 chars per sentence) so the banner settles at ≤ 3 plain + 2 flavor lines on the 5.0" device.
+
+**Accept.** Banner component test: no `numberOfLines` cap on lesson text; full t1/t5 strings render without ellipsis at a 360 dp viewport. Manual: the §6.3 device matrix, 5.0" row first.
+
+#### G15 — Ticker grammar: "You sets a digit."
+
+**Observed.** S3's caption reads "…ou sets a digit." (prefix occluded by the stray outline, G17).
+
+**Root cause (proven).** `mobile/src/ui/duel/Ticker.tsx:62-65` fills the template `duel.log.placed` = `"{player} sets a digit."` with `{player}` = `"You"` for the Clerk's placements — third-person verb, first-person subject. The Shade's branch (`"{foeName} sets a digit."`) is grammatical; the Clerk's never was.
+
+**Fix (M2.1).** Additive i18n only: new key `duel.log.placedYou` = `"You set a digit."` added to **both** `mobile/src/i18n/en.json` and `src/i18n/en.json` with equal values (the superset law; frozen keys untouched); the Ticker selects it when `e.player === 0`. Register is preserved — terse, formal, dry (§11.3).
+
+**Accept.** The dictionary-equality test extends to the new key; a ticker unit test pins the Clerk's placement line.
+
+#### G16 — Spotlight hole misses the taught cell (rings the caption instead)
+
+**Observed.** S2: the banner says "Tap the glowing cell." while the brass outline circles the caption band **above** the board — around the ticker text — not around any cell.
+
+**Root cause (real on main).** The hole is computed from **two independently-updated sources**: `boardSize` (state set from the board *area's* `onLayout`, `DuelScreen.tsx:432-437`) and `boardRect` (a separate `measureInWindow` in `TutorialLayer.tsx:74-82`, re-run only when `[want, phase, boardSize, width, height]` change). Banner geometry changes that move the board — the dots row appearing at step > 0, the t1 CTA chip appearing/disappearing, the t9 telegraph line — are not themselves re-measured, so a stale `boardRect`/`boardSize` pair displaces the hole by exactly the kind of one-band offset S2 shows. Two aggravators: (a) the board ref lives **inside ShakeLayer's animated transform** (`FxLayers.tsx:72`), so a measurement taken during a shake reads transformed coordinates (±6 px); (b) nothing verifies the hole intersects the *actual* Board wrap — `Spotlight.tsx` renders whatever rect it is handed.
+
+**Fix (M2.1).** **One source of truth:** measure the Board **wrap itself** (not the area), and derive both the Board's rendered size and the spotlight hole from that single rect. Re-measure on every phase/target change *after the layout settles* (two-frame/rAF settle), and fail-closed: a hole that does not intersect the measured wrap dims the whole container (the same hostile-input law `spotlight.ts:84-98` already applies) rather than pointing at the wrong thing. Geometry stays pure in `spotlight.ts`.
+
+**Accept.** Geometry tests: for every target kind, hole ⊆ measured wrap. New component invariant: **exactly one brass outline node exists during any teaching frame**, and when the target is a cell/the board, its window rect intersects the Board wrap. Manual: t3 on the tall Android and the 5.0" matrix row.
+
+#### G17 — Stray second brass outline over the Shade's mirror
+
+**Observed.** S3: an extra cell-sized brass rectangle sits on the mirror strip (top center) while the step targets the bottom-right cell.
+
+**Root cause.** **Cannot be produced by main's current code**: `TutorialLayer.tsx:101` mounts at most one Spotlight (single conditional), and `MirrorStrip.tsx` draws only a dot matrix and round claim stamps. Most consistent with the build drift of §12.1 (an older overlay set) or a transient double-tree during a `duelNonce` remount. Registered, not forgiven — the invariant below makes the class impossible.
+
+**Fix (M2.1).** The G16 "exactly one outline" invariant test, plus a debug-only window-rect dump behind a flag for on-device verification.
+
+**Accept.** Invariant test green on main; rebuilt build shows one outline across t1–t9 on device.
+
+#### G18 — The untaught room dims to illegibility (the "not clear at all" look)
+
+**Observed.** All three screenshots: HUD, mirror, toolbar, number pad and rites washed to ghost level while the lesson is active.
+
+**Root cause (proven).** `DuelScreen.tsx:628` defines `dimCluster: { opacity: 0.4 }` — a hardcoded literal — and wraps the HUD (`:504`), mirror (`:510`), pad (`:492`) and abilities (`:495`) for the whole of t0–t8. 0.4 opacity over the dark theme pushes every untaught surface below legible contrast, including the pad's remainder counts (`NumPad.tsx:159`, 9 px) and the ticker's dim italic voice (`Ticker.tsx:136`, `fgDim`). The dim is the right idea (focus) tuned past legibility.
+
+**Fix (M2.1).** The dim level becomes a theme token (`theme.stageDim`, value decided on-device in the 0.55–0.7 range) — no literals. The **ticker and banner never dim** (they are the lesson's voice). Dimming applies during action-gated steps (t3–t8) and relaxes while the player is *reading* (t1/t2). Taught-adjacent chrome keeps ≥ 4.5:1 contrast (§6.4).
+
+**Accept.** Zero color/opacity literals in the diff (token only); contrast spot-check on the 5.0" row; manual read of the pad counts during t4.
+
+#### G19 — "Unmute" glows brass and competes with the spotlight
+
+**Observed.** In every screenshot the Unmute button carries the focus border while the lesson says "Tap the glowing cell." — two glowing affordances, one call to attention.
+
+**Root cause (proven).** `ToolBtn` renders `borderColor: pressed ? theme.focus : …` (`DuelScreen.tsx:606-611`) and the mute button mounts with `pressed={muted}` (`:475-477`) — so audio muted (a default state) permanently paints the focus accent on Unmute for the entire duel, tutorial included.
+
+**Fix (M2.1).** While a teaching phase is active, the mute button renders neutral styling (the selected-state accent suppressed); the muted state stays legible through the label itself (Unmute/Mute — existing keys, no string changes).
+
+**Accept.** Component test: no `theme.focus` on the toolbar while any teaching phase is active — except the toolbar's own spotlight target at t6.
+
+#### G20 — Ticker band crowds the board; step label is screen-reader-only
+
+**Observed.** S1: the caption sits tight on the board's top edge and is overlapped by the misplaced hole (S2/S3). The 9 progress dots render but no visible "Step n of 9" anywhere.
+
+**Root cause (proven).** The left column stacks the mirror (54 px) and the ticker (`minHeight: 22`, 13 px italic, `fgDim`) with no breathing room above the board; the step text exists only as `accessibilityLabel` on the dots row (`TutorialBanner.tsx:58` — the `tutorialV2.step` key renders nowhere visually).
+
+**Fix (M2.1).** A minimum margin between the ticker band and the board (layout token, not a literal); in tutorial mode the ticker upgrades from `fgDim` to `fg` (tutorial-only, the same spirit as the G5 Arabic law); a visible "Step n of 9" microtext beside the dots using the existing `tutorialV2.step` key.
+
+**Accept.** Manual device check; banner test asserts a visible step-label node (not only an accessibility label).
+
+#### G21 — Unidentified cog-shaped glyph floats over the board's top-left
+
+**Observed.** S1–S3: a gear-like badge on a light disc sits over the r0c0/r1c0 area in all three screenshots, undimmed, reading as a settings control.
+
+**Root cause.** **No settings control exists in the mobile duel UI** — Settings is a screen in the shell's router, not an overlay; no gear asset is referenced anywhere in Board/Cell/HUD/banner code; the only hush badge renders over the number pad (`NumPad.tsx:137`). Candidates: an OS-level assistive bubble from the test device, a status overlay present only in the divergent build (§12.1), or an asset wired outside main's tree. Static reading cannot settle it; the rebuilt build will.
+
+**Fix (M2.1).** Identify on the rebuilt build (the G16/G17 rect-dump flag if needed). The law it must satisfy either way extends G3/COACH-7 from "the coach" to **all chrome: nothing floats over a board cell** — controls live in the HUD band or the banner row.
+
+**Accept.** Post-rebuild screenshot of the same three steps; the glyph is either removed/repositioned or identified as OS-level and documented here.
+
+#### G22 — Spotlight layout constants are hand-duplicated (latent drift)
+
+**Root cause (proven).** `tutorial/spotlight.ts:23-35` re-declares NumPad's tile law (48/5), AbilityBar's tile law (60/6) and the toolbar's law (44/6/4) as literals. They match today (`NumPad.tsx:147-150`, `AbilityBar.tsx:129-132`, DuelScreen toolbar) — but nothing ties the two sides together; any future pad resize silently misaligns every digit/rite hole, reproducing the G16 class of bug.
+
+**Fix (M2.1).** The layout components export their own constants as named exports; `spotlight.ts` imports them instead of re-declaring. The module stays pure numbers-in/rects-out and keeps its test pin.
+
+**Accept.** tsc + the existing spotlight geometry tests; a one-line ownership comment in both files pointing at the single source.
+
+### 12.3 Discipline for the fix pass (owner's rules, unchanged)
+
+1. **No hardcoded colors.** The dim level becomes `theme.stageDim`; every new or touched surface uses existing theme tokens. Zero color literals in the diff.
+2. **No hardcoded strings.** G15's new key and any copy touch goes through the i18n dictionary, added to **both** `mobile/src/i18n/en.json` and `src/i18n/en.json` with equal values; frozen keys untouched; additive-only (§11.4).
+3. **No god files.** `TutorialBanner.tsx` stays under the 300-line law — if the no-ellipsis layout grows it past the cap, split banner layout from copy selection into two files; spotlight geometry stays in pure `spotlight.ts`.
+4. **Story safety (§11.3) carries over verbatim.** No STORY.md edits, no story.json rewrites, no new canon, economy untouched. G15's fix changes one verb's agreement — the Shade's register survives intact.
+
+### 12.4 Milestone insertion — M2.1 "field-fix pass"
+
+M2.1 slots **between M2 (shipped, `1603c04`) and M3**, and takes its acceptance evidence from the same device the screenshots came from:
+
+| Step | Work | Defects |
+|---|---|---|
+| 0 | Clean rebuild from origin/main + retest of steps t1/t3/t5 on the same device (§12.1) | separates drift from defect |
+| 1 | Copy fixes: no-ellipsis banner law + `placedYou` key (both twins) | G14, G15 |
+| 2 | Spotlight truth-up: single measured source, post-layout settle, hostile-hole clamp, one-outline invariant | G16, G17 |
+| 3 | Legibility: `theme.stageDim` token, never dim ticker/banner, de-glow Unmute during teaching | G18, G19 |
+| 4 | Spacing + step microtext + constants single-sourcing | G20, G22 |
+| 5 | On-device identification of the floating glyph; close the register | G21 |
+
+**Retest protocol.** The same three tutorial steps (t1/t3/t5), screenshotted on the same phone, plus the 5.0" row of the §6.3 matrix. Gates before push: `tsc --noEmit`, `eslint .`, full `vitest run` (with the new G14–G22 tests), `expo export --platform all`.
+
+**Status.** Registered 2026-10-08 from field evidence; documentation only — implementation awaits the owner's greenlight.
 
 ---
 
