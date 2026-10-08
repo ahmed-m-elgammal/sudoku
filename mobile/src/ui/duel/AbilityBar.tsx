@@ -13,7 +13,7 @@
 //    desktop keyboard hint on a phone tile is exactly the kind of broken window that
 //    reads as a glitch to a new player.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 import { CONFIG, ORDER_ABILITIES, type AbilityId } from '@shared/config';
@@ -36,6 +36,11 @@ const RING_C = 2 * Math.PI * RING_R;
 export default function AbilityBar({ duel, theme }: AbilityBarProps) {
   const [descFor, setDescFor] = useState<AbilityId | null>(null);
   const me = duel.state.players[0];
+  useEffect(() => {
+    if (descFor === null) return;
+    const t = setTimeout(() => setDescFor(null), 4000);
+    return () => clearTimeout(t);
+  }, [descFor]);
   const meta = orderMeta(me.order);
   const abilities = ORDER_ABILITIES[me.order];
   const copy = i18n.orders[me.order].abilities;
@@ -60,6 +65,7 @@ export default function AbilityBar({ duel, theme }: AbilityBarProps) {
               duel.ability(id, target === 'cell' && duel.selected !== null ? { cell: duel.selected } : {});
             }}
             onLongPress={() => setDescFor(descFor === id ? null : id)}
+            delayLongPress={250}
             accessibilityRole="button"
             accessibilityLabel={`${copy[id].name}. ${copy[id].desc}`}
             accessibilityState={{ disabled: !ready }}
@@ -97,6 +103,7 @@ export default function AbilityBar({ duel, theme }: AbilityBarProps) {
       {descFor ? (
         <View
           accessibilityRole="summary"
+          pointerEvents="none"
           style={[styles.desc, { backgroundColor: theme.bgRaised, borderColor: theme.focus }]}
         >
           <Text style={[styles.descName, { color: theme.fg }]}>{copy[descFor].name}</Text>

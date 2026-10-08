@@ -297,7 +297,20 @@
     "weekly": "Weekly Assize",
     "weeklySub": "This week: {mods}. One sitting. Every Clerk.",
     "headerName": "the Clerk",
-    "candle": "candle"
+    "candle": "candle",
+    "sectionStart": "Start Here",
+    "sectionPlay": "Play",
+    "sectionStory": "Story",
+    "sectionMore": "Season & Friends",
+    "dailyHelp": "One puzzle a day. Keep your streak alive.",
+    "practiceHelp": "Any difficulty. No witness, small reward.",
+    "endlessHelp": "Run the circuit. Rung {rung} · best {best}.",
+    "weeklyHelp": "One sitting a week under special law: {mods}.",
+    "foliosHelp": "The story campaign — {done} of 27 duels settled.",
+    "echoesHelp": "Duel the recorded games of Clerks who came before.",
+    "friendHelp": "Share a link, settle it between you.",
+    "seasonHelp": "Tier {tier} · {ink} Season Ink.",
+    "tutorialHelp": "New to ASSIZE? Learn the rules — about two minutes."
   },
   "endless": {
     "title": "The Endless Assize",

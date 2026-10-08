@@ -162,77 +162,85 @@ export default function Antechamber() {
             <Text style={[styles.heroSub, { color: palette.parchmentDim, fontSize: fs.xs }]}>{i18n.hub.enterSub}</Text>
           </Pressable>
 
+          <Text style={[styles.section, { color: theme.fgDim, fontSize: fs.sm }]}>{i18n.hub.sectionStart}</Text>
+          <HubCard
+            theme={theme}
+            fs={fs}
+            title={i18n.tutorial.relearn}
+            sub={i18n.hub.tutorialHelp}
+            onPress={() => tap('tutorial', tutorialReplayPayload(duelNonce))}
+          />
+
+          <Text style={[styles.section, { color: theme.fgDim, fontSize: fs.sm }]}>{i18n.hub.sectionPlay}</Text>
           <View style={styles.pair}>
             <HubCard
               theme={theme}
               fs={fs}
               title={i18n.hub.daily}
-              sub={tf('hub.dailySub', { streak: save.daily.streak })}
+              sub={`${i18n.hub.dailyHelp} ${tf('hub.dailySub', { streak: save.daily.streak })}`}
               icon={<SvgUri uri={candleUri(dailyDone)} width={26} height={26} />}
               onPress={() => tap('daily')}
             />
             <HubCard
               theme={theme}
               fs={fs}
-              title={i18n.hub.folios}
-              sub={foliosSub}
-              onPress={() => tap('folioMap')}
+              title={i18n.hub.practice}
+              sub={i18n.hub.practiceHelp}
+              onPress={() => tap('orders', { duelMode: 'practice' })}
             />
           </View>
           <View style={styles.pair}>
             <HubCard
               theme={theme}
               fs={fs}
-              title={i18n.hub.season}
-              sub={tf('hub.seasonSub', { tier: Math.min(30, Math.floor(save.season.ink / 100) + 1), ink: save.season.ink })}
-              onPress={() => tap('season')}
+              title={i18n.hub.endless}
+              sub={tf('hub.endlessHelp', { rung: (save.endless?.current ?? 0) + 1, best: save.endless?.best ?? 0 })}
+              onPress={() => tap('endless')}
             />
             <HubCard
               theme={theme}
               fs={fs}
-              title={i18n.hub.friend}
-              sub={i18n.hub.friendSub}
-              onPress={() => tap('friend')}
+              title={i18n.hub.weekly}
+              sub={tf('hub.weeklyHelp', { mods: weekMods })}
+              onPress={() => tap('weekly')}
             />
           </View>
-          {/* T7/T18/T21 — the shelf of echoes, the endless circuit, the weekly writs */}
-          <HubCard
-            theme={theme}
-            fs={fs}
-            title={i18n.hub.practice}
-            sub={i18n.hub.practiceSub}
-            onPress={() => tap('orders', { duelMode: 'practice' })}
-          />
-          <HubCard
-            theme={theme}
-            fs={fs}
-            title={i18n.hub.echoes}
-            sub={i18n.hub.echoesSub}
-            onPress={() => tap('echoes')}
-          />
-          <HubCard
-            theme={theme}
-            fs={fs}
-            title={i18n.hub.endless}
-            sub={tf('hub.endlessSub', { rung: (save.endless?.current ?? 0) + 1, best: save.endless?.best ?? 0 })}
-            onPress={() => tap('endless')}
-          />
-          <HubCard
-            theme={theme}
-            fs={fs}
-            title={i18n.hub.weekly}
-            sub={tf('hub.weeklySub', { mods: weekMods })}
-            onPress={() => tap('weekly')}
-          />
-          {/* G13 — the lesson is re-playable from the hall: same shape as the G10
-              rematch routing, so a replay remounts the duel with a fresh runtime. */}
-          <HubCard
-            theme={theme}
-            fs={fs}
-            title={i18n.tutorial.relearn}
-            sub={i18n.tutorial.relearnSub}
-            onPress={() => tap('tutorial', tutorialReplayPayload(duelNonce))}
-          />
+
+          <Text style={[styles.section, { color: theme.fgDim, fontSize: fs.sm }]}>{i18n.hub.sectionStory}</Text>
+          <View style={styles.pair}>
+            <HubCard
+              theme={theme}
+              fs={fs}
+              title={i18n.hub.folios}
+              sub={save.campaign.ended ? foliosSub : tf('hub.foliosHelp', { done: folioDuels })}
+              onPress={() => tap('folioMap')}
+            />
+            <HubCard
+              theme={theme}
+              fs={fs}
+              title={i18n.hub.echoes}
+              sub={i18n.hub.echoesHelp}
+              onPress={() => tap('echoes')}
+            />
+          </View>
+
+          <Text style={[styles.section, { color: theme.fgDim, fontSize: fs.sm }]}>{i18n.hub.sectionMore}</Text>
+          <View style={styles.pair}>
+            <HubCard
+              theme={theme}
+              fs={fs}
+              title={i18n.hub.friend}
+              sub={i18n.hub.friendHelp}
+              onPress={() => tap('friend')}
+            />
+            <HubCard
+              theme={theme}
+              fs={fs}
+              title={i18n.hub.season}
+              sub={tf('hub.seasonHelp', { tier: Math.min(30, Math.floor(save.season.ink / 100) + 1), ink: save.season.ink })}
+              onPress={() => tap('season')}
+            />
+          </View>
         </View>
       </ScrollView>
       <Ribbon />
@@ -265,8 +273,6 @@ function HubCard({
         { backgroundColor: theme.bgRaised, borderColor: theme.lineStrong, opacity: pressed ? 0.85 : 1 },
       ]}
     >
-      {/* web .panel::before — the engraved inner ring, inset 4, 1px --line */}
-      <View style={[styles.panelRing, { borderColor: theme.line }]} pointerEvents="none" />
       {icon}
       <Text style={[styles.cardTitle, { color: theme.fg, fontSize: fs.md, letterSpacing: 0.02 * fs.md }]}>{title}</Text>
       <Text style={[styles.cardSub, { color: theme.fgDim, fontSize: fs.xs }]}>{sub}</Text>
@@ -316,7 +322,10 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderRadius: 4,
+    minHeight: 64,
+    justifyContent: 'center',
   },
+  section: { fontFamily: fonts.display, marginTop: 8, letterSpacing: 1 },
   // web .panel::before: absolute inset 4, 1px var(--line), radius 2
   panelRing: { position: 'absolute', top: 4, left: 4, right: 4, bottom: 4, borderWidth: 1, borderRadius: 2 },
   cardTitle: { fontFamily: fonts.display, marginTop: 2 },

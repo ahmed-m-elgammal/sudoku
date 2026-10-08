@@ -78,14 +78,14 @@ export default function FolioMap() {
             source={images.folioMap}
             resizeMode="cover"
             accessibilityLabel="The walled city of Novem"
-            style={[StyleSheet.absoluteFill, { borderColor: theme.lineStrong }]}
+            style={[styles.plateImg, { borderColor: theme.lineStrong }]}
           />
           {NODES.map((n, i) => {
             const locked = i > save.campaign.folioIdx;
             const current = i === save.campaign.folioIdx;
             const isDone = i < save.campaign.folioIdx;
-            const frameColor = isDone ? palette.brass : current ? palette.oxblood : theme.lineStrong;
-            const nodeInk = locked ? theme.lineStrong : isDone ? palette.brass : palette.parchmentLight;
+            const frameColor = isDone ? palette.brass : current ? palette.oxblood : theme.fgDim;
+            const nodeInk = locked ? theme.fgDim : isDone ? palette.brass : palette.parchmentLight;
             return (
               // absolute %-positioned wrapper; the child self-offsets -22,-22 =
               // the web's translate(-50%,-50%) for a fixed 44x44 node
@@ -110,7 +110,6 @@ export default function FolioMap() {
                       marginTop: -22,
                       borderColor: frameColor,
                       backgroundColor: locked ? theme.bgSunken : theme.bgRaised,
-                      opacity: locked ? 0.5 : 1,
                     },
                   ]}
                 >
@@ -147,6 +146,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   nodeWrap: { position: 'absolute' },
+  plateImg: { position: 'absolute', width: '100%', height: '100%' },
   // web 44x44 circle, 2px border, min 44 touch guard — the -22 offsets ride inline
   node: {
     width: 44,
