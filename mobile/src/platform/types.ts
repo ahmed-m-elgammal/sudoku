@@ -42,7 +42,7 @@ export interface SecureStore {
 
 // ---------------------------------------------------------------- audio
 /**
- * The web build's `synth` surface, verbatim — 18 methods, enumerated by grepping
+ * The web build's `synth` surface, verbatim — every method, enumerated by grepping
  * every call site in src/. Reimplement it; do not redesign it. Every method must be
  * a no-op (never a throw) before `unlock()` and when audio is unavailable: the game
  * is fully playable silent.
@@ -69,6 +69,8 @@ export interface AudioBackend {
   victory(): void;
   defeat(): void;
   draw(): void;
+  /** S10 — the Reliquary chest ritual (web synth.reliquary; Reliquary/Cabinet/Ledger). */
+  reliquary(): void;
 
   // continuous
   /** Tension 0..1 from the Seals gap; drives the ambient bed's intensity. */

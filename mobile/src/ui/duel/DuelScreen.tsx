@@ -37,6 +37,7 @@ import { useDisplaySettings } from '@/platform/display';
 import { fonts, layout, themeFor } from '@/theme/tokens';
 import { storyJson, i18n } from '@/i18n';
 import { SLOW_INK_MS } from '@/game/fx';
+import type { LocalDuelOpts } from '@/game/duelRuntime';
 import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
 import { weekIndexFor, weeklyInkBonus } from '@shared/weekly';
 import { useDuelSession, specFromUi, type DuelSessionSpec } from './useDuelSession';
@@ -264,6 +265,17 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         const wins = (save?.stats.wins ?? 0) + 1;
         reliquaryWon = wins % 3 === 0;
         if (reliquaryWon) s.update((cur) => ({ ...cur, economy: { ...cur.economy, reliquaryProgress: 0 } }));
+      }
+
+      // T7 — recordable human duels leave an echo behind (the ink-echo another Clerk
+      // may duel later). Tutorial (scripted) and campaign (canon foes) stay unrecorded.
+      // The web duck-types the recorder off the runtime instance (`'toReplay' in duel`):
+      // LocalDuel records, the server runtime does not. Same duck-check, structurally typed
+      // (the recorder rides LocalDuelOpts — the intersection law duelRuntime.ts documents).
+      const echoDuel = duel as { toReplay?: NonNullable<LocalDuelOpts['toReplay']> };
+      if (echoDuel.toReplay && ['practice', 'daily', 'shade', 'replay', 'endless', 'weekly'].includes(ui.duelMode)) {
+        const rec = echoDuel.toReplay({ winner, reason: r.reason });
+        if (rec) void import('@/game/echoes').then(({ saveEcho }) => saveEcho(rec));
       }
 
       // Endless: a win ascends, a loss returns to the foot; the rung win mits rung-scaled ink.

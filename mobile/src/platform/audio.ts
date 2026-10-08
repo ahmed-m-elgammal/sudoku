@@ -3,7 +3,7 @@
 // ┌────────────────────────────────────────────────────────────────────────────┐
 // │ OWNED BY: the audio agent. Replace this file wholesale with a real          │
 // │ expo-audio implementation. Keep the interface in ./types EXACTLY as-is —   │
-// │ 18 methods + unlock/setMuted/muted/setVolumes.                             │
+// │ every synth method + unlock/setMuted/muted/setVolumes.                     │
 // │                                                                             │
 // │ This baseline exists only so Phase A compiles: it is a silent, throw-free   │
 // │ implementation of the full contract. That is the correct degraded state    │
@@ -11,10 +11,10 @@
 // └────────────────────────────────────────────────────────────────────────────┘
 //
 // The web build's synth (../src/audio/synth.ts, 290 lines of WebAudio graph) is
-// NOT ported. It is replaced by an implementation of its 18-method call surface:
+// NOT ported. It is replaced by an implementation of its call surface:
 //
 //   cast claimWon defeat draw error orderSwap padlock pageTurn pencil place
-//   stamp statusApplied statusEnded tickMusic uiTap victory wrong
+//   reliquary stamp statusApplied statusEnded tickMusic uiTap victory wrong
 //
 // Design constraints for the replacement:
 //   - never throw; every method is a no-op before unlock() and when audio fails
@@ -54,6 +54,7 @@ export const audio: AudioBackend = {
   victory: noop,
   defeat: noop,
   draw: noop,
+  reliquary: noop,
 
   tickMusic(tension: number): void {
     lastTension = Number.isFinite(tension) ? Math.max(0, Math.min(1, tension)) : 0;
