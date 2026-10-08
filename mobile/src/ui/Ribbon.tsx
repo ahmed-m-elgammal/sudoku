@@ -19,7 +19,8 @@
 //  - the dingbat icons are `aria-hidden` spans on the web; RN hides them from both
 //    platforms' access layers explicitly.
 //  - `background: var(--charcoal) url(tab-ribbon.svg) cover` -> the charcoal ground
-//    with the SVG grain absolutely filling it; `slice` is the SVG word for CSS cover.
+//    with the raster grain absolutely filling it (mode="cover" — the SVG word for
+//    CSS cover was `slice`).
 //  - the web's `zIndex: 40` is page stacking order; RN's sibling order gives the same
 //    result, and each hub screen owns where the ribbon sits in its tree.
 //  - the TABS table's four labels and dingbats are COMPONENT LITERALS on the web
@@ -28,16 +29,16 @@
 import { useMemo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SvgUri } from 'react-native-svg';
 import { useUi } from '@/state/ui';
 import { audio } from '@/platform/audio';
 import { useDisplaySettings } from '@/platform/display';
+import Art from '@/ui/Art';
 import { fonts, palette, themeFor, type as typeScale } from '@/theme/tokens';
 
-// Metro needs a literal require (metro.config.js: svg is an asset extension);
-// resolveAssetSource turns the asset id into the URI SvgUri renders — the same law
-// ../duel/duelAssets.ts follows for the duel's registry.
-const RIBBON = require('../../assets/game/ui/tab-ribbon.svg');
+// Metro needs a literal require (metro.config.js: the raster twins are asset
+// extensions); resolveAssetSource turns the asset id into the URI the Art seam
+// paints — the same law ../duel/duelAssets.ts follows for the duel's registry.
+const RIBBON = require('../../assets/game/ui/tab-ribbon.png');
 const ribbonUri = Image.resolveAssetSource(RIBBON)?.uri ?? '';
 
 const TABS = [
@@ -67,11 +68,11 @@ export default function Ribbon() {
         { backgroundColor: theme.bgRaised, borderTopColor: palette.brassDim, paddingBottom: insets.bottom },
       ]}
     >
-      <SvgUri
+      <Art
         uri={ribbonUri}
         width="100%"
         height="100%"
-        preserveAspectRatio="xMidYMid slice"
+        mode="cover"
         style={StyleSheet.absoluteFill}
       />
       {TABS.map((t) => {

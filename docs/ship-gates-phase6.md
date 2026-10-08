@@ -106,3 +106,47 @@ does; `mobile/declarations.d.ts` types the `.wav` imports.
 5. Before screenshots: regenerate the five source-art assets with baked-in Chinese
    text (audit §3.3) — an image-pipeline decision at the source, shared with the web
    build; not closable from this workspace without re-authoring the art.
+
+## Follow-up: the native art pipeline — raster twins (post ship-gate device findings)
+
+On-device verification surfaced the three runtime findings this section closes.
+
+**Findings.** (1) react-native-svg warned `Some SVG filters used in the app are not
+implemented on native platforms` (FeTurbulence et al.) — 120 of the 140 engraved-kit
+SVGs carry turbulence-based filters. (2) The Fabric renderer threw
+`Text strings must be rendered within a <Text> component`. (3) UI/JS dropped to 0 fps
+when iterating screens.
+
+**Root cause (one, for all three).** Every kit asset was rendered through
+`<SvgUri>`: a runtime `fetch` + XML-parse + React-tree build of each SVG on EVERY
+mount. Native's SVG renderer implements none of the kit's filters (the warnings; the
+grain never painted), the parse storm across the board's ~90 art nodes + every hub
+screen's chrome was the frame collapse, and the `SvgAst` path renders dynamically
+built children arrays — the one non-standard render path under Fabric whose failure
+mode surfaces as raw-text throws.
+
+**The fix — bake the filters at build time.**
+- `tools/rasterize-game-art.mjs` (sharp/librsvg, which implements the full filter
+  spec) rasterizes every `mobile/assets/game/**/*.svg` beside its source: palette
+  PNG twins for marks/chrome, WebP q95 twins for the full-bleed noise (textures).
+  Scale = 2× intrinsic, clamped [96, 1024]. Total +1.95 MB; the SVGs are no longer
+  bundled (0 in the export; the twins take the 140 slots). A manifest
+  (`raster-manifest.json`) pins the mapping and feeds the audit.
+- `src/ui/Art.tsx` — the ONE render seam for bundled art: a native `<Image>`,
+  `mode` defaulting to 'contain' (SVG `meet`), `mode="cover"` where the web said
+  `slice`, null on empty uri (the registries' degrade law), `fadeDuration={0}`.
+- All 130 registry requires now point at the twins; all 14 render sites render
+  `<Art>`; `resolveUri`/`artUriFor`/`sigilArt`/`duelArt` keep the registry law with
+  honest names. The AbilityBar cooldown ring lost its data-URI `<SvgUri>` (which
+  native `<Image>` cannot paint at all) for an inline procedural `<Svg><Circle>` —
+  the same two circles, Fabric-safe.
+- `react-native-svg` stays for procedural geometry only (cooldown rings, Ledger
+  spark, seat circles, the disconnect spinner).
+
+**Proof.** `src/ui/__tests__/artSeam.test.ts` (3 laws: no .svg requires in src, no
+SvgUri/SvgXml usage, manifest↔disk integrity) + the suites above; the asset audit
+still PASSes (every reference resolves); `expo export` ios+android clean with
+`{ttf: 6, wav: 24, webp: 38, png: 105}` — zero svgs.
+
+**Fidelity note.** The art now shows the grain the web build always had — on device
+the noise filters never painted, so this is a fidelity RESTORATION, not a change.

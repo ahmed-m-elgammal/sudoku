@@ -13,10 +13,10 @@
 // order, same 44 pt minimum targets.
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import Art from '@/ui/Art';
 import type { DuelRuntime } from '@/game/duelRuntime';
 import type { Digit } from '@shared/config';
-import { duelSvgs } from './duelAssets';
+import { duelArt } from './duelAssets';
 import { i18n, tf } from '@/i18n';
 import { fonts, layout, type Theme } from '@/theme/tokens';
 
@@ -89,10 +89,10 @@ export default function NumPad({ duel, frozen, heat, theme, onTap }: NumPadProps
                 ]}
               >
                 <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <SvgUri
+                  <Art
                     width="100%"
                     height="100%"
-                    uri={complete ? duelSvgs.numTileComplete : duelSvgs.numTileNormal}
+                    uri={complete ? duelArt.numTileComplete : duelArt.numTileNormal}
                     opacity={theme.tileArtAlpha}
                   />
                 </View>
@@ -113,7 +113,7 @@ export default function NumPad({ duel, frozen, heat, theme, onTap }: NumPadProps
               style={[styles.tile, { borderColor: theme.lineStrong, backgroundColor: theme.bgRaised }]}
             >
               <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                <SvgUri width="100%" height="100%" uri={duelSvgs.numTileNormal} opacity={theme.tileArtAlpha} />
+                <Art width="100%" height="100%" uri={duelArt.numTileNormal} opacity={theme.tileArtAlpha} />
               </View>
               <Text style={[styles.digit, { color: theme.fg }]} allowFontScaling={false}>
                 {i18n.duel.pad.eraseGlyph}
@@ -134,7 +134,7 @@ export default function NumPad({ duel, frozen, heat, theme, onTap }: NumPadProps
           pointerEvents="none"
           style={[StyleSheet.absoluteFill, styles.hush, { backgroundColor: theme.hushVeil }]}
         >
-          <SvgUri width="130" height="130" uri={duelSvgs.overlayHush} />
+          <Art width={130} height={130} uri={duelArt.overlayHush} />
           <Text style={[styles.hushText, { color: theme.fg }]}>{i18n.duel.status.hush}</Text>
         </View>
       ) : null}

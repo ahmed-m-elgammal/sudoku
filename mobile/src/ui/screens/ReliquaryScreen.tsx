@@ -6,7 +6,7 @@
 // module-scope SVG requires are Metro-only, the documented split of proof.
 //
 // Translation notes (the AGENTS.md platform table, nothing more):
-//  - the chest <img> sequence rides SvgUri over the 8 bundled frames, same 500 ms
+//  - the chest <img> sequence rides Art (raster twins) over the 8 bundled frames, same 500 ms
 //    cadence, same 4 s finish; the web's `ink-settle` entry class is page chrome no
 //    mobile screen animates yet (the ResultScreen port's standing decision);
 //  - `synth.reliquary()` → `audio.reliquary()` — the one-shot the web synth carries
@@ -24,7 +24,7 @@
 //          degrades the rest identically — no art, the rarity + name still tell.
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import Art from '@/ui/Art';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
@@ -38,21 +38,21 @@ import { reliquaryAward, rarityBorderColor, rollItem, type ReliquaryItem } from 
 // Metro needs literal requires (see duelAssets.ts for the resolveAssetSource law);
 // frame 0..7 of the ritual — array order IS chestAssetName(i) (pinned by the law test).
 const CHEST_FRAMES = [
-  require('../../../assets/game/reliquary/chest-closed.svg'), // 0 — the web's 'closed'
-  require('../../../assets/game/reliquary/chest-opening-1.svg'),
-  require('../../../assets/game/reliquary/chest-opening-2.svg'),
-  require('../../../assets/game/reliquary/chest-opening-3.svg'),
-  require('../../../assets/game/reliquary/chest-opening-4.svg'),
-  require('../../../assets/game/reliquary/chest-opening-5.svg'),
-  require('../../../assets/game/reliquary/chest-opening-6.svg'),
-  require('../../../assets/game/reliquary/chest-open.svg'),   // 7 — the web's 'open'
+  require('../../../assets/game/reliquary/chest-closed.png'), // 0 — the web's 'closed'
+  require('../../../assets/game/reliquary/chest-opening-1.png'),
+  require('../../../assets/game/reliquary/chest-opening-2.png'),
+  require('../../../assets/game/reliquary/chest-opening-3.png'),
+  require('../../../assets/game/reliquary/chest-opening-4.png'),
+  require('../../../assets/game/reliquary/chest-opening-5.png'),
+  require('../../../assets/game/reliquary/chest-opening-6.png'),
+  require('../../../assets/game/reliquary/chest-open.png'),   // 7 — the web's 'open'
 ] as const;
 
 // The drop table's art, by id — the web address maps kind→dir (seals, seals/stamps,
 // ui, textures), and only these two files actually exist in the shipped assets.
 const ITEM_ART: Record<string, number> = {
-  'stamp-laurel': require('../../../assets/game/seals/stamps/stamp-laurel.svg'),
-  'stamp-crown': require('../../../assets/game/seals/stamps/stamp-crown.svg'),
+  'stamp-laurel': require('../../../assets/game/seals/stamps/stamp-laurel.png'),
+  'stamp-crown': require('../../../assets/game/seals/stamps/stamp-crown.png'),
 };
 
 export default function ReliquaryScreen() {
@@ -114,7 +114,7 @@ export default function ReliquaryScreen() {
         </Text>
         {!item ? (
           <>
-            <SvgUri uri={chestUri} width={180} height={180} />
+            <Art uri={chestUri} width={180} height={180} />
             <Text style={[styles.ritual, { color: theme.fgDim, fontSize: fs.sm, marginTop: 10 }]}>
               {i18n.reliquary.ritual}
             </Text>
@@ -126,7 +126,7 @@ export default function ReliquaryScreen() {
               <Text style={[styles.rarity, { color: theme.fgDim, fontSize: fs.xs, letterSpacing: 0.2 * fs.xs }]}>{item.rarity.toUpperCase()}</Text>
               {itemArtUri ? (
                 <View style={[styles.artFrame, { borderColor: theme.lineStrong }]}>
-                  <SvgUri uri={itemArtUri} width={120} height={120} />
+                  <Art uri={itemArtUri} width={120} height={120} />
                 </View>
               ) : null}
               <Text style={[styles.itemName, { color: theme.fg, fontSize: fs.xl }]}>{item.name}</Text>

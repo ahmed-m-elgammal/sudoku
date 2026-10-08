@@ -37,20 +37,15 @@ config.resolver.extraNodeModules = {
 // mobile/node_modules and at the repo root — a duplicate React would break hooks.
 config.resolver.nodeModulesPaths = [path.resolve(projectRoot, 'node_modules')];
 
-// ---- SVG: bundle it as an ASSET.
+// ---- SVG / raster twins: bundle them as ASSETS.
 //
-// The duel UI is 210 procedural engraved SVGs (seals, sigils, board furniture, status
-// overlays, the num-tile and medallion chrome). React Native cannot `require()` an
-// `.svg` the way it can a `.png` — Metro would hand the raw markup to the JS parser.
-//
-// Adding `svg` to `assetExts` makes Metro treat it as a bundled file, so
-// `require('./foo.svg')` returns a resolved URI that react-native-svg's <SvgUri> can
-// render. This is the zero-dependency route: the alternative is
-// `react-native-svg-transformer` (a babel plugin + a new package), which is not needed
-// because every SVG here is used as a texture/mark, never as composed JSX.
-//
-// Note: this also fixes a latent bug — `theme/assets.ts` already `require()`d
-// `brand/wordmark.svg`, which could not have resolved before this line.
+// The engraved kit ships as RASTER TWINS (png/webp) baked from the kit's SVG sources
+// by `tools/rasterize-game-art.mjs` — react-native-svg does not implement the kit's
+// feTurbulence/feDisplacementMap filters, and runtime XML parsing per mount was the
+// measured 0 fps + warning source (docs/ship-gates-phase6.md, the follow-up section).
+// Screens render the twins through `src/ui/Art.tsx` (a native <Image>); the .svg
+// sources stay in the tree unbundled. Keeping `svg` in `assetExts` means a stray
+// `require('./x.svg')` still resolves to an asset instead of crashing the bundler.
 if (!config.resolver.assetExts.includes('svg')) {
   config.resolver.assetExts = [...config.resolver.assetExts, 'svg'];
 }

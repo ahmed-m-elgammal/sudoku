@@ -17,7 +17,7 @@
 //    user-visible outcome, no new dependency. Only the player's own verdict fields
 //    go into the message: banner, claims, mistakes, time, standing. No identity,
 //    no auth material, no server state.
-//  - the ink-drop icon rides SvgUri the same way the duel's SVGs do (see
+//  - the ink-drop icon rides Art the same way the duel's art does (see
 //    ../duel/duelAssets.ts for the resolveAssetSource law this file follows).
 //  - the web's `.page-turn` banner animation is shell-wide page chrome, not screen
 //    content; no mobile screen animates its own entry yet, so this one doesn't
@@ -28,8 +28,9 @@
 //    diverging the frozen en.json.
 import { useEffect, useMemo } from 'react';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import Art from '@/ui/Art';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Polyline, SvgUri } from 'react-native-svg';
+import Svg, { Polyline } from 'react-native-svg';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { audio } from '@/platform/audio';
@@ -37,9 +38,9 @@ import { useDisplaySettings } from '@/platform/display';
 import { fonts, layout, palette, themeFor, type as typeScale } from '@/theme/tokens';
 import { i18n } from '@/i18n';
 
-// Metro needs a literal require (see metro.config.js: svg is an asset extension);
-// resolveAssetSource turns the asset id into the URI SvgUri renders.
-const INK_DROP = require('../../../assets/game/icons/ink-drop.svg');
+// Metro needs a literal require (see metro.config.js: the raster twins are asset
+// extensions); resolveAssetSource turns the asset id into the URI the Art seam paints.
+const INK_DROP = require('../../../assets/game/icons/ink-drop.png');
 const inkDropUri = Image.resolveAssetSource(INK_DROP)?.uri ?? '';
 
 export default function ResultScreen() {
@@ -178,7 +179,7 @@ export default function ResultScreen() {
           </Text>
           <View style={styles.inkRow}>
             <Text style={[styles.inkValue, { color: palette.brass, fontSize: fs.lg }]}>+{r.ink}</Text>
-            <SvgUri uri={inkDropUri} width={16} height={16} />
+            <Art uri={inkDropUri} width={16} height={16} />
           </View>
           {r.reliquaryWon ? (
             <Text style={[styles.reliquary, { color: palette.brass, fontSize: fs.sm }]}>

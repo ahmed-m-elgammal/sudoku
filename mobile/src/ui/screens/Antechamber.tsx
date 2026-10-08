@@ -9,14 +9,14 @@
 // pads under it — here the Ribbon is the column's last child, same always-visible
 // result. Copy fills go through i18n tf(); 'Standing' composes from i18n.result.rating
 // and 'Your portrait' is a web aria-label literal, both carried verbatim. The portrait
-// rides imageForPath, hero parchment + ink-drop ride svgUriFor; rank emblems, candles
+// rides imageForPath, hero parchment + ink-drop ride artUriFor; rank emblems, candles
 // and sigil-coin are this screen's own literal requires (Metro bundling law). PERF:
 // both subscriptions are selector-scoped (`go` is stable), stateless, effect-free —
 // nothing to leak between duels or sessions.
 import { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Art from '@/ui/Art';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SvgUri } from 'react-native-svg';
 import type { ReactNode } from 'react';
 import { useUi, type Screen } from '@/state/ui';
 import { useSave } from '@/state/save';
@@ -25,7 +25,7 @@ import { useDisplaySettings } from '@/platform/display';
 import { fonts, palette, themeFor, type as typeScale } from '@/theme/tokens';
 import { i18n, tf } from '@/i18n';
 import { imageForPath } from '@/theme/assets';
-import { svgUriFor } from '@/ui/duel/duelAssets';
+import { artUriFor } from '@/ui/duel/duelAssets';
 import { orderMeta } from '@shared/orders';
 // todayUtcKey rides the @shared barrel (screens ban @shared/rng directly; this is the
 // daily date-key util, not the engine). weekIndexFor is @shared/weekly — allowed.
@@ -37,23 +37,23 @@ import { tutorialReplayPayload } from './replayEntry';
 
 // Metro needs literal requires; these four are the hub's own chrome.
 const RANK_EMBLEMS: Record<string, number> = {
-  scrivener: require('../../../assets/game/ranks/rank-scrivener.svg'),
-  clerk: require('../../../assets/game/ranks/rank-clerk.svg'),
-  notary: require('../../../assets/game/ranks/rank-notary.svg'),
-  advocate: require('../../../assets/game/ranks/rank-advocate.svg'),
-  magistrate: require('../../../assets/game/ranks/rank-magistrate.svg'),
-  'high-magistrate': require('../../../assets/game/ranks/rank-high-magistrate.svg'),
-  justiciar: require('../../../assets/game/ranks/rank-justiciar.svg'),
-  'lord-of-the-assize': require('../../../assets/game/ranks/rank-lord-of-the-assize.svg'),
+  scrivener: require('../../../assets/game/ranks/rank-scrivener.png'),
+  clerk: require('../../../assets/game/ranks/rank-clerk.png'),
+  notary: require('../../../assets/game/ranks/rank-notary.png'),
+  advocate: require('../../../assets/game/ranks/rank-advocate.png'),
+  magistrate: require('../../../assets/game/ranks/rank-magistrate.png'),
+  'high-magistrate': require('../../../assets/game/ranks/rank-high-magistrate.png'),
+  justiciar: require('../../../assets/game/ranks/rank-justiciar.png'),
+  'lord-of-the-assize': require('../../../assets/game/ranks/rank-lord-of-the-assize.png'),
 };
-const CANDLE_LIT = require('../../../assets/game/reliquary/candle-lit.svg');
-const CANDLE_UNLIT = require('../../../assets/game/reliquary/candle-unlit.svg');
-const SIGIL_COIN = require('../../../assets/game/icons/sigil-coin.svg');
+const CANDLE_LIT = require('../../../assets/game/reliquary/candle-lit.png');
+const CANDLE_UNLIT = require('../../../assets/game/reliquary/candle-unlit.png');
+const SIGIL_COIN = require('../../../assets/game/icons/sigil-coin.png');
 const rankUri = (id: string) => Image.resolveAssetSource(RANK_EMBLEMS[id] ?? RANK_EMBLEMS.clerk)?.uri ?? '';
 const candleUri = (lit: boolean) => Image.resolveAssetSource(lit ? CANDLE_LIT : CANDLE_UNLIT)?.uri ?? '';
 const sigilCoinUri = Image.resolveAssetSource(SIGIL_COIN)?.uri ?? '';
-const panelParchmentUri = svgUriFor('/assets/ui/panel-parchment.svg') ?? '';
-const inkDropUri = svgUriFor('/assets/icons/ink-drop.svg') ?? '';
+const panelParchmentUri = artUriFor('/assets/ui/panel-parchment.svg') ?? '';
+const inkDropUri = artUriFor('/assets/icons/ink-drop.svg') ?? '';
 
 export default function Antechamber() {
   const go = useUi((s) => s.go);
@@ -110,7 +110,7 @@ export default function Antechamber() {
               {save.name}
             </Text>
             <View style={styles.rankRow}>
-              <SvgUri uri={rankUri(rank.id)} width={18} height={18} />
+              <Art uri={rankUri(rank.id)} width={18} height={18} />
               <Text style={[styles.rankText, { color: theme.fgDim, fontSize: fs.sm }]}>
                 {rank.label} · {i18n.result.rating} {save.standing}
               </Text>
@@ -118,11 +118,11 @@ export default function Antechamber() {
           </View>
           <View style={styles.purse}>
             <View style={styles.currency}>
-              <SvgUri uri={inkDropUri} width={14} height={14} />
+              <Art uri={inkDropUri} width={14} height={14} />
               <Text style={[styles.currencyText, { color: theme.fg, fontSize: fs.sm }]}>{save.economy.ink}</Text>
             </View>
             <View style={styles.currency}>
-              <SvgUri uri={sigilCoinUri} width={14} height={14} />
+              <Art uri={sigilCoinUri} width={14} height={14} />
               <Text style={[styles.currencyText, { color: theme.fg, fontSize: fs.sm }]}>{save.economy.sigils}</Text>
             </View>
           </View>
@@ -146,11 +146,11 @@ export default function Antechamber() {
               { backgroundColor: theme.bgRaised, borderColor: palette.brassDim, opacity: pressed ? 0.9 : 1 },
             ]}
           >
-            <SvgUri
+            <Art
               uri={panelParchmentUri}
               width="100%"
               height="100%"
-              preserveAspectRatio="xMidYMid slice"
+              mode="cover"
               style={StyleSheet.absoluteFill}
             />
             {/* web .panel::before — the engraved inner ring paints above the parchment,
@@ -178,7 +178,7 @@ export default function Antechamber() {
               fs={fs}
               title={i18n.hub.daily}
               sub={`${i18n.hub.dailyHelp} ${tf('hub.dailySub', { streak: save.daily.streak })}`}
-              icon={<SvgUri uri={candleUri(dailyDone)} width={26} height={26} />}
+              icon={<Art uri={candleUri(dailyDone)} width={26} height={26} />}
               onPress={() => tap('daily')}
             />
             <HubCard

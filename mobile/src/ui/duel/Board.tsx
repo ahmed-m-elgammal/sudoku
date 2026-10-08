@@ -15,13 +15,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import { Circle, Ellipse, Svg, SvgUri } from 'react-native-svg';
+import Art from '@/ui/Art';
+import { Circle, Ellipse, Svg } from 'react-native-svg';
 import type { DuelRuntime } from '@/game/duelRuntime';
 import { cellsOfFlood, centroidOfUnit, ownerOfCell } from '@/game/fx';
 import Cell from './Cell';
 import { boardWarmthMix } from './motionLaw';
 import { useMotionReduced } from '@/platform/display';
-import { duelSvgs } from './duelAssets';
+import { duelArt } from './duelAssets';
 import { palette, type Theme } from '@/theme/tokens';
 
 export interface BoardProps {
@@ -122,7 +123,7 @@ export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, hea
     // cell labels navigable, which the labels still do here.
     <Animated.View style={[styles.wrap, size ? { width: size, height: size } : null, { borderColor }]}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <SvgUri width="100%" height="100%" uri={duelSvgs.parchmentVellum} />
+        <Art width="100%" height="100%" uri={duelArt.parchmentVellum} />
       </View>
 
       {/* ---- the 81 cells: 9 rows of 9 cells */}
@@ -204,14 +205,14 @@ export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, hea
                   UNDER the claim stamp exactly as a CSS background-image does */}
               {quarantined.has(`b${b}`) ? (
                 <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <SvgUri width="100%" height="100%" uri={duelSvgs.overlayQuarantine} />
+                  <Art width="100%" height="100%" uri={duelArt.overlayQuarantine} />
                 </View>
               ) : null}
               {owner !== null ? (
-                <SvgUri
+                <Art
                   width="72%"
                   height="72%"
-                  uri={owner === 0 ? duelSvgs.stampFleur : duelSvgs.stampTau}
+                  uri={owner === 0 ? duelArt.stampFleur : duelArt.stampTau}
                   accessibilityLabel={`Box ${ROMAN[b]} claimed`}
                 />
               ) : null}
@@ -228,14 +229,14 @@ export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, hea
             <View key={`row${r}`} style={styles.gutterCell}>
               {quarantined.has(`r${r}`) ? (
                 <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <SvgUri width="100%" height="100%" uri={duelSvgs.overlayQuarantine} />
+                  <Art width="100%" height="100%" uri={duelArt.overlayQuarantine} />
                 </View>
               ) : null}
               {owner !== null ? (
-                <SvgUri
+                <Art
                   width="80%"
                   height="80%"
-                  uri={owner === 0 ? duelSvgs.stampFleur : duelSvgs.stampTau}
+                  uri={owner === 0 ? duelArt.stampFleur : duelArt.stampTau}
                   accessibilityLabel={`Row ${ROMAN[r]} claimed`}
                 />
               ) : null}
@@ -250,14 +251,14 @@ export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, hea
             <View key={`col${c}`} style={styles.gutterCell}>
               {quarantined.has(`c${c}`) ? (
                 <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <SvgUri width="100%" height="100%" uri={duelSvgs.overlayQuarantine} />
+                  <Art width="100%" height="100%" uri={duelArt.overlayQuarantine} />
                 </View>
               ) : null}
               {owner !== null ? (
-                <SvgUri
+                <Art
                   width="80%"
                   height="80%"
-                  uri={owner === 0 ? duelSvgs.stampFleur : duelSvgs.stampTau}
+                  uri={owner === 0 ? duelArt.stampFleur : duelArt.stampTau}
                   accessibilityLabel={`Column ${ROMAN[c]} claimed`}
                 />
               ) : null}

@@ -68,7 +68,13 @@ vi.mock('react-native', async () => {
     TouchableOpacity: host('TouchableOpacity'),
     Modal: host('Modal'),
     ActivityIndicator: host('ActivityIndicator'),
-    Image: host('Image'),
+    Image: Object.assign(host('Image'), {
+      // registries (duelArt.ts, cabinetArt.ts, Ribbon…) turn a Metro asset id into a
+      // URI at module scope. The runner has no Metro: degrade to null — the callers'
+      // `?.uri ?? ''` law then hands Art an empty uri, which renders null. A seam that
+      // is absent must degrade, never throw.
+      resolveAssetSource: () => null,
+    }),
     ImageBackground: host('ImageBackground'),
     TextInput: host('TextInput'),
     Switch: host('Switch'),

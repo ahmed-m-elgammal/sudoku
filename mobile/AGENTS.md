@@ -146,10 +146,17 @@ in review.
 - Touch targets ≥ 44 pt (`layout.touch`). Every board cell carries an
   `accessibilityLabel` (the web build already produces the strings — port `cellAria`
   from `Board.tsx`).
-- Assets: use `require()` through `src/theme/assets.ts`, which points at the 222 real
-  files copied from `../public/assets`. React Native cannot `require()` an `.svg` — the
-  SVG chrome (seals, sigils, board furniture, status overlays) must render through
-  `react-native-svg` (`SvgXml` with the file content, or `SvgUri`).
+- Assets: use `require()` through the art registries (`src/theme/assets.ts` for story
+  plates/portraits, `duelArt.ts` / `cabinetArt.ts` / `ledgerArt.ts` for the engraved
+  kit), which point at the 222 real files copied from `../public/assets`. The engraved
+  kit's SVG sources carry `feTurbulence`/`feDisplacementMap` filters that
+  `react-native-svg` does NOT implement, and runtime XML-parsing of the kit per mount
+  was the measured source of unsupported-filter warnings and 0 fps stalls — so native
+  renders the **raster twins** baked by `tools/rasterize-game-art.mjs` (sharp/librsvg
+  implements the full filter spec) through `src/ui/Art.tsx` (a native `<Image>`).
+  `SvgUri`/`SvgXml` are banned (pinned by `src/ui/__tests__/artSeam.test.ts`);
+  `react-native-svg` remains ONLY for procedural geometry (cooldown rings, the Ledger
+  spark, seat circles).
 
 ## Platform seams — always go through `src/platform/`
 

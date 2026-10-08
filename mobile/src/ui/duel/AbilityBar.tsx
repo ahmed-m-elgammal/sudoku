@@ -15,11 +15,12 @@
 
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
+import Art from '@/ui/Art';
 import { CONFIG, ORDER_ABILITIES, type AbilityId } from '@shared/config';
 import { orderMeta } from '@shared/orders';
 import type { DuelRuntime } from '@/game/duelRuntime';
-import { duelSvgs, sigilSvg } from './duelAssets';
+import { duelArt, sigilArt } from './duelAssets';
 import { i18n } from '@/i18n';
 import { audio } from '@/platform/audio';
 import { fonts, layout, type Theme } from '@/theme/tokens';
@@ -54,7 +55,7 @@ export default function AbilityBar({ duel, theme }: AbilityBarProps) {
         const pct = rt.cdLeftMs > 0 ? rt.cdLeftMs / span : 0;
         const ready = rt.cdLeftMs <= 0 && rt.usesLeft !== 0;
         const usesNote = id === 'tincture' && rt.usesLeft !== null ? `×${rt.usesLeft}` : '';
-        const sigil = sigilSvg(meta.abilities[idx].icon);
+        const sigil = sigilArt(meta.abilities[idx].icon);
 
         return (
           <Pressable
@@ -72,10 +73,10 @@ export default function AbilityBar({ duel, theme }: AbilityBarProps) {
             style={[styles.tile, { borderColor: ready ? theme.focus : theme.lineStrong, backgroundColor: theme.bgRaised }]}
           >
             <View style={StyleSheet.absoluteFill} pointerEvents="none">
-              <SvgUri width="100%" height="100%" uri={duelSvgs.abilityTile} opacity={theme.tileArtAlpha} />
+              <Art width="100%" height="100%" uri={duelArt.abilityTile} opacity={theme.tileArtAlpha} />
             </View>
 
-            {sigil ? <SvgUri width={26} height={26} uri={sigil} /> : null}
+            {sigil ? <Art width={26} height={26} uri={sigil} /> : null}
             <Text style={[styles.name, { color: theme.fg }]} numberOfLines={1} allowFontScaling={false}>
               {copy[id].name}
             </Text>
@@ -89,7 +90,7 @@ export default function AbilityBar({ duel, theme }: AbilityBarProps) {
             {pct > 0 ? (
               <>
                 <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <SvgUri width="100%" height="100%" uri={cooldownRing(pct, theme)} />
+                  <CooldownRing pct={pct} theme={theme} />
                 </View>
                 <Text style={[styles.cdText, { color: theme.fgDim }]} allowFontScaling={false}>
                   {Math.ceil(rt.cdLeftMs / 1000)}
@@ -115,21 +116,33 @@ export default function AbilityBar({ duel, theme }: AbilityBarProps) {
 }
 
 /**
- * The cooldown ring as a data URI SVG — a stroked circle with a dash offset. Built as a
- * string rather than a `<Circle>` because the ring must sit UNDER the tile's text with a
- * single absolutely-positioned layer, which is what the web CSS did.
+ * The cooldown ring as PROCEDURAL geometry — a stroked circle with a dash offset,
+ * drawn with the same two <circle> primitives the web build's data-URI SVG carried.
+ * It was a data-URI <SvgUri> in the first port: native <Image> cannot paint SVG, and
+ * the data-URI fetch was dead weight on iOS. Inline primitives are Fabric-safe, render
+ * synchronously, and the ring keeps sitting UNDER the tile's text in one absolutely-
+ * positioned layer, which is what the web CSS did.
  *
  * Colours come from the theme, never from a literal.
  */
-function cooldownRing(pct: number, theme: Theme) {
+function CooldownRing({ pct, theme }: { pct: number; theme: Theme }) {
   const offset = RING_C * (1 - Math.max(0, Math.min(1, pct)));
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72">` +
-    `<circle cx="36" cy="36" r="${RING_R}" fill="none" stroke="${theme.cdTrack}" stroke-width="2"/>` +
-    `<circle cx="36" cy="36" r="${RING_R}" fill="none" stroke="${theme.focus}" stroke-width="3"` +
-    ` stroke-dasharray="${RING_C}" stroke-dashoffset="${offset}"` +
-    ` transform="rotate(-90 36 36)"/></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  return (
+    <Svg width="100%" height="100%" viewBox="0 0 72 72">
+      <Circle cx={36} cy={36} r={RING_R} fill="none" stroke={theme.cdTrack} strokeWidth={2} />
+      <Circle
+        cx={36}
+        cy={36}
+        r={RING_R}
+        fill="none"
+        stroke={theme.focus}
+        strokeWidth={3}
+        strokeDasharray={RING_C}
+        strokeDashoffset={offset}
+        transform="rotate(-90 36 36)"
+      />
+    </Svg>
+  );
 }
 
 const styles = StyleSheet.create({

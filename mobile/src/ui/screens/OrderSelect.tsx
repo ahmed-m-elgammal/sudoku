@@ -26,8 +26,8 @@
 //    resizeMode cover is pixel-identical to the web's default fill.
 import { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Art from '@/ui/Art';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SvgUri } from 'react-native-svg';
 import { ORDERS, type OrderMeta } from '@shared/orders';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
@@ -36,7 +36,7 @@ import { useDisplaySettings } from '@/platform/display';
 import { fonts, layout, palette, themeFor, type as typeScale } from '@/theme/tokens';
 import { i18n } from '@/i18n';
 import { imageForPath } from '@/theme/assets';
-import { sigilSvg } from '@/ui/duel/duelAssets';
+import { sigilArt } from '@/ui/duel/duelAssets';
 import Ribbon from '@/ui/Ribbon';
 
 // web 240px card + 14px gap — the snap interval
@@ -135,11 +135,11 @@ export default function OrderSelect() {
                 </Text>
                 <View style={styles.abilities}>
                   {o.abilities.map((a, i) => {
-                    const sigil = sigilSvg(a.icon);
+                    const sigil = sigilArt(a.icon);
                     const copy = abilityCopy(o, a.id);
                     return (
                       <View key={a.id} style={styles.ability}>
-                        {sigil ? <SvgUri uri={sigil} width={22} height={22} /> : null}
+                        {sigil ? <Art uri={sigil} width={22} height={22} /> : null}
                         <Text style={[styles.abilityText, { color: theme.fg, fontSize: fs.sm }]}>
                           <Text style={styles.bold}>{copy.name}</Text> · {copy.desc}
                         </Text>

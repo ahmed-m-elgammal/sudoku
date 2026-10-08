@@ -27,7 +27,7 @@
 //    entry, CabinetScreen.tsx:79-87).
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import Art from '@/ui/Art';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSave } from '@/state/save';
 import { audio } from '@/platform/audio';
@@ -114,10 +114,10 @@ export default function CabinetScreen() {
             {i18n.cabinet.title}
           </Text>
           <View style={styles.purse}>
-            <SvgUri uri={cabinetArtUri('/assets/icons/ink-drop.svg')} width={13} height={13} />
+            <Art uri={cabinetArtUri('/assets/icons/ink-drop.svg')} width={13} height={13} />
             <Text style={[styles.purseText, { color: theme.fgDim, fontSize: fs.md }]}>{save.economy.ink}</Text>
             <Text style={[styles.purseText, { color: theme.fgDim, fontSize: fs.md }]}>·</Text>
-            <SvgUri uri={cabinetArtUri('/assets/icons/sigil-coin.svg')} width={13} height={13} />
+            <Art uri={cabinetArtUri('/assets/icons/sigil-coin.svg')} width={13} height={13} />
             <Text style={[styles.purseText, { color: theme.fgDim, fontSize: fs.md, marginLeft: 8 }]}>
               {save.economy.sigils}
             </Text>
@@ -164,7 +164,7 @@ export default function CabinetScreen() {
                     <View style={[styles.ring, { borderColor: theme.line }]} pointerEvents="none" />
                     {cabinetArtUri(it.preview) ? (
                       <View style={[styles.art, { borderColor: theme.line }]}>
-                        <SvgUri uri={cabinetArtUri(it.preview)} width={64} height={64} />
+                        <Art uri={cabinetArtUri(it.preview)} width={64} height={64} />
                       </View>
                     ) : null}
                     <Text style={[styles.cardName, { color: theme.fg, fontSize: fs.sm }]}>{it.name}</Text>

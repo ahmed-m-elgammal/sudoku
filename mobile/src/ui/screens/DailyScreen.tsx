@@ -26,8 +26,8 @@
 //    .hub pad, the Antechamber port's established translation).
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Art from '@/ui/Art';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SvgUri } from 'react-native-svg';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { net } from '@/game/net/client';
@@ -42,8 +42,8 @@ import Ribbon from '@/ui/Ribbon';
 import DailyBoard, { type DailyData } from './DailyBoard';
 import { fmtCountdown } from './dailyFormat';
 
-const CANDLE_LIT = require('../../../assets/game/reliquary/candle-lit.svg');
-const CANDLE_UNLIT = require('../../../assets/game/reliquary/candle-unlit.svg');
+const CANDLE_LIT = require('../../../assets/game/reliquary/candle-lit.png');
+const CANDLE_UNLIT = require('../../../assets/game/reliquary/candle-unlit.png');
 const candleUri = (lit: boolean) => Image.resolveAssetSource(lit ? CANDLE_LIT : CANDLE_UNLIT)?.uri ?? '';
 
 export default function DailyScreen() {
@@ -112,7 +112,7 @@ export default function DailyScreen() {
           style={[styles.panel, { marginHorizontal: 16, marginVertical: 8, backgroundColor: theme.bgRaised, borderColor: theme.lineStrong }]}
         >
           <View style={[styles.ring, { borderColor: theme.line }]} pointerEvents="none" />
-          <SvgUri uri={candleUri(done)} width={40} height={40} />
+          <Art uri={candleUri(done)} width={40} height={40} />
           <Text style={[styles.center, { color: theme.fg, fontSize: fs.md, marginTop: 6 }]}>
             <Text style={[styles.bold, { color: theme.fg, fontSize: fs.md }]}>{key}</Text>
             {` · Tier ${tierForDailyDate(key)}`}

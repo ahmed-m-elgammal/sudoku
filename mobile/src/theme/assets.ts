@@ -27,7 +27,7 @@ export const images = {
   iconMaskable: require('../../assets/game/brand/app-icon-maskable.png'),
   ogImage: require('../../assets/game/brand/og-image.png'),
   splash828: require('../../assets/game/brand/splash-828.png'),
-  wordmark: require('../../assets/game/brand/wordmark.svg'),
+  wordmark: require('../../assets/game/brand/wordmark.png'),
 
   // ---- story plates
   platePrologue: require('../../assets/game/plates/plate-prologue.webp'),
@@ -135,10 +135,10 @@ export const orderPortraits: Record<string, ImageKey> = {
 };
 
 /**
- * React Native cannot load .svg through require(); the SVG chrome (seals, sigils,
- * board furniture, status overlays, buttons) must go through react-native-svg's
- * `SvgUri` or be converted to PNG. The file paths are exposed here so a screen or the
- * duel-UI agent can wire them deliberately rather than guessing.
+ * The engraved kit's SVG sources are not bundled on native — screens render the
+ * raster twins (`tools/rasterize-game-art.mjs`) through `src/ui/Art.tsx`. This helper
+ * remains only as a path documentation of the assets/game tree; prefer a literal
+ * require of the twin through a registry (duelArt.ts, cabinetArt.ts, ledgerArt.ts).
  */
 export const svgAsset = (relative: string): string =>
   `../../assets/game/${relative.replace(/^\//, '')}`;

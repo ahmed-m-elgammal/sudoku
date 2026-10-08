@@ -23,7 +23,7 @@
 // the flow. The port wires it exactly the same (the Reliquary precedent).
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import Art from '@/ui/Art';
 import { useUi } from '@/state/ui';
 import { audio } from '@/platform/audio';
 import { useDisplaySettings } from '@/platform/display';
@@ -64,7 +64,7 @@ export default function PurseScreen() {
           {EXPLAINER.map((row) => (
             // web p: flex, gap 10, center
             <View key={row.icon} style={styles.row}>
-              <SvgUri uri={purseArt(row.icon)} width={26} height={26} />
+              <Art uri={purseArt(row.icon)} width={26} height={26} />
               <Text style={[styles.rowText, { color: theme.fg, fontSize: fs.md }]}>{row.copy}</Text>
             </View>
           ))}

@@ -1,0 +1,845 @@
+{
+  "generatedBy": "tools/rasterize-game-art.mjs",
+  "files": {
+    "achievements/achievement-apothecary-sworn.svg": {
+      "twin": "achievements/achievement-apothecary-sworn.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10170
+    },
+    "achievements/achievement-augur-faithful.svg": {
+      "twin": "achievements/achievement-augur-faithful.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10330
+    },
+    "achievements/achievement-box-wright.svg": {
+      "twin": "achievements/achievement-box-wright.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9382
+    },
+    "achievements/achievement-clean-hand.svg": {
+      "twin": "achievements/achievement-clean-hand.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9957
+    },
+    "achievements/achievement-column-saint.svg": {
+      "twin": "achievements/achievement-column-saint.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9423
+    },
+    "achievements/achievement-daily-ember.svg": {
+      "twin": "achievements/achievement-daily-ember.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9637
+    },
+    "achievements/achievement-executioner-sworn.svg": {
+      "twin": "achievements/achievement-executioner-sworn.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10161
+    },
+    "achievements/achievement-first-blood.svg": {
+      "twin": "achievements/achievement-first-blood.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9891
+    },
+    "achievements/achievement-flinchless.svg": {
+      "twin": "achievements/achievement-flinchless.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9819
+    },
+    "achievements/achievement-folio-fifth.svg": {
+      "twin": "achievements/achievement-folio-fifth.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10976
+    },
+    "achievements/achievement-folio-first.svg": {
+      "twin": "achievements/achievement-folio-first.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10411
+    },
+    "achievements/achievement-folio-ninth.svg": {
+      "twin": "achievements/achievement-folio-ninth.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 11844
+    },
+    "achievements/achievement-hush-proof.svg": {
+      "twin": "achievements/achievement-hush-proof.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9997
+    },
+    "achievements/achievement-ledger-keeper.svg": {
+      "twin": "achievements/achievement-ledger-keeper.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10080
+    },
+    "achievements/achievement-miasma-walker.svg": {
+      "twin": "achievements/achievement-miasma-walker.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10246
+    },
+    "achievements/achievement-reckoning-dealt.svg": {
+      "twin": "achievements/achievement-reckoning-dealt.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10908
+    },
+    "achievements/achievement-row-lord.svg": {
+      "twin": "achievements/achievement-row-lord.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 8779
+    },
+    "achievements/achievement-scholar-sworn.svg": {
+      "twin": "achievements/achievement-scholar-sworn.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10102
+    },
+    "achievements/achievement-seal-breaker.svg": {
+      "twin": "achievements/achievement-seal-breaker.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10600
+    },
+    "achievements/achievement-smudge-reader.svg": {
+      "twin": "achievements/achievement-smudge-reader.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9541
+    },
+    "achievements/achievement-streak-seven.svg": {
+      "twin": "achievements/achievement-streak-seven.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10268
+    },
+    "achievements/achievement-tide-turner.svg": {
+      "twin": "achievements/achievement-tide-turner.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9644
+    },
+    "achievements/achievement-unchained.svg": {
+      "twin": "achievements/achievement-unchained.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9535
+    },
+    "achievements/achievement-warden-sworn.svg": {
+      "twin": "achievements/achievement-warden-sworn.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10531
+    },
+    "achievements/achievement-weekly-sat.svg": {
+      "twin": "achievements/achievement-weekly-sat.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 10234
+    },
+    "board/box-line.svg": {
+      "twin": "board/box-line.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 1928
+    },
+    "board/corner-ne.svg": {
+      "twin": "board/corner-ne.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 2810
+    },
+    "board/corner-nw.svg": {
+      "twin": "board/corner-nw.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 2865
+    },
+    "board/corner-se.svg": {
+      "twin": "board/corner-se.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 2853
+    },
+    "board/corner-sw.svg": {
+      "twin": "board/corner-sw.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 2789
+    },
+    "board/grid-line.svg": {
+      "twin": "board/grid-line.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 1667
+    },
+    "board/gutter-strip.svg": {
+      "twin": "board/gutter-strip.png",
+      "width": 96,
+      "height": 1024,
+      "bytes": 5829
+    },
+    "brand/favicon.svg": {
+      "twin": "brand/favicon.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 3178
+    },
+    "brand/wordmark.svg": {
+      "twin": "brand/wordmark.png",
+      "width": 1024,
+      "height": 320,
+      "bytes": 18452
+    },
+    "icons/ink-drop.svg": {
+      "twin": "icons/ink-drop.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 3726
+    },
+    "icons/sigil-coin.svg": {
+      "twin": "icons/sigil-coin.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 6899
+    },
+    "overlays/chain.svg": {
+      "twin": "overlays/chain.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 7097
+    },
+    "overlays/hush-icon.svg": {
+      "twin": "overlays/hush-icon.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 7019
+    },
+    "overlays/hush.svg": {
+      "twin": "overlays/hush.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 20341
+    },
+    "overlays/miasma.svg": {
+      "twin": "overlays/miasma.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 24847
+    },
+    "overlays/quarantine.svg": {
+      "twin": "overlays/quarantine.png",
+      "width": 512,
+      "height": 128,
+      "bytes": 2527
+    },
+    "overlays/smudge.svg": {
+      "twin": "overlays/smudge.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 15581
+    },
+    "overlays/strike-1.svg": {
+      "twin": "overlays/strike-1.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 8280
+    },
+    "overlays/strike-2.svg": {
+      "twin": "overlays/strike-2.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 8067
+    },
+    "overlays/strike-3.svg": {
+      "twin": "overlays/strike-3.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 8158
+    },
+    "ranks/pip.svg": {
+      "twin": "ranks/pip.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 2243
+    },
+    "ranks/rank-advocate.svg": {
+      "twin": "ranks/rank-advocate.png",
+      "width": 384,
+      "height": 384,
+      "bytes": 18951
+    },
+    "ranks/rank-clerk.svg": {
+      "twin": "ranks/rank-clerk.png",
+      "width": 384,
+      "height": 384,
+      "bytes": 18491
+    },
+    "ranks/rank-high-magistrate.svg": {
+      "twin": "ranks/rank-high-magistrate.png",
+      "width": 384,
+      "height": 384,
+      "bytes": 19812
+    },
+    "ranks/rank-justiciar.svg": {
+      "twin": "ranks/rank-justiciar.png",
+      "width": 384,
+      "height": 384,
+      "bytes": 19789
+    },
+    "ranks/rank-lord-of-the-assize.svg": {
+      "twin": "ranks/rank-lord-of-the-assize.png",
+      "width": 384,
+      "height": 384,
+      "bytes": 19657
+    },
+    "ranks/rank-magistrate.svg": {
+      "twin": "ranks/rank-magistrate.png",
+      "width": 384,
+      "height": 384,
+      "bytes": 19006
+    },
+    "ranks/rank-notary.svg": {
+      "twin": "ranks/rank-notary.png",
+      "width": 384,
+      "height": 384,
+      "bytes": 19131
+    },
+    "ranks/rank-scrivener.svg": {
+      "twin": "ranks/rank-scrivener.png",
+      "width": 384,
+      "height": 384,
+      "bytes": 18859
+    },
+    "reliquary/candle-gutter.svg": {
+      "twin": "reliquary/candle-gutter.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 8693
+    },
+    "reliquary/candle-lit.svg": {
+      "twin": "reliquary/candle-lit.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 8217
+    },
+    "reliquary/candle-unlit.svg": {
+      "twin": "reliquary/candle-unlit.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 7387
+    },
+    "reliquary/chest-closed.svg": {
+      "twin": "reliquary/chest-closed.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 18795
+    },
+    "reliquary/chest-open.svg": {
+      "twin": "reliquary/chest-open.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 20073
+    },
+    "reliquary/chest-opening-1.svg": {
+      "twin": "reliquary/chest-opening-1.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 21527
+    },
+    "reliquary/chest-opening-2.svg": {
+      "twin": "reliquary/chest-opening-2.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 23142
+    },
+    "reliquary/chest-opening-3.svg": {
+      "twin": "reliquary/chest-opening-3.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 23757
+    },
+    "reliquary/chest-opening-4.svg": {
+      "twin": "reliquary/chest-opening-4.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 23023
+    },
+    "reliquary/chest-opening-5.svg": {
+      "twin": "reliquary/chest-opening-5.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 21648
+    },
+    "reliquary/chest-opening-6.svg": {
+      "twin": "reliquary/chest-opening-6.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 20073
+    },
+    "seals/seal-ash-broken.svg": {
+      "twin": "seals/seal-ash-broken.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 16123
+    },
+    "seals/seal-ash-cracked.svg": {
+      "twin": "seals/seal-ash-cracked.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15817
+    },
+    "seals/seal-ash-intact.svg": {
+      "twin": "seals/seal-ash-intact.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15398
+    },
+    "seals/seal-black-broken.svg": {
+      "twin": "seals/seal-black-broken.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14743
+    },
+    "seals/seal-black-cracked.svg": {
+      "twin": "seals/seal-black-cracked.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14617
+    },
+    "seals/seal-black-intact.svg": {
+      "twin": "seals/seal-black-intact.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14055
+    },
+    "seals/seal-gilt-broken.svg": {
+      "twin": "seals/seal-gilt-broken.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 16147
+    },
+    "seals/seal-gilt-cracked.svg": {
+      "twin": "seals/seal-gilt-cracked.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15851
+    },
+    "seals/seal-gilt-intact.svg": {
+      "twin": "seals/seal-gilt-intact.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15554
+    },
+    "seals/seal-oxblood-broken.svg": {
+      "twin": "seals/seal-oxblood-broken.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15820
+    },
+    "seals/seal-oxblood-cracked.svg": {
+      "twin": "seals/seal-oxblood-cracked.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15529
+    },
+    "seals/seal-oxblood-intact.svg": {
+      "twin": "seals/seal-oxblood-intact.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15083
+    },
+    "seals/seal-verdigris-broken.svg": {
+      "twin": "seals/seal-verdigris-broken.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15838
+    },
+    "seals/seal-verdigris-cracked.svg": {
+      "twin": "seals/seal-verdigris-cracked.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15399
+    },
+    "seals/seal-verdigris-intact.svg": {
+      "twin": "seals/seal-verdigris-intact.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 15012
+    },
+    "seals/stamps/stamp-crown.svg": {
+      "twin": "seals/stamps/stamp-crown.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14796
+    },
+    "seals/stamps/stamp-fleur.svg": {
+      "twin": "seals/stamps/stamp-fleur.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14894
+    },
+    "seals/stamps/stamp-laurel.svg": {
+      "twin": "seals/stamps/stamp-laurel.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14940
+    },
+    "seals/stamps/stamp-scale.svg": {
+      "twin": "seals/stamps/stamp-scale.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14778
+    },
+    "seals/stamps/stamp-tau.svg": {
+      "twin": "seals/stamps/stamp-tau.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14281
+    },
+    "seals/stamps/stamp-tower.svg": {
+      "twin": "seals/stamps/stamp-tower.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14157
+    },
+    "sigils/sigil-axe.svg": {
+      "twin": "sigils/sigil-axe.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14014
+    },
+    "sigils/sigil-bar.svg": {
+      "twin": "sigils/sigil-bar.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 12695
+    },
+    "sigils/sigil-censer.svg": {
+      "twin": "sigils/sigil-censer.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 13954
+    },
+    "sigils/sigil-cup.svg": {
+      "twin": "sigils/sigil-cup.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 13678
+    },
+    "sigils/sigil-dagger.svg": {
+      "twin": "sigils/sigil-dagger.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 13239
+    },
+    "sigils/sigil-eye.svg": {
+      "twin": "sigils/sigil-eye.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 13854
+    },
+    "sigils/sigil-hourglass.svg": {
+      "twin": "sigils/sigil-hourglass.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14113
+    },
+    "sigils/sigil-key.svg": {
+      "twin": "sigils/sigil-key.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 13926
+    },
+    "sigils/sigil-lantern.svg": {
+      "twin": "sigils/sigil-lantern.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 13920
+    },
+    "sigils/sigil-quill.svg": {
+      "twin": "sigils/sigil-quill.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 13742
+    },
+    "sigils/sigil-shield.svg": {
+      "twin": "sigils/sigil-shield.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 14169
+    },
+    "sigils/sigil-vial.svg": {
+      "twin": "sigils/sigil-vial.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 13523
+    },
+    "statuses/status-chain.svg": {
+      "twin": "statuses/status-chain.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 6987
+    },
+    "statuses/status-hush.svg": {
+      "twin": "statuses/status-hush.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 6966
+    },
+    "statuses/status-miasma.svg": {
+      "twin": "statuses/status-miasma.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 7093
+    },
+    "statuses/status-quarantine.svg": {
+      "twin": "statuses/status-quarantine.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 6990
+    },
+    "statuses/status-smudge.svg": {
+      "twin": "statuses/status-smudge.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 6999
+    },
+    "textures/brass-plate.svg": {
+      "twin": "textures/brass-plate.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 18742
+    },
+    "textures/charcoal-paper.svg": {
+      "twin": "textures/charcoal-paper.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 3036
+    },
+    "textures/parchment-aged-vellum.svg": {
+      "twin": "textures/parchment-aged-vellum.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 93988
+    },
+    "textures/parchment-bone.svg": {
+      "twin": "textures/parchment-bone.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 99318
+    },
+    "textures/parchment-cathedral-rubric.svg": {
+      "twin": "textures/parchment-cathedral-rubric.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 91326
+    },
+    "textures/parchment-plague-linen.svg": {
+      "twin": "textures/parchment-plague-linen.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 85550
+    },
+    "textures/parchment-slate.svg": {
+      "twin": "textures/parchment-slate.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 94658
+    },
+    "textures/parchment-tallow.svg": {
+      "twin": "textures/parchment-tallow.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 88632
+    },
+    "textures/worn-leather.svg": {
+      "twin": "textures/worn-leather.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 4724
+    },
+    "ui/ability-tile.svg": {
+      "twin": "ui/ability-tile.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 2818
+    },
+    "ui/btn-primary-disabled.svg": {
+      "twin": "ui/btn-primary-disabled.png",
+      "width": 640,
+      "height": 176,
+      "bytes": 8956
+    },
+    "ui/btn-primary-normal.svg": {
+      "twin": "ui/btn-primary-normal.png",
+      "width": 640,
+      "height": 176,
+      "bytes": 8251
+    },
+    "ui/btn-primary-pressed.svg": {
+      "twin": "ui/btn-primary-pressed.png",
+      "width": 640,
+      "height": 176,
+      "bytes": 8154
+    },
+    "ui/btn-secondary-disabled.svg": {
+      "twin": "ui/btn-secondary-disabled.png",
+      "width": 640,
+      "height": 176,
+      "bytes": 10687
+    },
+    "ui/btn-secondary-normal.svg": {
+      "twin": "ui/btn-secondary-normal.png",
+      "width": 640,
+      "height": 176,
+      "bytes": 10077
+    },
+    "ui/btn-secondary-pressed.svg": {
+      "twin": "ui/btn-secondary-pressed.png",
+      "width": 640,
+      "height": 176,
+      "bytes": 10194
+    },
+    "ui/corner-1.svg": {
+      "twin": "ui/corner-1.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 1387
+    },
+    "ui/corner-2.svg": {
+      "twin": "ui/corner-2.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 2567
+    },
+    "ui/corner-3.svg": {
+      "twin": "ui/corner-3.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 565
+    },
+    "ui/corner-4.svg": {
+      "twin": "ui/corner-4.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 1451
+    },
+    "ui/divider-1.svg": {
+      "twin": "ui/divider-1.png",
+      "width": 640,
+      "height": 96,
+      "bytes": 749
+    },
+    "ui/divider-2.svg": {
+      "twin": "ui/divider-2.png",
+      "width": 640,
+      "height": 96,
+      "bytes": 1967
+    },
+    "ui/divider-3.svg": {
+      "twin": "ui/divider-3.png",
+      "width": 640,
+      "height": 96,
+      "bytes": 945
+    },
+    "ui/divider-4.svg": {
+      "twin": "ui/divider-4.png",
+      "width": 640,
+      "height": 96,
+      "bytes": 529
+    },
+    "ui/divider-5.svg": {
+      "twin": "ui/divider-5.png",
+      "width": 640,
+      "height": 96,
+      "bytes": 763
+    },
+    "ui/frame-brass.svg": {
+      "twin": "ui/frame-brass.png",
+      "width": 960,
+      "height": 640,
+      "bytes": 4157
+    },
+    "ui/medallion.svg": {
+      "twin": "ui/medallion.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 12159
+    },
+    "ui/modal-sheet.svg": {
+      "twin": "ui/modal-sheet.png",
+      "width": 768,
+      "height": 1024,
+      "bytes": 32950
+    },
+    "ui/num-tile-complete.svg": {
+      "twin": "ui/num-tile-complete.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9780
+    },
+    "ui/num-tile-disabled.svg": {
+      "twin": "ui/num-tile-disabled.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9736
+    },
+    "ui/num-tile-normal.svg": {
+      "twin": "ui/num-tile-normal.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9951
+    },
+    "ui/num-tile-pressed.svg": {
+      "twin": "ui/num-tile-pressed.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 9575
+    },
+    "ui/panel-parchment.svg": {
+      "twin": "ui/panel-parchment.png",
+      "width": 960,
+      "height": 640,
+      "bytes": 3674
+    },
+    "ui/slider.svg": {
+      "twin": "ui/slider.png",
+      "width": 640,
+      "height": 144,
+      "bytes": 2251
+    },
+    "ui/tab-ribbon.svg": {
+      "twin": "ui/tab-ribbon.png",
+      "width": 1024,
+      "height": 224,
+      "bytes": 9785
+    },
+    "ui/toast.svg": {
+      "twin": "ui/toast.png",
+      "width": 960,
+      "height": 192,
+      "bytes": 7589
+    },
+    "ui/toggle.svg": {
+      "twin": "ui/toggle.png",
+      "width": 256,
+      "height": 144,
+      "bytes": 4635
+    }
+  }
+}

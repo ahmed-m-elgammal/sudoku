@@ -53,7 +53,7 @@ vi.mock('@/game/net/client', () => ({
 
 vi.mock('@/ui/screens/ledgerArt', () => ({
   // the honest double: mirrors the real seam's inventory — 'endless-ten' has no
-  // art file, so the double degrades it identically ('' → no SvgUri rendered)
+  // art file, so the double degrades it identically ('' → no Image rendered)
   rankArt: (id: string) => `art://rank-${id}`,
   achievementArt: (id: string) => (id === 'endless-ten' ? '' : `art://achievement-${id}`),
   purseArt: (which: string) => `art://purse-${which}`,
@@ -267,10 +267,10 @@ describe('LedgerProfile (specs/17 5.6)', () => {
     const text = findAllText(tree.toJSON());
     // every dictionary entry's title renders
     for (const [, a] of Object.entries(i18n.achievements)) expect(text).toContain(a.title);
-    // cells: one SvgUri per entry with art, none for 'endless-ten'
-    const icons = findAll(tree.toJSON(), 'SvgUri').filter((n) => String(n.props.uri).startsWith('art://achievement-'));
+    // cells: one Image per entry with art, none for 'endless-ten'
+    const icons = findAll(tree.toJSON(), 'Image').filter((n) => String((n.props.source as { uri: string } | undefined)?.uri).startsWith('art://achievement-'));
     expect(icons).toHaveLength(Object.keys(i18n.achievements).length - 1);
-    const uris = icons.map((n) => String(n.props.uri));
+    const uris = icons.map((n) => String((n.props.source as { uri: string } | undefined)?.uri));
     expect(uris).toContain('art://achievement-first-blood');
     expect(uris).not.toContain('art://achievement-endless-ten');
   });

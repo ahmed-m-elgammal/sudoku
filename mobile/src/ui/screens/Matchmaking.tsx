@@ -19,8 +19,8 @@
 //     never join_queue after the player left (a ghost the server would pair at 4 s).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import Art from '@/ui/Art';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SvgUri } from 'react-native-svg';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { loadIdentity } from '@/state/identity';
@@ -29,7 +29,7 @@ import { audio } from '@/platform/audio';
 import { useDisplaySettings, useMotionReduced } from '@/platform/display';
 import { fonts, layout, palette, themeFor, type as typeScale } from '@/theme/tokens';
 import { i18n } from '@/i18n';
-import { sigilSvg } from '@/ui/duel/duelAssets';
+import { sigilArt } from '@/ui/duel/duelAssets';
 import {
   SHADE_FALLBACK_WAIT_MS, matchedToNav, shadeFallbackNav, type MatchedPayload,
 } from './matchmakingLaw';
@@ -117,7 +117,7 @@ export default function Matchmaking() {
     };
   }, [go]);
 
-  const hourglass = sigilSvg('sigil-hourglass');
+  const hourglass = sigilArt('sigil-hourglass');
 
   return (
     <View style={[styles.root, { backgroundColor: theme.bg, paddingTop: insets.top }]}>
@@ -171,7 +171,7 @@ function InkSettleSigil({ uri, size }: { uri: string; size: number }) {
   const opacity = anim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.65, 1, 1] });
   return (
     <Animated.View style={{ transform: [{ scale }], opacity }} accessibilityLabel="">
-      <SvgUri uri={uri} width={size} height={size} />
+      <Art uri={uri} width={size} height={size} />
     </Animated.View>
   );
 }

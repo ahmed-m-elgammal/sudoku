@@ -90,12 +90,14 @@ describe('PurseScreen (specs/17 5.5)', () => {
 
   it('PURSE-2 the three icons ride the art seam at 26×26, in the web\'s order', async () => {
     const tree = await renderScreen();
-    const icons = findAll(tree.toJSON(), 'SvgUri');
-    const uris = icons.map((n) => n.props.uri as string);
+    const icons = findAll(tree.toJSON(), 'Image');
+    const uris = icons.map((n) => (n.props.source as { uri: string } | undefined)?.uri as string);
     expect(uris).toEqual(['art://purse-inkDrop', 'art://purse-sigilCoin', 'art://purse-chestClosed']);
     for (const icon of icons) {
-      expect(icon.props.width).toBe(26);
-      expect(icon.props.height).toBe(26);
+      // Art paints through the native <Image>: the geometry lands in style, not props
+      const base = Array.isArray(icon.props.style) ? icon.props.style[0] : icon.props.style;
+      expect(base.width).toBe(26);
+      expect(base.height).toBe(26);
     }
   });
 

@@ -7,12 +7,13 @@
 
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import Art from '@/ui/Art';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Svg, Circle, SvgUri } from 'react-native-svg';
+import { Svg, Circle } from 'react-native-svg';
 import type { DuelRuntime } from '@/game/duelRuntime';
 import { orderMeta } from '@shared/orders';
 import { images, orderPortraits } from '@/theme/assets';
-import { duelSvgs, statusSvg } from './duelAssets';
+import { duelArt, statusArt } from './duelAssets';
 import { i18n } from '@/i18n';
 import { fonts, type Theme } from '@/theme/tokens';
 
@@ -53,7 +54,7 @@ export default function HudHeader({ duel, theme, info }: HudHeaderProps) {
           accessibilityLabel={info ? i18n.tutorialV2.hudClock : undefined}
           style={styles.medallionWrap}
         >
-          <SvgUri width="100%" height="100%" uri={duelSvgs.medallion} />
+          <Art width="100%" height="100%" uri={duelArt.medallion} />
           <Text style={[styles.medallionText, { color: theme.fg }]} allowFontScaling={false}>
             {medallion}
           </Text>
@@ -81,7 +82,7 @@ export default function HudHeader({ duel, theme, info }: HudHeaderProps) {
 function Portrait({ order, you, theme }: { order: Parameters<typeof orderMeta>[0]; you?: boolean; theme: Theme }) {
   const meta = orderMeta(order);
   const key = orderPortraits[order];
-  // Portraits are WebP rasters, NOT SVG — an <Image>, not an <SvgUri>. Only the engraved
+  // Portraits are WebP rasters, NOT SVG — an <Image>, not an <Art>. Only the engraved
   // chrome (medallion, status marks, stamps) goes through react-native-svg.
   const src = key ? images[key] : null;
   return (
@@ -130,7 +131,7 @@ function StatusChips({ duel, seat, theme }: { duel: DuelRuntime; seat: 0 | 1; th
     <View style={styles.chips}>
       {p.statuses.map((s) => {
         const left = Math.max(0, (s.endsAtMs - duel.state.clockMs) / 1000);
-        const art = statusSvg[s.type];
+        const art = statusArt[s.type];
         return (
           <View
             key={s.uid}
@@ -138,7 +139,7 @@ function StatusChips({ duel, seat, theme }: { duel: DuelRuntime; seat: 0 | 1; th
             accessibilityLabel={`${i18n.duel.status[s.type]}, ${left.toFixed(0)}s`}
             style={[styles.chip, { borderColor: theme.lineStrong, backgroundColor: theme.bgRaised }]}
           >
-            {art ? <SvgUri width={12} height={12} uri={duelSvgs[art]} /> : null}
+            {art ? <Art width={12} height={12} uri={duelArt[art]} /> : null}
             <Text style={[styles.chipLabel, { color: theme.fg }]} numberOfLines={1} allowFontScaling={false}>
               {i18n.duel.status[s.type]}
             </Text>

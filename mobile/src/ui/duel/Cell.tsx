@@ -13,9 +13,9 @@
 
 import { memo, useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import Art from '@/ui/Art';
 import { ROW_OF, COL_OF, BOX_OF } from '@shared/config';
-import { duelSvgs } from './duelAssets';
+import { duelArt } from './duelAssets';
 import { floodDelayMs } from './motionLaw';
 import { FLOOD_ANIM_MS } from '@/game/fx';
 import { useMotionReduced } from '@/platform/display';
@@ -167,22 +167,22 @@ function CellImpl({
 
       {v !== 0 && smudged ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <SvgUri width="100%" height="100%" uri={duelSvgs.overlaySmudge} accessibilityLabel="smudged digit" />
+          <Art width="100%" height="100%" uri={duelArt.overlaySmudge} accessibilityLabel="smudged digit" />
         </View>
       ) : null}
 
       {chained ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <SvgUri width="100%" height="100%" uri={duelSvgs.overlayChain} />
+          <Art width="100%" height="100%" uri={duelArt.overlayChain} />
         </View>
       ) : null}
 
       {wrongNow ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <SvgUri
+          <Art
             width="100%"
             height="100%"
-            uri={duelSvgs[(`strike${((wrongVariant % 3) + 1)}` as 'strike1' | 'strike2' | 'strike3')]}
+            uri={duelArt[(`strike${((wrongVariant % 3) + 1)}` as 'strike1' | 'strike2' | 'strike3')]}
           />
         </View>
       ) : null}
@@ -208,7 +208,7 @@ function CellImpl({
 
       {miasma && v === 0 ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <SvgUri width="100%" height="100%" uri={duelSvgs.overlayMiasma} />
+          <Art width="100%" height="100%" uri={duelArt.overlayMiasma} />
         </View>
       ) : null}
     </AnimatedPressable>

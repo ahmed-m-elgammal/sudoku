@@ -29,7 +29,7 @@
 //    standard order this codebase's screens already use. No behaviour change.
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import Art from '@/ui/Art';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSave } from '@/state/save';
 import { loadIdentity, saveIdentity } from '@/state/identity';
@@ -122,7 +122,7 @@ export default function LedgerProfile() {
             </Pressable>
           </View>
           <View style={[styles.rankRow, { marginTop: 10 }]}>
-            {rankArt(rank.id) ? <SvgUri uri={rankArt(rank.id)} width={28} height={28} /> : null}
+            {rankArt(rank.id) ? <Art uri={rankArt(rank.id)} width={28} height={28} /> : null}
             <Text style={[styles.body, { color: theme.fgDim, fontSize: fs.md }]}>
               {rank.label}{rank.division ? ` · ${rank.division}` : ''} · {i18n.ledger.standing} {save.standing}
             </Text>
@@ -187,7 +187,7 @@ export default function LedgerProfile() {
                   return (
                     // web li: flex, gap 8, center; opacity got ? 1 : 0.45
                     <View key={id} style={[styles.achCell, { opacity: got ? 1 : 0.45 }]}>
-                      {achievementArt(id) ? <SvgUri uri={achievementArt(id)} width={30} height={30} /> : null}
+                      {achievementArt(id) ? <Art uri={achievementArt(id)} width={30} height={30} /> : null}
                       <View style={styles.achText}>
                         <Text style={[styles.achTitle, { color: theme.fg, fontSize: fs.sm }]}>{a.title}</Text>
                         <Text style={[styles.achDesc, { color: theme.fgDim, fontSize: fs.xs }]}>{a.desc}</Text>
