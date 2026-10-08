@@ -134,6 +134,31 @@ vi.mock('react-native', async () => {
   };
 });
 
+// react-native-svg ships Flow-typed source the rolldown transform cannot parse
+// (the same law as react-native itself above): its primitives become host
+// components. A render test proves the tree mounts and the props land; the SVG
+// internals are Metro's business. Screens that import SvgUri (Cabinet, Ribbon…)
+// stay component-testable through this double.
+vi.mock('react-native-svg', async () => {
+  const React = await import('react');
+  const host = (name: string) => {
+    const C = (props: Record<string, unknown>) => React.createElement(name, props);
+    C.displayName = name;
+    return C;
+  };
+  return {
+    __esModule: true,
+    SvgUri: host('SvgUri'),
+    SvgXml: host('SvgXml'),
+    Svg: host('Svg'),
+    Circle: host('Circle'),
+    Rect: host('Rect'),
+    Path: host('Path'),
+    G: host('G'),
+    Line: host('Line'),
+  };
+});
+
 vi.mock('expo-haptics', () => ({
   impactAsync: vi.fn(async () => {}),
   notificationAsync: vi.fn(async () => {}),
