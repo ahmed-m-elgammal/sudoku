@@ -52,12 +52,16 @@
     "notes": {
       "select": "Tap an empty cell. The brass edge marks your hand.",
       "place": "Now tap a numeral below. Correct ink is final; it cannot be undone.",
-      "mistake": "A false hand errs. You lost one wax Seal — see the pips above.",
+      "mistake": "A false hand errs. The false digit is struck out — no Seal is lost; try again.",
       "pencil": "Toggle the quill to pencil candidates. Notes never cost Seals.",
-      "claim": "Complete a row, column, or box to claim it and wound your foe. I am… not hurrying.",
+      "claim": "Fill every cell of a row, a column, or a box to claim it and wound your foe.",
       "augur": "The Eye reveals the true digit in a chosen cell. One use, freely given.",
       "end": "Break my Seals, or fill the Tablet first. Begin, Clerk."
-    }
+    },
+    "skipTitle": "Skip the lesson?",
+    "skipBody": "You'll keep your 100 Ink and go straight to the hall. The Shade will keep the rest of the lesson for another day.",
+    "skipGo": "Skip",
+    "skipStay": "Keep learning"
   },
   "duel": {
     "toolbar": {
@@ -126,7 +130,7 @@
       "expand": "Expand",
       "shrink": "Shrink"
     },
-"pad": {
+    "pad": {
       "erase": "Erase",
       "remaining": "{n} left",
       "complete": "Complete",

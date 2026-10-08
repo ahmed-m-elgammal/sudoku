@@ -43,6 +43,13 @@ interface UiStore {
   direction: number; // page turn variant
   story: StoryPayload | null;
   duelMode: DuelMode;
+  /**
+   * M1 (docs/TUTORIAL_OPTIMIZATION_PLAN.md G10) — bumped to force the duel screens
+   * to REMOUNT with a fresh runtime: the tutorial-replay routing re-enters the same
+   * screen, and the shell's switch would otherwise reuse the ended duel instance.
+   * Also the hook the M2/G13 replay entry points will use.
+   */
+  duelNonce: number;
   pendingEcho: DuelReplay | null;
   pendingPersonalShade: { replay: DuelReplay; profile: ShadeProfile } | null;
   endlessRung: number | null;
@@ -67,6 +74,7 @@ export const useUi = create<UiStore>((set, get) => ({
   direction: 1,
   story: null,
   duelMode: 'tutorial',
+  duelNonce: 0,
   campaignDuel: null,
   lastResult: null,
   pendingFoe: null,

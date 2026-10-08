@@ -48,6 +48,9 @@ export const TUTORIAL_NOTE_ORDER = [
 ] as const;
 export type TutorialNoteId = (typeof TUTORIAL_NOTE_ORDER)[number];
 
+/** The Shade's re-check cadence while it holds at the tutorial floor (G9/G10). */
+const TUTORIAL_FLOOR_HOLD_MS = 700;
+
 export class LocalDuel implements DuelRuntime {
   state: DuelState;
   /**
@@ -271,6 +274,14 @@ export class LocalDuel implements DuelRuntime {
   // ------------------------------------------------------------------ actions
   place(cell: number, digit: Digit) {
     if (this.ended) return { ok: false, reason: 'ended' as const };
+    // G9 — the tutorial cannot cost Seals on a mistake. The sanitized mods surface
+    // clamps wrongSealCost to >= 1 (T21 sanitizer, shared/ and not ours to touch), so
+    // forgiveness is re-armed instead: the scholar's Marginalia passive is reset
+    // before every tutorial placement, which routes EVERY tutorial mistake through
+    // the engine's own forgiven path — no Seal loss, no seal death — while the
+    // strike, the flinch and the haptic still teach. The tutorial spec is
+    // scholar-owned (useDuelSession.specFromUi), which this relies on.
+    if (this.opts.mode === 'tutorial') this.state.players[0].marginaliaUsed = false;
     const res = place(this.state, 0, cell, digit);
     // t is rounded: the engine clock is continuous (rAF deltas), the replay contract is integer ms
     if (res.ok) recordAction(this.recorder, { t: Math.round(this.state.clockMs), kind: 'place', cell, digit }); // echo: mistakes replay too
@@ -385,6 +396,15 @@ export class LocalDuel implements DuelRuntime {
 
   private shadeWake() {
     if (this.ended) return;
+    // G9/G10 — the tutorial floor: with the Clerk at 1 Seal the Shade holds its hand
+    // ENTIRELY, so no claim can ever land the killing wound and the lesson can never
+    // be lost. Unreachable while every tutorial mistake is forgiven (see place()) —
+    // this is the belt under that brace.
+    if (this.opts.mode === 'tutorial' && this.state.players[0].seals <= 1) {
+      this.scheduleShade(TUTORIAL_FLOOR_HOLD_MS);
+      this.bump();
+      return;
+    }
     // T7: a replay duel's foe is the ink-echo - recorded human actions applied when
     // the engine clock reaches them. An exhausted or degraded echo falls back to the
     // calibrated Shade bot.

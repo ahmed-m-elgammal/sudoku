@@ -8,6 +8,12 @@
 // "a different Order". Those are presentation-only and have no dictionary entry, so they
 // are resolved through the dictionary where one exists (`common.theShade`) and otherwise
 // degrade to the same words the web build showed.
+//
+// M1 (docs/TUTORIAL_OPTIMIZATION_PLAN.md G5): in the tutorial the log reads as a
+// two-line sentence with ARABIC unit numerals — "Row 5", not "Row V". Roman numerals
+// assume a classical education the lesson's audience does not have, and the one-line
+// clamp truncated mid-word ("Row IV claimed by You. Shad…"). Every other mode keeps
+// the web build's one-line Roman-numeral law.
 
 import { StyleSheet, Text, View } from 'react-native';
 import type { DuelRuntime } from '@/game/duelRuntime';
@@ -26,7 +32,8 @@ export default function Ticker({ duel, theme }: TickerProps) {
   // `DuelRuntimeOpts` the interface exposes — so it is read the same narrow way the web
   // build read it. A runtime without `mode` simply is not the tutorial.
   const mode = (duel.opts as { mode?: string }).mode;
-  const quiet = mode === 'tutorial'
+  const tutorial = mode === 'tutorial';
+  const quiet = tutorial
       ? tf('tutorial.waits', { name: i18n.tutorial.shadeName })
       : i18n.duel.log.waiting;
 
@@ -35,17 +42,17 @@ export default function Ticker({ duel, theme }: TickerProps) {
       <Text
         accessibilityRole="text"
         accessibilityLiveRegion="polite"
-        numberOfLines={1}
+        numberOfLines={tutorial ? 2 : 1}
         style={[styles.text, { color: theme.fgDim }]}
         allowFontScaling={false}
       >
-        {last ? formatEvent(last as unknown as Record<string, unknown>) : quiet}
+        {last ? formatEvent(last as unknown as Record<string, unknown>, tutorial) : quiet}
       </Text>
     </View>
   );
 }
 
-function formatEvent(e: Record<string, unknown>): string {
+function formatEvent(e: Record<string, unknown>, tutorial: boolean): string {
   const you = i18n.common.you;
   const foeName = i18n.common.theShade;
   const who = (p: unknown) => (p === 0 ? you : foeName);
@@ -63,9 +70,9 @@ function formatEvent(e: Record<string, unknown>): string {
     case 'claim': {
       const by = who(e.player);
       const target = e.player === 0 ? foeName : you;
-      if (e.deferred) return tf('duel.log.claimDeferred', { unit: unitName(String(e.unit ?? '')) });
+      if (e.deferred) return tf('duel.log.claimDeferred', { unit: unitName(String(e.unit ?? ''), tutorial) });
       return tf(e.clean ? 'duel.log.claimClean' : 'duel.log.claim', {
-        unit: unitName(String(e.unit ?? '')),
+        unit: unitName(String(e.unit ?? ''), tutorial),
         player: by,
         target,
         n: String(e.damage ?? 1),
@@ -107,11 +114,12 @@ function formatEvent(e: Record<string, unknown>): string {
   }
 }
 
-/** "Row IV" / "Column II" / "Box VII" — the dictionary's unit word plus a Roman numeral. */
-function unitName(u: string): string {
+/** "Row IV" / "Column II" / "Box VII" — the dictionary's unit word plus a Roman numeral
+ *  (Arabic in the tutorial, G5: the lesson's audience cannot be assumed to read Roman). */
+function unitName(u: string, tutorial: boolean): string {
   const kind = u[0] as 'r' | 'c' | 'b';
   const n = parseInt(u.slice(1), 10) + 1;
-  const roman = i18n.common.roman[n] ?? String(n);
+  const roman = tutorial ? String(n) : (i18n.common.roman[n] ?? String(n));
   const label = kind === 'r' ? i18n.duel.units.r : kind === 'c' ? i18n.duel.units.c : i18n.duel.units.b;
   return `${label} ${roman}`;
 }

@@ -48,7 +48,7 @@ import HudHeader from './HudHeader';
 import MirrorStrip from './MirrorStrip';
 import Ticker from './Ticker';
 import { ShakeLayer, WorldDim, HeatVignette } from './FxLayers';
-import { PauseModal, ConcedeModal, DisconnectModal, SwapBanner } from './Modals';
+import { PauseModal, ConcedeModal, DisconnectModal, SkipModal, SwapBanner } from './Modals';
 
 export default function DuelScreen() {
   const ui = useUi();
@@ -77,6 +77,7 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
 
   const [paused, setPaused] = useState(false);
   const [confirmConcede, setConfirmConcede] = useState(false);
+  const [confirmSkip, setConfirmSkip] = useState(false);
   const [muted, setMuted] = useState(audio.muted());
   const [boardSize, setBoardSize] = useState<number>(0);
   const endedRef = useRef(false);
@@ -96,10 +97,21 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
       if (endedRef.current || !duel) return;
       endedRef.current = true;
 
+      const winner = r.winner as 0 | 1 | 'draw';
+
+      // G10 — a tutorial duel cannot be lost (every mistake is forgiven and the Shade
+      // holds at the floor), but if one EVER ends without the Clerk winning, the
+      // verdict is a fresh REPLAY of the lesson — never the result screen, whose
+      // Rematch used to re-queue the child into a real calibrated Shade duel. The
+      // bumped duelNonce remounts the duel screen with a fresh runtime.
+      if (ui.duelMode === 'tutorial' && winner !== 0) {
+        ui.go('tutorial', { duelNonce: ui.duelNonce + 1, lastResult: null, serverDuel: null });
+        return;
+      }
+
       const st = duel.state;
       const me = st.players[0];
       const foe = st.players[1];
-      const winner = r.winner as 0 | 1 | 'draw';
       const shadeDuel = ui.duelMode !== 'ranked' && ui.duelMode !== 'friend' && ui.duelMode !== 'daily';
 
       // Economy: win 30 / loss 10 / draw 15, claims 3 each.
@@ -335,9 +347,11 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
 
   // G1 — the free Augur is granted by TutorialCoach once its note has been readable
   // for 2.5 s (or by the first Augur-tile tap — LocalDuel.ability owns that path).
-  // The skip chip keeps the web build's graduation semantics (the M1 confirm sheet is
-  // a separate change): graduation reward + tutorialDone, then the duel ends.
+  // G11 — the chip only ASKS; skipTutorial below is the confirmed, positive completion:
+  // graduation reward + tutorialDone, straight to the hall — no concede, no DEFEAT.
+  const requestSkip = useCallback(() => setConfirmSkip(true), []);
   const skipTutorial = useCallback(() => {
+    setConfirmSkip(false);
     if (!duel) return;
     useSave.getState().update((c) => ({
       ...c,
@@ -346,8 +360,10 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
       economy: { ...c.economy, ink: c.economy.ink + 100 },
     }));
     recordInk({ duelId: `tutorial-skip-${Date.now().toString(36)}`, mode: 'tutorial', delta: 100 });
-    duel.concede();
-  }, [duel]);
+    // The duel is abandoned, not lost: the screen unmounts and the session cleanup
+    // destroys the runtime, so no verdict — and no defeat ledger entry — ever lands.
+    ui.go('antechamber', { lastResult: null, serverDuel: null });
+  }, [duel, ui]);
 
   const foeName = spec?.names[1] ?? i18n.duel.log.theTablet;
 
@@ -367,7 +383,7 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   // G3/G4 — the note is docked IN FLOW (never over the board) and the skip chip
   // lives in the banner row (never over the HUD).
   const coach = tutorialNote ? (
-    <TutorialCoach duel={duel} note={tutorialNote} theme={theme} onSkip={skipTutorial} />
+    <TutorialCoach duel={duel} note={tutorialNote} theme={theme} onSkip={requestSkip} />
   ) : null;
 
   const board = (
@@ -485,6 +501,14 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
           theme={theme}
           onConfirm={() => { setConfirmConcede(false); duel.concede(); }}
           onCancel={() => setConfirmConcede(false)}
+        />
+      ) : null}
+
+      {confirmSkip ? (
+        <SkipModal
+          theme={theme}
+          onConfirm={skipTutorial}
+          onCancel={() => setConfirmSkip(false)}
         />
       ) : null}
 

@@ -1,5 +1,5 @@
-// Modals.tsx — the duel's four blocking surfaces: pause, concede-confirm, the S08
-// reconnect countdown, and Orsolo's "He adapts." callout.
+// Modals.tsx — the duel's blocking surfaces: pause, concede-confirm, the M1 G11
+// skip-confirm, the S08 reconnect countdown, and Orsolo's "He adapts." callout.
 //
 // PORT of the modal blocks in ../src/app/game/DuelScreen.tsx. The web build hand-rolled
 // every one of them: a local `<Modal>` component plus `<div className="modal-backdrop"
@@ -112,6 +112,40 @@ export function ConcedeModal({ theme, onConfirm, onCancel }: ConcedeModalProps) 
 export interface DisconnectModalProps {
   state: { secondsLeft: number; graceS: number; who: string };
   theme: Theme;
+}
+
+// M1 G11 — the skip confirmation. Asking first is the whole fix: the old chip quit
+// the tutorial on a mis-tap, paid the graduation reward and THEN showed a DEFEAT
+// banner. Confirming here completes the tutorial positively (DuelScreen owns the
+// routing) — no concede, no defeat verdict, the +100 Ink kept.
+export interface SkipModalProps {
+  theme: Theme;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function SkipModal({ theme, onConfirm, onCancel }: SkipModalProps) {
+  return (
+    <DuelModal title={i18n.tutorial.skipTitle} theme={theme} onRequestClose={onCancel}>
+      <Text style={[styles.body, { color: theme.fgDim }]}>{i18n.tutorial.skipBody}</Text>
+      <View style={styles.actions}>
+        <Pressable
+          onPress={onConfirm}
+          accessibilityRole="button"
+          style={[styles.btn, { backgroundColor: theme.accent }]}
+        >
+          <Text style={[styles.btnText, { color: theme.fg }]}>{i18n.tutorial.skipGo}</Text>
+        </Pressable>
+        <Pressable
+          onPress={onCancel}
+          accessibilityRole="button"
+          style={[styles.btn, { borderColor: theme.lineStrong, borderWidth: 1 }]}
+        >
+          <Text style={[styles.btnText, { color: theme.fg }]}>{i18n.tutorial.skipStay}</Text>
+        </Pressable>
+      </View>
+    </DuelModal>
+  );
 }
 
 /** S08 — the peer dropped and the server-ticked grace is draining. An `alertdialog`. */

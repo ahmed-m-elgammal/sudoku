@@ -74,8 +74,9 @@ export default function ResultScreen() {
     '0,34 300,34';
 
   // T18/T21 law, verbatim from web:87 — an endless rung rematches on the stair
-  // itself, a weekly sitting returns to the writs; a tutorial verdict re-queues as
-  // a shade duel. Everything else goes back through matchmaking.
+  // itself, a weekly sitting returns to the writs. Everything else goes back through
+  // matchmaking — EXCEPT the tutorial (M1 G10): a tutorial verdict replays the
+  // lesson; it used to re-queue the child into a real calibrated Shade duel.
   const rematch = () => {
     if (ui.duelMode === 'endless') {
       ui.go('endless');
@@ -85,7 +86,11 @@ export default function ResultScreen() {
       ui.go('weekly');
       return;
     }
-    ui.go('matchmaking', { duelMode: ui.duelMode === 'tutorial' ? 'shade' : ui.duelMode });
+    if (ui.duelMode === 'tutorial') {
+      ui.go('tutorial', { duelNonce: ui.duelNonce + 1, lastResult: null, serverDuel: null });
+      return;
+    }
+    ui.go('matchmaking', { duelMode: ui.duelMode });
   };
 
   const share = () => {

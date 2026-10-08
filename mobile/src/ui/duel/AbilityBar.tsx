@@ -4,9 +4,14 @@
 // build's, including the first-use factor (a rite's FIRST cast starts at 50 % cooldown,
 // so its ring reads against a half-length bar).
 //
-// The long-press description panel is the one behavioural change: on the web it was a
-// right-click (`onContextMenu`). A phone has no right-click, so it is a long press — the
-// same gesture, on the only input device the player has. The copy is unchanged.
+// Two behavioural changes, both port-mandated:
+//  · the long-press description panel was a right-click on the web (`onContextMenu`);
+//    a phone has no right-click, so it is a long press — the same gesture, on the only
+//    input device the player has. The copy is unchanged.
+//  · M1 (docs/TUTORIAL_OPTIMIZATION_PLAN.md G6): the web tile's Q/W/E keyboard hint is
+//    NOT ported — this build is tap-only (AGENTS.md: phone play is touch-first), and a
+//    desktop keyboard hint on a phone tile is exactly the kind of broken window that
+//    reads as a glitch to a new player.
 
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -85,10 +90,6 @@ export default function AbilityBar({ duel, theme }: AbilityBarProps) {
                 </Text>
               </>
             ) : null}
-
-            <Text style={[styles.key, { color: theme.line }]} allowFontScaling={false}>
-              {['Q', 'W', 'E'][idx]}
-            </Text>
           </Pressable>
         );
       })}
@@ -139,7 +140,6 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.display, fontSize: 12, letterSpacing: 0.5 },
   uses: { position: 'absolute', top: 2, right: 5, fontSize: 10 },
   cdText: { position: 'absolute', top: 3, left: 5, fontSize: 11 },
-  key: { position: 'absolute', bottom: 2, right: 5, fontSize: 9 },
   desc: {
     position: 'absolute',
     bottom: '100%',

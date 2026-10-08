@@ -39,6 +39,9 @@ import WeeklyScreen from './screens/WeeklyScreen';
 export default function GameShell() {
   const screen = useUi((s) => s.screen);
   const goBack = useUi((s) => s.goBack);
+  // G10 — the duel screens key on the store's duelNonce so a bumped nonce remounts
+  // the screen with a fresh runtime (the tutorial replay re-enters the SAME screen).
+  const duelNonce = useUi((s) => s.duelNonce);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -53,7 +56,7 @@ export default function GameShell() {
 
   switch (screen) {
     case 'boot': return <BootScreen />;
-    case 'duel': case 'tutorial': return <DuelScreen />;
+    case 'duel': case 'tutorial': return <DuelScreen key={duelNonce} />;
     case 'antechamber': return <Antechamber />;
     case 'orders': return <OrderSelect />;
     case 'matchmaking': return <Matchmaking />;
