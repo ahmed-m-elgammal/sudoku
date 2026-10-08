@@ -1,6 +1,6 @@
 # ASSIZE Mobile — Tutorial Optimization Plan
 
-**Status:** Proposal for owner review · **Scope:** `mobile/` (primary), `shared/` (script v2, spec'd change), `src/` (web parity, follow-up) · **Author:** tutorial analysis pass, 2026-10-08
+**Status:** Proposal for owner review · **Scope:** `mobile/` (primary), `shared/` (script v2, spec'd change), `src/` (web parity, follow-up) · **Author:** tutorial analysis pass, 2026-10-08 · **Amended 2026-10-08 (§11):** M2 reframed from "kid-first" to **universally clear** per owner decision — documentation only, no code
 
 ---
 
@@ -13,7 +13,7 @@ This plan ships in three milestones:
 | Milestone | What | Effort | Outcome |
 |---|---|---|---|
 | **M1 — Hotfix** | Kill the 8 glitches (note flash, note regression, overlays over the board, skip/loss traps, Q/W/E on touch, ticker truncation) + make the tutorial impossible to lose | ~2 dev-days | Tutorial stops feeling broken *today* |
-| **M2 — Rebuild** | Phased, gated, spotlight-driven interactive lessons; sudoku basics taught first; Shade script v2 (pausable race, no unfair damage, safe-to-fail); plain-language copy layer; replay entry points | ~8–10 dev-days | A 7-year-old can finish it unaided |
+| **M2 — Rebuild** | Phased, gated, spotlight-driven interactive lessons; sudoku basics taught first; Shade script v2 (pausable race, no unfair damage, safe-to-fail); plain-language copy layer; replay entry points | ~8–10 dev-days | A first-timer of **any age** finishes it unaided (amended §11 — universally clear, not kid-first) |
 | **M3 — Polish & measure** | Demo animations ("ghost hand"), assist options, telemetry hooks, full device QA matrix, web parity port | ~3–4 dev-days | Shippable, measurable, consistent on both platforms |
 
 Full rationale, code-level root causes, phase-by-phase design spec, file-by-file change list, test matrix, and risks follow.
@@ -123,7 +123,7 @@ Severity: 🔴 breaks comprehension · 🟠 confuses · 🟡 polish
 
 ## 4. Design goals & principles
 
-**Goal:** a first-time player aged ~6+ completes the tutorial unaided, can state the goal ("fill rows, columns and boxes with 1–9 without repeats; claim them to break the foe's Seals before they break mine"), and wants to play again.
+**Goal (amended §11):** a first-time player of **any age** completes the tutorial unaided, can state the goal ("fill rows, columns and boxes with 1–9 without repeats; claim them to break the foe's Seals before they break mine"), and wants to play again.
 
 **Principles (in priority order):**
 
@@ -168,17 +168,17 @@ Every phase defines: **UI state**, **gate** (what advances), **coach** (spotligh
 |---|---|---|---|---|
 | T0 | Prologue | 2 full-screen story cards (existing `plate-prologue` art + `story.json.prologue[3..4]` condensed), tappable, skippable, "Tap to continue" | tap / skip | — |
 | T1 | Welcome | Duel room visible; **NumPad, AbilityBar, MirrorStrip, clock hidden or dimmed to 40 %**; board centered larger; banner bottom-docked (never overlapping board — §5.3) | tap "Continue" on banner | frozen |
-| T2 | The one rule | **Ghost-hand demo:** a scripted animation fills row 5 of an overlay board 1→9 with staggered ink (reuse flood tint), then a repeat-9 highlight pulses the rule; kid taps "Try it" | watch (5 s) or tap through | frozen |
+| T2 | The one rule | **Ghost-hand demo:** a scripted animation fills row 5 of an overlay board 1→9 with staggered ink (reuse flood tint), then a repeat-9 highlight pulses the rule; player taps "Try it" | watch (5 s) or tap through | frozen |
 | T3 | Select | Spotlight (dimmed cutout) on ONE prepared empty cell; banner: "Tap the glowing cell" | tap that cell | frozen |
 | T4 | Place | Spotlight on the correct digit tile in the NumPad + a small hint pip in the target cell; wrong digits can be tapped but are gently rejected ("Not that one — look for the glowing 7") — **no Seal cost during T3–T7** | place correct digit | frozen |
-| T5 | Mistakes | Scripted: the game *tells* the kid to tap a wrong digit on purpose in a sacrificial cell; strike overlay plays; **big** Seal callout ("You lost 1 of 7 Seals — the first is always free"); Scholar passive ("Marginalia") surfaces here as the built-in forgiveness | watch the mistake they made | frozen |
+| T5 | Mistakes | Scripted: the game *tells* the player to tap a wrong digit on purpose in a sacrificial cell; strike overlay plays; **big** Seal callout ("You lost 1 of 7 Seals — the first is always free"); Scholar passive ("Marginalia") surfaces here as the built-in forgiveness | watch the mistake they made | frozen |
 | T6 | Pencil | Spotlight pencil button; prepared cell; gate: toggle pencil + tap two digits (notes appear), then erase | notes placed + erased | frozen |
 | T7 | Claims | Prepared near-complete row (8 filled); banner explains rows/cols/boxes are *territory*; gate: place the final digit → full claim presentation: flood + stamp + foe-Seal chip animation ("You took Row 5! The Shade loses 1 Seal") | claim resolves | frozen |
 | T8 | Augur | Spotlight pulses the Augur tile; gate: cast it on the spotlighted cell → reveal animation; banner explains rites and long-press descriptions | ability cast | frozen |
 | T9 | The race | All HUD elements restore; Shade wakes at 8–12 s/digit (≈2× slower than today), slips only after the player's 4th correct placement; **claim teaching note re-fires if player stalls >25 s**; banner becomes ambient | win (Seals or Tablet) | racing, gentle |
 | T10 | Graduation | Win → engraved card using `story.tutorial[1..3]` + rewards summary (+100 Ink) → Antechamber. Loss is impossible (§5.5) | continue | — |
 
-**Timing budget:** a focused kid finishes T0–T10 in ~4–6 minutes; an adult can speed-read it in ~90 s (tappable demos, no artificial waits).
+**Timing budget:** a focused first-timer finishes T0–T10 in ~4–6 minutes; an adult can speed-read it in ~90 s (tappable demos, no artificial waits).
 
 ### 5.3 Coach system (replaces the floating margin note)
 
@@ -219,7 +219,7 @@ Determinism law is preserved: pure module, seeded `Rng`, engine-observable condi
   - `rule` plain: "Every row, every column, and every box needs the numbers 1 to 9 — no repeats." flavor: *"Nine digits to a unit. The Ledger abhors a duplicate."*
   - `seal` plain: "You have 7 wax Seals. A wrong number breaks one. Lose all 7 and you lose the duel." flavor: *"The false hand errs, and the wax remembers."*
   - `claim` plain: "Finish a row, column, or box and you claim it — the Shade loses a Seal!" flavor: *"Territory is taken, Clerk, one completed line at a time."*
-- Names on screen stay plain for kids: HUD tooltips ("Seals = your life") available via a long-press **info chip** on the HUD; ticker strings switch to "Row 5" (Arabic numerals) in tutorial mode.
+- Names on screen stay plain for anyone new (§11): HUD tooltips ("Seals = your life") available via a long-press **info chip** on the HUD; ticker strings switch to "Row 5" (Arabic numerals) in tutorial mode.
 - All new keys added to **both** `mobile/src/i18n/en.json` and `src/i18n/en.json`; existing frozen keys untouched.
 
 ---
@@ -286,11 +286,11 @@ All work stays inside the ownership table of AGENTS.md (`src/ui/duel/**`, `src/u
 7. Antechamber + Settings replay entries (G13).
    *Accept: all four gates green; 12-mistake soak cannot lose; skip lands in Antechamber with Ink; replay works; no overlay covers any board cell on the 3 QA phones.*
 
-**M2 — Rebuild (the kid-first tutorial)**
+**M2 — Rebuild (the universally clear tutorial — amended by §11)**
 1. T0–T10 phases with spotlight coach, gated interactions, stage-dimmed UI per §5.2.
 2. `shared/tutorialV2.ts` + tests; director wired; v1 reachable by flag.
 3. `tutorialV2` copy namespace live; prologue cards using existing plate art.
-   *Accept: a playtest script (or an adult simulating a 6-year-old: slow taps, wrong digits, ignore text) completes unaided; gates green; no file > 300 lines.*
+   *Accept (amended §11): a playtest script (or an adult simulating a first-time player of any age: slow taps, wrong digits, ignore text) completes unaided; gates green; no file > 300 lines.*
 
 **M3 — Polish, measure, converge**
 1. Ghost-demo animations (T2/T7), HUD info chips, graduation card polish, haptic/audio passes (reuse existing 18-method audio surface: `pencil`, `stamp`, `claimWon`, `victory`).
@@ -327,14 +327,73 @@ All work stays inside the ownership table of AGENTS.md (`src/ui/duel/**`, `src/u
 ## 10. Open questions for the owner
 
 1. **T0 prologue screens:** new `Screen` union member (cleaner, matches StoryCard pattern) vs overlay inside DuelScreen (smaller diff)? Plan assumes overlay.
-2. **Kid wording toggle:** ship plain+flavor always, or add a Settings switch ("Simple words") that hides flavor lines? Plan assumes always-paired (simpler, no divergence).
+2. **Kid wording toggle:** ship plain+flavor always, or add a Settings switch ("Simple words") that hides flavor lines? Plan assumes always-paired (simpler, no divergence). — **Resolved by §11: no toggle; always-paired.**
 3. **v2 default timing:** keep the +100 Ink graduation reward on replay-plays (deduped), or grant only cosmetic celebration? Plan assumes deduped-once.
 4. **Web timing:** back-port in M3 immediately, or hold until mobile metrics land? Plan assumes immediate.
 5. **New art:** T2 ghost-hand demo reuses existing flood/stamp assets; if a dedicated "pointing hand" glyph is wanted, it must go through `tools/generate-assets.mjs` in the engraved style — confirm or accept asset-free spotlights.
 
 ---
 
-## Appendix A — Jargon → kid-language glossary (for copy + HUD info chips)
+## 11. M2 amendment — owner decision (2026-10-08): understandable for anyone, not "kid-first"
+
+**Decision recorded.** The owner pushes back on the "kid-first" framing of M2: the rebuild must not be designed, worded, or branded *for children*. The bar is **universal clarity** — a first-time player of **any** age and any familiarity with sudoku (child, teenager, adult; hobbyist or total newcomer) completes the tutorial unaided. Universal clarity is a superset of child-legibility: everything that made this plan work for a young player (one concept at a time, plain words before flavor, show-then-say-then-do, safe to fail) is retained precisely because it is simply *good teaching*, not because it is childish. Nothing in the rebuilt tutorial may look, sound, or read like children's media — no cartoon register, no talking-down, no exclamation-mark cheer, no simplified visuals. The game's voice stays exactly as `docs/STORY.md` pins it: terse, formal, dry, a little archaic, never jokey.
+
+This amendment is **documentation only — no code ships with it.** The mechanics in §5 and §6 stand as written. What changes is the framing (§11.1), the build order restated under that framing for sign-off (§11.2), and the two guarantees the owner asked to see in writing before M2 is built: what the rebuild will **never** touch in the story (§11.3), and where the design deliberately leaves **room to increment the story later** (§11.4). M1 (shipped, commits `7ee1c02` / `381836e` / `0f1c577`) remains fully valid under this amendment — its fixes are clarity fixes, not children's features.
+
+### 11.1 What changes (framing only)
+
+| Item | Was (kid-first) | Now (universally clear) |
+|---|---|---|
+| Milestone name | M2 — Rebuild (the kid-first tutorial) | M2 — Rebuild (the universally clear tutorial) |
+| Success bar (§4 goal) | a first-time player aged ~6+ finishes unaided | a first-time player of any age finishes unaided; the **binding acceptance persona is an adult who has never played sudoku and skims text** — the hardest non-child reader. Children stay covered for free, because plain-and-clear is the same build either way. |
+| TL;DR outcome (§0) | "A 7-year-old can finish it unaided" | "A first-timer of any age finishes it unaided" |
+| Copy law (§5.6) | plain lines "for kids" | plain lines for **anyone new to the game**: short declarative sentences, concrete nouns, one instruction per line, every jargon term translated on first use (Appendix A becomes the *plain-language* glossary — same content, neutral name). The flavor line follows in the existing Orsolo register and carries the fiction for everyone else. |
+| Playtest acceptance (§7) | adult simulating a 6-year-old | adult simulating a first-time player of any age (slow taps, wrong digits, ignores text) |
+| §10 open question 2 | "Simple words" toggle open | **Resolved — no toggle.** Plain + flavor is always paired: plain serves every newcomer, flavor keeps the voice; a toggle would fork the copy for zero clarity gain. |
+| "Kid" wording through the doc | §5.2/§5.6/Appendix A said "kid" | reworded to "player" / "first-timer" / "anyone new"; historical diagnosis (§0, §3) left untouched — it quotes the original brief and the observed problem, and the observed problem included adults |
+
+**Mechanics that do not change:** the T0–T10 phase structure (§5.1–5.2), the Coach spotlight + docked banner (§5.3), the additive `tutorialV2` Shade script (§5.4), the safety nets (§5.5), the file plan and 300-line ceilings (§6.1–6.2), the test plan and device matrix (§6.3), the effort estimate (~8–10 dev-days), and the milestone gates.
+
+### 11.2 What we will do (M2 build order under this framing)
+
+1. **Phased lessons T0–T10 (§5.1–5.2).** Prologue cards, then the one rule of sudoku taught *before* any dueling (rows/columns/boxes, 1–9, no repeats), then select → place → mistakes → pencil → claims → augur → a gentle race → graduation. Each phase gates on exactly one action, dims everything not yet taught, and is skippable and pausable throughout. This is the core of "understandable for anyone": the puzzle is explained before the fiction is layered on it.
+2. **Coach overlay (§5.3).** Spotlight cutouts that *point* instead of describing; a two-line docked banner (plain sentence first, flavor sentence second); progress dots; latched notes that can never flicker or regress — the M1 latch law carries over.
+3. **Shade script v2 (§5.4).** The race starts only at T9 at roughly half today's pace, claims are telegraphed, no damage lands before the player understands what Seals are, and loss is made impossible — a newcomer is never punished for learning.
+4. **Copy namespace `tutorialV2` (§5.6).** ~30 plain-first/flavor-second keys added to both `en.json` twins; frozen keys untouched; Arabic-numeral ticker in tutorial mode.
+5. **Replay + graduation (§5.5).** The M1 Antechamber/Settings entries (G13) stay; the graduation card finally renders the tutorial lines from `story.json` that shipped but were never shown.
+6. **Tests and QA (§6.3).** Unit/component suites pinning gates, latching, unlosability and layout; the amended first-timer persona; the existing device matrix; all milestone gates (`tsc`, `eslint`, `vitest`, `jest`) green.
+
+Nothing above is implemented yet — this is the build order the owner is approving, and implementation starts only on their go.
+
+### 11.3 What will NOT affect the story (hard guarantees)
+
+1. **`docs/STORY.md` is not edited.** No plot point, character, setting detail, twist, folio, interlude, or ending changes because of M2. The rebuild is a *teaching* layer, not a narrative pass.
+2. **Shipped story text is never rewritten or deleted.** The `story.json` prologue and tutorial lines are only ever *rendered* — they exist today and are simply never shown (§3.2.8); surfacing them is presentation of existing canon, not a story change. If any line must be condensed to fit a card, the condensation is flagged for owner review before it lands.
+3. **The tutorial introduces no new canon.** Plain lines explain mechanics; flavor lines may reuse the existing register but may not invent facts, characters, events, names, or retcon anything. The Shade of Orsolo remains the only speaking character in the tutorial, exactly as written.
+4. **No story content is gated behind the rebuild.** The Folio I–IX structure, interludes, the Orsolo reveal, both endings, and achievements are untouched; the scope boundary stays tutorial mode only (§8). Tutorial-only mods (free mistakes, Seal floor) exist inside tutorial mode and are invisible to every other mode.
+5. **The fiction's visual identity is untouched.** Same engraved art set, portraits, plates, parchment/brass palette. The T2/T7 demos reuse the existing flood/stamp visual language or ship asset-free spotlights — no cartoon icons, no new art unless the owner greenlights it (§10.5).
+6. **Economy and progression fiction intact.** Ink, Seals, claims, Orders, ranks keep their meanings and values; nothing in the tutorial grants or changes anything in the wider game beyond the existing once-per-save graduation Ink (already deduped in M1).
+7. **The voice law is preserved.** Any new flavor line must pass the STORY.md register test — terse, formal, dry, a little archaic, never jokey — and the plain line always comes first, so the fiction decorates the lesson instead of carrying it.
+
+### 11.4 Where the story can grow later (extension points left open)
+
+The rebuild is deliberately structured as **slots**, so story can be incremented later — after the owner sees the clear tutorial working — without refactoring anything:
+
+1. **T0 prologue cards are a key-driven slot.** They render whatever `story.json` provides; today that is the existing prologue. Appending more cards, or swapping in a rewritten opening, is a later i18n addition — zero phase-logic changes.
+2. **Every banner is a plain+flavor pair in i18n.** Flavor lines can be deepened, rewritten, or localized later with no logic edits; a future story pass can enrich all ten phases in one namespace sweep.
+3. **The director emits `onPhaseEnter`/`onPhaseExit` events (§6.1) that nothing subscribes to yet.** Future story beats — a Shade quip when the race wakes at T9, a farewell line at graduation — can attach to those events without touching the FSM or the gates.
+4. **The graduation card is a slot.** It ships as summary + rewards; a later increment can add a Shade farewell or a Folio I foreshadowing line by filling one key.
+5. **T9 telegraphs and taunts are strings.** The ticker already surfaces Shade actions; a later increment can route them through story-style lines ("The Shade eyes Row 3…") with no engine changes.
+6. **The T0 card component generalizes** (existing `StoryCard` pattern): any future tutorial-side interlude or story card reuses it as-is.
+7. **Additive-only i18n** (`tutorialV2` namespace, extend-never-edit law): story increments can never break frozen keys or web parity, because they only ever add keys.
+
+### 11.5 Explicitly unchanged
+
+No HUD redesign, no engine edits, no economy changes, no router, no new assets, scope bounded to tutorial mode (§8). This amendment ships documentation only; M2 implementation awaits the owner's greenlight.
+
+---
+
+## Appendix A — Jargon → plain-language glossary (for copy + HUD info chips; §11)
 
 | Game term | Plain words |
 |---|---|
