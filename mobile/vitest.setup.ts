@@ -156,6 +156,9 @@ vi.mock('react-native-svg', async () => {
     Path: host('Path'),
     G: host('G'),
     Line: host('Line'),
+    // the Ledger's spark polyline (5.6) — the web renders an <svg><polyline>;
+    // additive, the same host-double law as the primitives above.
+    Polyline: host('Polyline'),
   };
 });
 

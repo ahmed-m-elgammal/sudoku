@@ -1,5 +1,11 @@
 // LedgerProfile — S17: name edit, rank emblem, Standing graph, win rate by Order, Marginalia
 // (24 achievements), last 20 duels with Shade tag, Recovery Code, export/import (spec §7, §17).
+//
+// FIX (hooks order): the `if (!save) return null;` guard used to sit ABOVE the two
+// useEffects — a rules-of-hooks violation (React throws "Rendered fewer hooks than
+// expected" the moment the ledger mounts before the save has loaded, because the
+// hook count changes between renders). The guard now sits below the hooks and the
+// name-mirror effect tolerates a null save; rendered output is unchanged.
 'use client';
 import { useEffect, useState } from 'react';
 import { useUi } from '@/state/ui';
@@ -18,13 +24,8 @@ export default function LedgerProfile() {
   const [code, setCode] = useState<string | null>(null);
   const [importText, setImportText] = useState('');
   const [serverInk, setServerInk] = useState<number | null>(null);
-  if (!save) return null;
-  const rank = rankOfStanding(save.standing);
-  const hist = save.stats.standingHistory.slice(-20);
-  const spark = hist.map((v, i) => `${(i / Math.max(1, hist.length - 1)) * 280},${70 - Math.min(70, ((v - 800) / 1200) * 70)}`).join(' ');
-  const achievements = Object.entries(i18n.achievements) as Array<[string, { title: string; desc: string }]>;
 
-  useEffect(() => { setName(save.name); }, [save.name]);
+  useEffect(() => { if (save) setName(save.name); }, [save?.name]);
 
   // T13 — the server-known Ink balance: a quiet auth on mount, shown for auditability
   useEffect(() => {
@@ -38,6 +39,12 @@ export default function LedgerProfile() {
     })();
     return () => { live = false; };
   }, []);
+
+  if (!save) return null;
+  const rank = rankOfStanding(save.standing);
+  const hist = save.stats.standingHistory.slice(-20);
+  const spark = hist.map((v, i) => `${(i / Math.max(1, hist.length - 1)) * 280},${70 - Math.min(70, ((v - 800) / 1200) * 70)}`).join(' ');
+  const achievements = Object.entries(i18n.achievements) as Array<[string, { title: string; desc: string }]>;
 
   return (
     <main className="hub" style={{ minHeight: '100dvh', paddingBottom: 'calc(var(--ribbon-h) + var(--safe-bottom))' }}>

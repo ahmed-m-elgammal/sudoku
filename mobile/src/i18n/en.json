@@ -447,6 +447,7 @@
     "recoveryCopy": "Copy",
     "export": "Export save",
     "import": "Import save",
+    "importPlaceholder": "Paste the exported save…",
     "duels": "duels",
     "wins": "wins",
     "losses": "losses",

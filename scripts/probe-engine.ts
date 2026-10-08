@@ -1,7 +1,7 @@
 // Probe — hard evidence before the adversarial suite. Every probe tries to BREAK
 // the engine the way a hostile client (or a buggy transport) would. bun scripts/probe-engine.ts
-import { createDuel, place, useAbility, tick, swapOrder, serializeDuel, deserializeDuel, cellFlags } from '../shared/engine';
-import { generatePuzzle } from '../shared/sudoku';
+import { createDuel, place, useAbility, tick, swapOrder, serializeDuel, deserializeDuel, cellFlags, type CreateDuelOpts } from '../shared/engine';
+import { generatePuzzle, countSolutions } from '../shared/sudoku';
 import { Rng } from '../shared/rng';
 import { CONFIG } from '../shared/config';
 
@@ -16,7 +16,11 @@ const probe = (name: string, fn: () => string) => {
   }
 };
 
-const fresh = (over: Parameters<typeof createDuel>[0] = {}) => {
+// the probe's overrides ride a PARTIAL on purpose: every probe keeps the shared
+// seed/givens/solution unless it says otherwise (the pre-Partial typing made
+// tsc read every override as a guaranteed overwrite — and every partial call
+// site as a missing field)
+const fresh = (over: Partial<CreateDuelOpts> = {}) => {
   const p = generatePuzzle('probe-seed', 'Easy');
   return createDuel({
     seed: 'probe',
@@ -156,8 +160,6 @@ probe('countSolutions purity', () => {
   const p = generatePuzzle('probe-purity', 'Easy');
   const g = Uint8Array.from(p.givens);
   const before = Array.from(g);
-  generatePuzzle; // keep import used
-  const { countSolutions } = require('../shared/sudoku') as typeof import('../shared/sudoku');
   countSolutions(g, 2);
   const same = before.every((v, i) => g[i] === v);
   return `inputPreserved=${same}`;
