@@ -25,6 +25,17 @@ import {
 } from '@shared/engine';
 import { shadeAct, profileForStanding, type ShadeProfile } from '@shared/shade';
 import { tutorialAct, newTutorialScript, type TutorialScriptState } from '@shared/tutorial';
+import {
+  tutorialV2Act, newTutorialV2Script, armTutorialRace, tutorialV2Telegraph,
+  type TutorialV2State,
+} from '@shared/tutorialV2';
+import {
+  advanceDirector, newTutorialDirector, t6SubStep,
+  type TutorialDirectorState, type TutorialDuelEvent,
+} from './tutorialDirector';
+import type {
+  LocalDuelOpts, DuelRuntime, DuelRuntimeOpts, TutorialSpotTarget, TutorialTelegraph,
+} from './duelRuntime';
 import { bossAct, newBossScriptState, type BossScript, type BossScriptState } from '@shared/phaseScript';
 import { adaptiveSwapTarget } from '@shared/orders';
 import {
@@ -32,11 +43,10 @@ import {
   type DuelReplay, type ReplayRecorder, type ReplayAction,
 } from '@shared/replay';
 import { Rng } from '@shared/rng';
-import { CONFIG, type AbilityId, type Digit, type OrderId, type PlayerId, type Tier } from '@shared/config';
+import { CONFIG, CELL_UNITS, UNIT_CELLS, type AbilityId, type Digit, type OrderId, type PlayerId, type Tier } from '@shared/config';
 import { generatePuzzle } from '@shared/sudoku';
 import { audio } from '@/platform/audio';
 import { haptics } from '@/platform/haptics';
-import type { LocalDuelOpts, DuelRuntime, DuelRuntimeOpts } from './duelRuntime';
 
 export type { LocalDuelOpts };
 
@@ -116,6 +126,19 @@ export class LocalDuel implements DuelRuntime {
   // readable instead of flashing for the single frame before raw moves past it.
   private mistakeNoteHold = false;
 
+  // M2 rebuild (docs/TUTORIAL_OPTIMIZATION_PLAN.md §5–§6, amended §11) — the v2
+  // teaching machine. `director` owns WHICH lesson is live (t0–t10, forward-only);
+  // `scriptV2` owns the Shade (frozen until the director arms the race at t9).
+  // `tutorialScript: 'v1'` (the default) keeps the entire v1 path below untouched.
+  private readonly v2: boolean;
+  private director: TutorialDirectorState | null = null;
+  private scriptV2: TutorialV2State | null = null;
+  // the teaching targets, latched the first time their phase asks (stable while the
+  // phase is live — the scrim makes everything else untappable)
+  private teachCell: number | null = null;
+  private teachCell2: number | null = null;
+  private claimCell: number | null = null;
+
   // T7 - replay Shades: the foe is driven by a stored human log instead of shadeAct.
   // A replay that fails validation degrades VISIBLY (replayDegraded) to a normal Shade
   // rather than crashing the duel screen.
@@ -139,6 +162,11 @@ export class LocalDuel implements DuelRuntime {
     const puz = generatePuzzle(opts.seed, opts.tier);
     this.rng = new Rng(`${opts.seed}-shade`);
     this.scriptRng = new Rng(`${opts.seed}-script`);
+    this.v2 = opts.mode === 'tutorial' && opts.tutorialScript === 'v2';
+    if (this.v2) {
+      this.director = newTutorialDirector(!!opts.tutorialSkipPrologue);
+      this.scriptV2 = newTutorialV2Script();
+    }
     this.script = newTutorialScript();
     this.state = createDuel({
       seed: opts.seed,
@@ -161,6 +189,7 @@ export class LocalDuel implements DuelRuntime {
   select(cell: number | null) {
     this.selected = cell;
     audio.uiTap();
+    if (this.v2 && cell !== null) this.directorEvent({ kind: 'select', cell });
     this.bump();
   }
 
@@ -252,6 +281,7 @@ export class LocalDuel implements DuelRuntime {
     this.ended = true;
     this.recorder.sealed = true; // no posthumous ink in the echo
     const w = this.state.winner;
+    if (this.v2) this.directorEvent({ kind: 'duelEnd', winner: w ?? 'draw' });
     if (w === 'draw') audio.draw();
     else if (w === 0) { audio.victory(); haptics.impact(); }
     else { audio.defeat(); haptics.impact(); }
@@ -282,6 +312,9 @@ export class LocalDuel implements DuelRuntime {
     // strike, the flinch and the haptic still teach. The tutorial spec is
     // scholar-owned (useDuelSession.specFromUi), which this relies on.
     if (this.opts.mode === 'tutorial') this.state.players[0].marginaliaUsed = false;
+    // M2 — the units this cell sits in, BEFORE the ink (a new owner = the placement
+    // claimed). Only read when the v2 relay needs it.
+    const ownersBefore = this.v2 ? CELL_UNITS(cell).map((u) => this.state.unitOwner[u]) : null;
     const res = place(this.state, 0, cell, digit);
     // t is rounded: the engine clock is continuous (rAF deltas), the replay contract is integer ms
     if (res.ok) recordAction(this.recorder, { t: Math.round(this.state.clockMs), kind: 'place', cell, digit }); // echo: mistakes replay too
@@ -310,6 +343,11 @@ export class LocalDuel implements DuelRuntime {
     this.opts.onEvent?.({ seq: -1, atMs: this.state.clockMs, kind: res.correct ? 'placed' : 'mistake', player: 0, cell, digit });
     // tutorial pacing hooks
     if (this.opts.mode === 'tutorial') this.advanceTutorial(!!res.correct);
+    // M2 — the director learns every settled placement (correct, wrong, claimed)
+    if (this.v2 && res.ok) {
+      const claimed = !!res.correct && ownersBefore!.some((o, i) => o === undefined && this.state.unitOwner[CELL_UNITS(cell)[i]] === 0);
+      this.directorEvent({ kind: 'place', correct: !!res.correct, claimed });
+    }
     return res;
   }
 
@@ -330,6 +368,7 @@ export class LocalDuel implements DuelRuntime {
   setNotes(cell: number, digits: number[]) {
     if (digits.length === 0) this.notes.delete(cell);
     else this.notes.set(cell, new Set(digits));
+    if (this.v2) this.directorEvent({ kind: 'notes', count: this.noteDigitCount() });
     this.bump();
   }
 
@@ -340,7 +379,16 @@ export class LocalDuel implements DuelRuntime {
     if (set.has(d)) set.delete(d); else set.add(d);
     if (!set.size) this.notes.delete(cell); else this.notes.set(cell, set);
     audio.pencil();
+    if (this.v2) this.directorEvent({ kind: 'notes', count: this.noteDigitCount() });
     this.bump();
+  }
+
+  /** The t6 gate counts pencil MARKS, not cells — the lesson teaches two digits into
+   *  one cell, so two marks in the same cell must satisfy it (§5.2 T6). */
+  private noteDigitCount(): number {
+    let n = 0;
+    for (const s of this.notes.values()) n += s.size;
+    return n;
   }
 
   ability(id: AbilityId, arg: { cell?: number; unit?: string } = {}) {
@@ -348,7 +396,8 @@ export class LocalDuel implements DuelRuntime {
     // G1 — the free Augur is also granted by the FIRST Augur-tile tap while its
     // note is up: "freely given" must not depend on waiting out the note timer.
     // Taps before the augur lesson step keep the rite's normal cooldown.
-    if (this.opts.mode === 'tutorial' && id === 'augur' && !this.freeAugurGranted && this.tutorialNote() === 'augur') {
+    if (this.opts.mode === 'tutorial' && id === 'augur' && !this.freeAugurGranted
+      && (this.v2 ? this.director?.phase === 't8' : this.tutorialNote() === 'augur')) {
       this.grantFreeAugur();
     }
     const a = arg.cell !== undefined ? arg : this.selected !== null ? { ...arg, cell: this.selected } : arg;
@@ -362,6 +411,7 @@ export class LocalDuel implements DuelRuntime {
       audio.cast(Object.keys(this.state.players[0].abilities).indexOf(id));
       this.opts.onEvent?.({ seq: -1, atMs: this.state.clockMs, kind: 'ability', player: 0, ability: id });
     } else audio.error();
+    if (this.v2) this.directorEvent({ kind: 'ability', id, ok: !!res.ok });
     this.bump();
     return res;
   }
@@ -379,6 +429,7 @@ export class LocalDuel implements DuelRuntime {
 
   togglePencil() {
     this.pencil = !this.pencil;
+    if (this.v2) this.directorEvent({ kind: 'pencil', on: this.pencil });
     this.bumpPublic();
   }
 
@@ -426,7 +477,9 @@ export class LocalDuel implements DuelRuntime {
     // the plain calibrated Shade bot.
     const prevPhase = this.bossState ? this.bossState.phaseIdx : -1;
     const act = this.opts.mode === 'tutorial'
-      ? tutorialAct(this.script, this.state, 1, this.state.players[0].progress, this.scriptRng, performance.now())
+      ? this.v2 && this.scriptV2
+        ? tutorialV2Act(this.scriptV2, this.state, 1, this.scriptRng, performance.now())
+        : tutorialAct(this.script, this.state, 1, this.state.players[0].progress, this.scriptRng, performance.now())
       : this.bossState && this.opts.foeScript
         ? bossAct(this.opts.foeScript as BossScript, this.bossState, this.state, 1, prof, () => this.rng.next(), performance.now())
         : shadeAct(this.state, 1, prof, () => this.rng.next(), performance.now());
@@ -482,7 +535,7 @@ export class LocalDuel implements DuelRuntime {
   }
 
   tutorialNote(): TutorialNoteId | null {
-    if (this.opts.mode !== 'tutorial') return null;
+    if (this.opts.mode !== 'tutorial' || this.v2) return null;
     // G2 — the held Seal note: shown once, readable until the player moves forward.
     if (this.noteLatch === 'mistake' && this.mistakeNoteHold) return 'mistake';
     const raw = this.rawTutorialNote();
@@ -527,6 +580,107 @@ export class LocalDuel implements DuelRuntime {
     rt.cdLeftMs = 0;
     this.freeAugurGranted = true;
     this.bump();
+  }
+
+  // ------------------------------------------------------------------ M2 director
+  // The v2 tutorial surface (DuelRuntime's optional members). Everything here is
+  // inert unless opts.tutorialScript === 'v2' — ServerDuel never sees this code.
+
+  /** The live lesson phase, 't0'…'t10'; null outside the v2 tutorial. */
+  tutorialPhase(): string | null {
+    return this.v2 ? this.director!.phase : null;
+  }
+
+  /** What the spotlight coach aims at during the current phase. */
+  tutorialTarget(): TutorialSpotTarget {
+    if (!this.v2 || !this.director) return null;
+    switch (this.director.phase) {
+      case 't1':
+        return { kind: 'board' };
+      case 't3':
+        return { kind: 'cell', cell: this.latchTeachCell() };
+      case 't4':
+        return { kind: 'digit', digit: this.state.solution![this.latchTeachCell()] as Digit };
+      case 't5':
+        return { kind: 'cell', cell: this.latchTeachCell2() };
+      case 't6': {
+        const sub = t6SubStep(this.director);
+        if (sub === 'quill') return { kind: 'toolbar', index: 0 };
+        if (sub === 'notes') return { kind: 'cell', cell: this.latchTeachCell() };
+        return { kind: 'erase' };
+      }
+      case 't7':
+        return { kind: 'cell', cell: this.latchClaimCell() };
+      case 't8':
+        return { kind: 'ability', id: 'augur' };
+      default:
+        return null; // t0 (cards cover the room), t2 (ghost demo), t9/t10 (open room)
+    }
+  }
+
+  /** The pending Shade claim, for the coach's telegraph line; null when none. */
+  tutorialTelegraph(): TutorialTelegraph | null {
+    if (!this.v2 || !this.scriptV2) return null;
+    const u = tutorialV2Telegraph(this.scriptV2);
+    if (!u) return null;
+    const n = parseInt(u.slice(1), 10) + 1;
+    if (!Number.isFinite(n)) return null;
+    if (u.startsWith('r')) return { unit: 'row', n };
+    if (u.startsWith('c')) return { unit: 'col', n };
+    return { unit: 'box', n };
+  }
+
+  /** A banner CTA: the prologue's last tap, t1's Continue, t2's Try it. */
+  tutorialAdvance(gate: 'prologueDone' | 'continue' | 'tryIt'): void {
+    this.directorEvent({ kind: 'gate', gate });
+  }
+
+  private directorEvent(e: TutorialDuelEvent) {
+    if (!this.director) return;
+    advanceDirector(this.director, e);
+    // t9 — the race wakes exactly here, once (§5.4: the director owns the pacing)
+    if (this.director.phase === 't9' && this.scriptV2 && !this.scriptV2.raceArmed) {
+      armTutorialRace(this.scriptV2);
+    }
+    this.bump();
+  }
+
+  private latchTeachCell(): number {
+    if (this.teachCell === null) {
+      const board = this.state.players[0].board;
+      for (let c = 0; c < 81; c++) if (board[c] === 0) { this.teachCell = c; break; }
+      if (this.teachCell === null) this.teachCell = 0; // a full tablet cannot be taught; fail visible
+    }
+    return this.teachCell;
+  }
+
+  private latchTeachCell2(): number {
+    if (this.teachCell2 === null) {
+      const board = this.state.players[0].board;
+      for (let c = this.latchTeachCell() + 1; c < 81; c++) if (board[c] === 0) { this.teachCell2 = c; break; }
+      if (this.teachCell2 === null) this.teachCell2 = this.latchTeachCell();
+    }
+    return this.teachCell2;
+  }
+
+  /** A cell whose true digit completes a not-yet-owned unit — the claim lesson's mark. */
+  private latchClaimCell(): number {
+    if (this.claimCell === null) {
+      const board = this.state.players[0].board;
+      for (let c = 0; c < 81; c++) {
+        if (board[c] !== 0) continue;
+        const digit = this.state.solution ? this.state.solution[c] : 0;
+        if (!digit) continue;
+        const completes = CELL_UNITS(c).some((u) =>
+          this.state.unitOwner[u] === undefined
+          && UNIT_CELLS[u].every((cc) => (cc === c ? true : this.state.players[0].board[cc] !== 0)));
+        if (completes) { this.claimCell = c; break; }
+      }
+      // no one-away unit (hostile save): any empty cell — the gate is the claim event,
+      // not this mark, and the v2 Shade can never steal it before t9
+      if (this.claimCell === null) this.claimCell = this.latchTeachCell();
+    }
+    return this.claimCell;
   }
 
   /** The seat-0 perspective every screen renders (ServerDuel mirrors it). */

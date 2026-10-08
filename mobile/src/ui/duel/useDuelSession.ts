@@ -228,10 +228,16 @@ export function specFromUi(): DuelSessionSpec {
   const mode = ui.duelMode;
 
   if (mode === 'tutorial') {
+    // M2 (docs/TUTORIAL_OPTIMIZATION_PLAN.md §5–§6, amended §11) — the rebuilt
+    // lesson rides the v2 Shade script + the phase director. Rollback is one line:
+    // drop the tutorialScript field and the entire v1 path runs again (the script,
+    // the note machine and the docked note are all still there behind the flag).
     return {
       mode: 'tutorial', seed: 'tutorial-orsolo', tier: 'Easy',
       orders: ['scholar', 'executioner'],
       names: ['You', 'Shade of Orsolo'],
+      tutorialScript: 'v2',
+      tutorialSkipPrologue: !!save.tutorialDone,
     };
   }
 

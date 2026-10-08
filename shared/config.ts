@@ -96,6 +96,19 @@ export const CONFIG = {
     shadeFallbackMs: 4_000,          // max wait before pairing with a Shade
     windowWidenMs: 2_000,            // widen window every 2s
   },
+  // M2 (docs/TUTORIAL_OPTIMIZATION_PLAN.md §5.4) — the tutorial Shade script v2
+  // tunables. Additive; v1's hard-coded pacing in tutorial.ts is untouched and
+  // remains the rollback path (spec-selected `tutorialScript: 'v1'`).
+  tutorialV2: {
+    raceDelayMs: [8_000, 12_000],    // T9 pace while the Clerk has fewer than 6 correct
+    raceLateDelayMs: [5_000, 8_000], // T9 pace from the Clerk's 6th correct onward
+    falterDelayMs: [7_800, 9_600],   // past the ink cap: slips only, slowest cadence
+    slipAfterPlayerCorrect: 4,       // no scripted slip before the Clerk's 4th correct
+    slipEvery: 4,                    // then one slip every 4th Shade placement
+    telegraphLeadMs: 2_000,          // a Shade claim is announced this long before it lands
+    correctCap: 22,                  // the Shade never fills the Tablet (same cap as v1)
+    holdWhileIdleMs: 700,            // re-check cadence while frozen or holding
+  },
 } as const;
 
 export type Digit = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;

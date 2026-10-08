@@ -38,6 +38,27 @@ export interface SwapBanner {
   to: OrderId;
 }
 
+/**
+ * M2 (docs/TUTORIAL_OPTIMIZATION_PLAN.md §5.2, §6.1) — what the spotlight coach aims
+ * at during a teaching phase. `board` = the whole Tablet; `toolbar` indexes the four
+ * tool buttons (0 = the quill). The spotlight geometry itself is pure UI law
+ * (ui/duel/tutorial/spotlight.ts); the runtime only names the target.
+ */
+export type TutorialSpotTarget =
+  | { kind: 'board' }
+  | { kind: 'cell'; cell: number }
+  | { kind: 'digit'; digit: Digit }
+  | { kind: 'toolbar'; index: number }
+  | { kind: 'erase' }
+  | { kind: 'ability'; id: AbilityId }
+  | null;
+
+/** A pending Shade claim the coach announces ("The Shade eyes Row 3…"). */
+export interface TutorialTelegraph {
+  unit: 'row' | 'col' | 'box';
+  n: number; // 1-based
+}
+
 /** S08: the peer dropped and the server-ticked grace is draining. */
 export interface DisconnectState {
   secondsLeft: number;
@@ -115,6 +136,13 @@ export interface DuelRuntime {
   tutorialNote(): string | null;
   grantFreeAugur(): void;
 
+  // ---- M2 tutorial-director surface (OPTIONAL members: ServerDuel stays inert and
+  //      untouched; only LocalDuel implements them, and only in v2 mode)
+  tutorialPhase?(): string | null;
+  tutorialTarget?(): TutorialSpotTarget;
+  tutorialTelegraph?(): TutorialTelegraph | null;
+  tutorialAdvance?(gate: 'prologueDone' | 'continue' | 'tryIt'): void;
+
   // ---- the options bag the runtime was constructed with, plus the end hook the
   //      screen assigns AFTER construction.
   //      `DuelRuntimeOpts` is deliberately minimal: it is the intersection every
@@ -141,6 +169,15 @@ export interface LocalDuelOpts {
   onEnd?: (r: { winner: PlayerId | 'draw'; reason: string }) => void;
   onEvent?: (e: DuelEvent) => void;
   onPhase?: (phaseIdx: number) => void;
+  /**
+   * M2 — the tutorial Shade script selection. 'v1' (default) keeps the shipped
+   * teaching race; 'v2' is the plan's §5.4 rebuild: frozen until the director arms
+   * the race at t9, paced 8–12 s, telegraphed claims, no early slips. The flag is
+   * the documented rollback path (flip specFromUi's one line).
+   */
+  tutorialScript?: 'v1' | 'v2';
+  /** M2 — a graduated replay skips the prologue cards and enters at t1. */
+  tutorialSkipPrologue?: boolean;
   /** the recorded human log of THIS duel (validated; null if illegal) */
   toReplay?: (outcome: { winner: 0 | 1 | 'draw'; reason: string }) => DuelReplay | null;
   /** visible degradation when a stored echo fails validation */
@@ -160,4 +197,8 @@ export interface DuelSessionSpec {
   foeScript?: unknown;
   mods?: DuelState['rules'];
   replay?: DuelReplay;
+  /** M2 — see LocalDuelOpts.tutorialScript */
+  tutorialScript?: 'v1' | 'v2';
+  /** M2 — see LocalDuelOpts.tutorialSkipPrologue */
+  tutorialSkipPrologue?: boolean;
 }

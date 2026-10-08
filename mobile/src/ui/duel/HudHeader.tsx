@@ -5,7 +5,8 @@
 // minutes, the pips are the Seals that remain, and a Magistrate's 8 Seals get their own
 // longer row (the web build grew `max` past 7 for exactly that reason).
 
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Svg, Circle, SvgUri } from 'react-native-svg';
 import type { DuelRuntime } from '@/game/duelRuntime';
@@ -18,17 +19,20 @@ import { fonts, type Theme } from '@/theme/tokens';
 export interface HudHeaderProps {
   duel: DuelRuntime;
   theme: Theme;
+  /** M2 (§5.6/§6.2) — v2 tutorial only: a long-press on the clock explains the HUD in plain words */
+  info?: boolean;
 }
 
 const ROMAN_MIN = ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 const CHIP_R = 10;
 const CHIP_C = 2 * Math.PI * CHIP_R;
 
-export default function HudHeader({ duel, theme }: HudHeaderProps) {
+export default function HudHeader({ duel, theme, info }: HudHeaderProps) {
   const st = duel.state;
   // web `.hud` pads the clock row with `calc(var(--safe-top) + 6px)` — the hardcoded 44
   // sat UNDER the camera on 59pt Dynamic-Island phones and left a dead band on Android.
   const insets = useSafeAreaInsets();
+  const [infoOpen, setInfoOpen] = useState(false);
   const [me, foe] = st.players;
   const mins = Math.floor(st.clockMs / 60000);
   const medallion = mins <= 10 ? ROMAN_MIN[mins] : 'X';
@@ -42,12 +46,27 @@ export default function HudHeader({ duel, theme }: HudHeaderProps) {
       </View>
 
       <View style={styles.center}>
-        <View style={styles.medallionWrap}>
+        <Pressable
+          disabled={!info}
+          onLongPress={() => setInfoOpen(!infoOpen)}
+          accessibilityRole={info ? 'button' : 'text'}
+          accessibilityLabel={info ? i18n.tutorialV2.hudClock : undefined}
+          style={styles.medallionWrap}
+        >
           <SvgUri width="100%" height="100%" uri={duelSvgs.medallion} />
           <Text style={[styles.medallionText, { color: theme.fg }]} allowFontScaling={false}>
             {medallion}
           </Text>
-        </View>
+        </Pressable>
+        {info && infoOpen ? (
+          <View
+            accessibilityRole="text"
+            style={[styles.infoCard, { backgroundColor: theme.bgRaised, borderColor: theme.focus }]}
+          >
+            <Text style={[styles.infoLine, { color: theme.fg }]}>{i18n.tutorialV2.hudSeals}</Text>
+            <Text style={[styles.infoLine, { color: theme.fg }]}>{i18n.tutorialV2.hudClock}</Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.side}>
@@ -153,6 +172,17 @@ const styles = StyleSheet.create({
   side: { flex: 1, alignItems: 'center', gap: 4 },
   center: { alignItems: 'center', paddingTop: 4 },
   medallionWrap: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  infoCard: {
+    position: 'absolute',
+    top: '100%',
+    width: 200,
+    borderWidth: 1,
+    borderRadius: 3,
+    padding: 8,
+    gap: 4,
+    zIndex: 30,
+  },
+  infoLine: { fontSize: 12, lineHeight: 16 },
   medallionText: { position: 'absolute', fontFamily: fonts.display, fontSize: 17 },
   portrait: {
     width: 40,

@@ -42,6 +42,10 @@ import { weekIndexFor, weeklyInkBonus } from '@shared/weekly';
 import { useDuelSession, specFromUi, type DuelSessionSpec } from './useDuelSession';
 import { isGraduated, completeTutorialByWin, completeTutorialBySkip, GRADUATION_INK } from './tutorialGraduation';
 import TutorialCoach from './TutorialCoach';
+import TutorialBanner from './tutorial/TutorialBanner';
+import TutorialLayer from './tutorial/TutorialLayer';
+import GraduationCard from './tutorial/GraduationCard';
+import type { TutorialPhase } from '@/game/tutorialDirector';
 import Board from './Board';
 import NumPad from './NumPad';
 import AbilityBar from './AbilityBar';
@@ -83,6 +87,13 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   const [boardSize, setBoardSize] = useState<number>(0);
   const endedRef = useRef(false);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // M2 — the lesson's overlay surfaces measure these four containers (spotlight holes)
+  const boardRef = useRef<View | null>(null);
+  const padRef = useRef<View | null>(null);
+  const toolbarRef = useRef<View | null>(null);
+  const abilityRef = useRef<View | null>(null);
+  // T10 — the graduation card: null = no card; true/false = which graduation this is
+  const [gradFirst, setGradFirst] = useState<boolean | null>(null);
 
   // J3 — the freeze gates the three placement surfaces (Board, NumPad, keyboard); the
   // toolbar and abilities stay live.
@@ -180,6 +191,15 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         const firstGraduation = !isGraduated(useSave.getState().save);
         if (firstGraduation) ledgerDelta += GRADUATION_INK;
         s.update(completeTutorialByWin);
+        // M2 T10 (§5.2) — the v2 lesson's verdict is the graduation card, not the
+        // result screen. The ledger entry still flows (same id shape as the generic
+        // branch below); the card's Continue routes to the hall.
+        if (spec?.tutorialScript === 'v2') {
+          const ts = Date.now().toString(36);
+          recordInk({ duelId: `tutorial-${ts}-${Math.floor(Math.random() * 46656).toString(36)}`, mode: 'tutorial', delta: ledgerDelta });
+          setGradFirst(firstGraduation);
+          return;
+        }
       }
 
       // Campaign progression, unlocks and the narrative beats.
@@ -317,7 +337,7 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         },
       });
     },
-    [duel, ui, save],
+    [duel, ui, save, spec],
   );
 
   // J3 — the verdict waits 300 ms of slow ink.
@@ -339,6 +359,14 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   }, [duel, finish]);
 
   const tutorialNote = duel && ui.duelMode === 'tutorial' ? duel.tutorialNote() : null;
+
+  // M2 — the v2 lesson: the phase machine (optional runtime surface), the taught
+  // stage (everything not yet taught dims to a whisper), and the spotlight target.
+  const tp: TutorialPhase | null =
+    duel && ui.duelMode === 'tutorial' && spec?.tutorialScript === 'v2' && duel.tutorialPhase
+      ? (duel.tutorialPhase() as TutorialPhase | null)
+      : null;
+  const teaching = tp !== null && tp !== 't9' && tp !== 't10';
 
   // The tutorial margin note teaches; it never blocks the board.
   useEffect(() => {
@@ -381,13 +409,25 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   const heatValue = heat?.heat ?? 0;
 
   // G3/G4 — the note is docked IN FLOW (never over the board) and the skip chip
-  // lives in the banner row (never over the HUD).
-  const coach = tutorialNote ? (
+  // lives in the banner row (never over the HUD). M2: the v2 lesson renders its own
+  // banner (plain+flavor, dots, CTAs); the v1 docked note stays for the rollback flag.
+  const coach = tp && tp !== 't0' && tp !== 't10' ? (
+    <TutorialBanner
+      duel={duel}
+      phase={tp}
+      target={duel.tutorialTarget?.() ?? null}
+      telegraph={duel.tutorialTelegraph?.() ?? null}
+      theme={theme}
+      onGate={(g) => duel.tutorialAdvance?.(g)}
+      onSkip={requestSkip}
+    />
+  ) : tutorialNote ? (
     <TutorialCoach duel={duel} note={tutorialNote} theme={theme} onSkip={requestSkip} />
   ) : null;
 
   const board = (
     <View
+      ref={boardRef}
       style={styles.boardArea}
       onLayout={(e) => {
         const { width: w, height: h } = e.nativeEvent.layout;
@@ -413,7 +453,7 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
 
   const controls = (
     <View style={{ paddingBottom: insets.bottom + 8 }}>
-      <View style={styles.toolbar}>
+      <View ref={toolbarRef} style={styles.toolbar}>
         <ToolBtn
           label={i18n.duel.toolbar.pencil}
           pressed={duel.pencil}
@@ -447,18 +487,29 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
           <ToolBtn label={i18n.duel.toolbar.pause} theme={theme} onPress={() => setPaused(true)} />
         )}
       </View>
-      <NumPad duel={duel} frozen={frozen} heat={heatValue} theme={theme} onTap={() => audio.uiTap()} />
-      <AbilityBar duel={duel} theme={theme} />
+      {/* M2 — the pad and the rites are the spotlight's other two containers; the
+        untaught ones dim with the stage (opacity wrapper — visual only, never blocking). */}
+      <View ref={padRef} style={teaching ? styles.dimCluster : null}>
+        <NumPad duel={duel} frozen={frozen} heat={heatValue} theme={theme} onTap={() => audio.uiTap()} />
+      </View>
+      <View ref={abilityRef} style={teaching ? styles.dimCluster : null}>
+        <AbilityBar duel={duel} theme={theme} />
+      </View>
     </View>
   );
 
   return (
     <View style={[styles.root, { backgroundColor: theme.bg }]}>
-      <HudHeader duel={duel} theme={theme} />
+      {/* M2 §5.2 T1 — the untaught room dims to a whisper; t9 restores it. */}
+      <View style={teaching ? styles.dimCluster : null}>
+        <HudHeader duel={duel} theme={theme} info={tp !== null} />
+      </View>
 
       <View style={[styles.main, landscape && styles.mainLandscape]}>
         <View style={styles.left}>
-          <MirrorStrip duel={duel} theme={theme} />
+          <View style={teaching ? styles.dimCluster : null}>
+            <MirrorStrip duel={duel} theme={theme} />
+          </View>
           <Ticker duel={duel} theme={theme} />
         </View>
         {/* J2 — the web shakes `.boardWrap` ONLY: the HUD, pad and rites hold still. */}
@@ -472,6 +523,31 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         full-width strip under the room — still in flow, still never over a cell. */}
       {landscape ? (
         <View style={{ marginBottom: insets.bottom + 4, marginHorizontal: 8 }}>{coach}</View>
+      ) : null}
+
+      {/* M2 — the lesson's floating surfaces: prologue cards (t0), the ghost demos
+        (t2/t7), the spotlight scrim (t1, t3–t8). One composition point (§6.1). */}
+      {tp !== null && duel ? (
+        <TutorialLayer
+          duel={duel}
+          phase={tp}
+          theme={theme}
+          boardSize={boardSize}
+          refs={{ board: boardRef, pad: padRef, toolbar: toolbarRef, ability: abilityRef }}
+          onGate={(g) => duel.tutorialAdvance?.(g)}
+        />
+      ) : null}
+
+      {/* M2 T10 — the graduation card: the v2 lesson's verdict surface. */}
+      {gradFirst !== null && duel ? (
+        <GraduationCard
+          theme={theme}
+          first={gradFirst}
+          onContinue={() => {
+            setGradFirst(null);
+            ui.go('antechamber', { lastResult: null, serverDuel: null });
+          }}
+        />
       ) : null}
 
       {/* J4/J3 — the vignette (web z-60) and the world dim (web z-80) paint OVER the
@@ -547,6 +623,9 @@ const styles = StyleSheet.create({
   toolBtn: { flex: 1, paddingVertical: 6, borderWidth: 1, borderRadius: 3, minHeight: layout.touch, alignItems: 'center', justifyContent: 'center' },
   toolText: { fontFamily: fonts.display, fontSize: 13, letterSpacing: 0.5 },
   skeleton: { width: 200, height: 12, marginTop: '40%', alignSelf: 'center' },
+  // M2 §5.2 T1 — the taught stage's whisper: visual-only dimming (opacity never blocks
+  // touches; the spotlight scrim is what absorbs them)
+  dimCluster: { opacity: 0.4 },
   // web `.reconnectBanner`: fixed, top calc(safe-top + 8px), horizontally centered —
   // alignSelf centers the absolute child the way the web's left:50% translateX(-50%) did
   offline: { position: 'absolute', alignSelf: 'center', borderWidth: 1, borderRadius: 3, padding: 8 },
