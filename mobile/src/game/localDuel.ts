@@ -40,6 +40,14 @@ import type { LocalDuelOpts, DuelRuntime, DuelRuntimeOpts } from './duelRuntime'
 
 export type { LocalDuelOpts };
 
+// ------------------------------------------------------------------ tutorial
+// The teaching sequence in the only order the notes may ever appear. The latch in
+// tutorialNote() guarantees the banner walks this list FORWARD only.
+export const TUTORIAL_NOTE_ORDER = [
+  'select', 'place', 'mistake', 'pencil', 'claim', 'augur', 'end',
+] as const;
+export type TutorialNoteId = (typeof TUTORIAL_NOTE_ORDER)[number];
+
 export class LocalDuel implements DuelRuntime {
   state: DuelState;
   /**
@@ -90,6 +98,20 @@ export class LocalDuel implements DuelRuntime {
   freeAugurGranted = false;
   pencilUsedOnce = false;
   claimedOnce = false;
+
+  // M1 hotfix (docs/TUTORIAL_OPTIMIZATION_PLAN.md G1/G2) — the note latch.
+  // `tutorialNote()` is read on every render, and the raw state underneath it
+  // flickers: any mistake re-fires 'mistake' long after the lesson moved on (G2),
+  // and the augur note used to be cancelled by its own grant the frame it appeared
+  // (G1). `seenNotes` records every note the player has been shown (each note is a
+  // one-time lesson) and `noteLatch` holds the note currently on screen, so the
+  // banner only ever steps FORWARD through TUTORIAL_NOTE_ORDER.
+  readonly seenNotes = new Set<TutorialNoteId>();
+  private noteLatch: TutorialNoteId | null = null;
+  // G2 — while the Seal note is up it HOLDS until the player's next forward action
+  // (a correct placement or the pencil), so the once-only mistake lesson is actually
+  // readable instead of flashing for the single frame before raw moves past it.
+  private mistakeNoteHold = false;
 
   // T7 - replay Shades: the foe is driven by a stored human log instead of shadeAct.
   // A replay that fails validation degrades VISIBLY (replayDegraded) to a normal Shade
@@ -258,6 +280,7 @@ export class LocalDuel implements DuelRuntime {
       haptics.tick();
       this.autoCleanNotes(cell, digit);
       this.lastWrong = null;
+      this.mistakeNoteHold = false; // G2 — a correct placement yields the held Seal note
       // tutorial pacing: mark the first claim
       const st = this.state;
       for (const u of ['r', 'c', 'b'] as const) {
@@ -301,6 +324,7 @@ export class LocalDuel implements DuelRuntime {
 
   toggleNote(cell: number, d: number) {
     this.pencilUsedOnce = true;
+    this.mistakeNoteHold = false; // G2 — the pencil is the way past the held Seal note
     const set = this.notes.get(cell) ?? new Set<number>();
     if (set.has(d)) set.delete(d); else set.add(d);
     if (!set.size) this.notes.delete(cell); else this.notes.set(cell, set);
@@ -310,6 +334,12 @@ export class LocalDuel implements DuelRuntime {
 
   ability(id: AbilityId, arg: { cell?: number; unit?: string } = {}) {
     if (this.ended) return { ok: false, reason: 'ended' as const };
+    // G1 — the free Augur is also granted by the FIRST Augur-tile tap while its
+    // note is up: "freely given" must not depend on waiting out the note timer.
+    // Taps before the augur lesson step keep the rite's normal cooldown.
+    if (this.opts.mode === 'tutorial' && id === 'augur' && !this.freeAugurGranted && this.tutorialNote() === 'augur') {
+      this.grantFreeAugur();
+    }
     const a = arg.cell !== undefined ? arg : this.selected !== null ? { ...arg, cell: this.selected } : arg;
     const res = engineUseAbility(this.state, 0, id, a);
     if (res.ok) {
@@ -431,12 +461,38 @@ export class LocalDuel implements DuelRuntime {
     this.bump();
   }
 
-  tutorialNote(): string | null {
+  tutorialNote(): TutorialNoteId | null {
     if (this.opts.mode !== 'tutorial') return null;
+    // G2 — the held Seal note: shown once, readable until the player moves forward.
+    if (this.noteLatch === 'mistake' && this.mistakeNoteHold) return 'mistake';
+    const raw = this.rawTutorialNote();
+    // G2 — forward-only: a raw state that sits BEFORE the note on screen (a fresh
+    // mistake after the pencil/claim steps) never pulls the banner backwards; the
+    // current note holds until the lesson genuinely moves past it.
+    const note: TutorialNoteId =
+      this.noteLatch && TUTORIAL_NOTE_ORDER.indexOf(raw) < TUTORIAL_NOTE_ORDER.indexOf(this.noteLatch)
+        ? this.noteLatch
+        : raw;
+    // A raw note the latch SUPPRESSES is consumed: it never fires again, because the
+    // lesson decided not to teach it (a first mistake after the pencil/claim steps is
+    // the only note that can ever sit below the banner). Without this, the unseen
+    // mistake clause would fire on every later read and pin the lesson where it is.
+    if (note !== raw) this.seenNotes.add(raw);
+    // Latch on display: the mistake note is a one-time lesson (G2), and seenNotes
+    // records the lesson the player has actually been shown.
+    this.seenNotes.add(note);
+    this.noteLatch = note;
+    if (note === 'mistake') this.mistakeNoteHold = true;
+    return note;
+  }
+
+  /** The raw, unlatched lesson state — the web build's derivation, minus the
+   *  once-only mistake clause: a shown Seal note never fires again (G2). */
+  private rawTutorialNote(): TutorialNoteId {
     const p = this.state.players[0];
     if (p.progress === 0) return 'select';
     if (p.progress === 1) return 'place';
-    if (p.mistakes > 0 && !this.freeAugurGranted) return 'mistake';
+    if (p.mistakes > 0 && !this.freeAugurGranted && !this.seenNotes.has('mistake')) return 'mistake';
     if (!this.pencilUsedOnce) return 'pencil';
     if (!this.claimedOnce) return 'claim';
     if (!this.freeAugurGranted) return 'augur';
@@ -444,6 +500,9 @@ export class LocalDuel implements DuelRuntime {
   }
 
   grantFreeAugur() {
+    // G1 — idempotent: the screen's 2.5 s note timer and the tile-tap path both
+    // call this, and a late timer fire must never re-zero a POST-cast cooldown.
+    if (this.freeAugurGranted) return;
     const rt = this.state.players[0].abilities.augur;
     rt.cdLeftMs = 0;
     this.freeAugurGranted = true;

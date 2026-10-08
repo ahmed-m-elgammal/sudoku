@@ -40,6 +40,7 @@ import { SLOW_INK_MS } from '@/game/fx';
 import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
 import { weekIndexFor, weeklyInkBonus } from '@shared/weekly';
 import { useDuelSession, specFromUi, type DuelSessionSpec } from './useDuelSession';
+import TutorialCoach from './TutorialCoach';
 import Board from './Board';
 import NumPad from './NumPad';
 import AbilityBar from './AbilityBar';
@@ -60,9 +61,6 @@ export default function DuelScreen() {
   // 10 bottom, fixed banner offsets) ignored the notch, the Dynamic Island and the
   // home-indicator — edge-to-edge makes the bottom inset REAL on every modern phone.
   const insets = useSafeAreaInsets();
-  // web `.marginNote`: bottom: clamp(238px, 34dvh, 318px) — dvh, not a fixed pixel, or it
-  // overlaps the pad on short phones and floats on tall ones.
-  const marginNoteBottom = Math.min(318, Math.max(238, height * 0.34));
 
   // `specFromUi()` reads the screen machine and the save synchronously and has no side
 // effects, so the spec is available on the FIRST render. The web build deferred it to a
@@ -82,7 +80,6 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   const [muted, setMuted] = useState(audio.muted());
   const [boardSize, setBoardSize] = useState<number>(0);
   const endedRef = useRef(false);
-  const augurRef = useRef(false);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // J3 — the freeze gates the three placement surfaces (Board, NumPad, keyboard); the
@@ -329,20 +326,28 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
 
   const tutorialNote = duel && ui.duelMode === 'tutorial' ? duel.tutorialNote() : null;
 
-  // The tutorial grants its free Augur the moment its margin note asks for it.
-  useEffect(() => {
-    if (tutorialNote === 'augur' && duel && !augurRef.current) {
-      augurRef.current = true;
-      duel.grantFreeAugur();
-    }
-  }, [tutorialNote, duel]);
-
   // The tutorial margin note teaches; it never blocks the board.
   useEffect(() => {
     if (!tutorialNote) return;
     const note = i18n.tutorial.notes[tutorialNote as keyof typeof i18n.tutorial.notes];
     if (note) audio.pencil();
   }, [tutorialNote]);
+
+  // G1 — the free Augur is granted by TutorialCoach once its note has been readable
+  // for 2.5 s (or by the first Augur-tile tap — LocalDuel.ability owns that path).
+  // The skip chip keeps the web build's graduation semantics (the M1 confirm sheet is
+  // a separate change): graduation reward + tutorialDone, then the duel ends.
+  const skipTutorial = useCallback(() => {
+    if (!duel) return;
+    useSave.getState().update((c) => ({
+      ...c,
+      tutorialDone: true,
+      antechamberUnlocked: true,
+      economy: { ...c.economy, ink: c.economy.ink + 100 },
+    }));
+    recordInk({ duelId: `tutorial-skip-${Date.now().toString(36)}`, mode: 'tutorial', delta: 100 });
+    duel.concede();
+  }, [duel]);
 
   const foeName = spec?.names[1] ?? i18n.duel.log.theTablet;
 
@@ -358,6 +363,12 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   const swap = duel.swapBanner();
   const cold = heat?.cold ?? false;
   const heatValue = heat?.heat ?? 0;
+
+  // G3/G4 — the note is docked IN FLOW (never over the board) and the skip chip
+  // lives in the banner row (never over the HUD).
+  const coach = tutorialNote ? (
+    <TutorialCoach duel={duel} note={tutorialNote} theme={theme} onSkip={skipTutorial} />
+  ) : null;
 
   const board = (
     <View
@@ -436,37 +447,15 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         </View>
         {/* J2 — the web shakes `.boardWrap` ONLY: the HUD, pad and rites hold still. */}
         <ShakeLayer shake={shake}>{board}</ShakeLayer>
+        {/* G3 — docked below the board / above the toolbar, in the layout flow. */}
+        {!landscape ? coach : null}
         {controls}
       </View>
 
-      {tutorialNote ? (
-        <>
-          <Pressable
-            onPress={() => {
-              useSave.getState().update((c) => ({
-                ...c,
-                tutorialDone: true,
-                antechamberUnlocked: true,
-                economy: { ...c.economy, ink: c.economy.ink + 100 },
-              }));
-              recordInk({ duelId: `tutorial-skip-${Date.now().toString(36)}`, mode: 'tutorial', delta: 100 });
-              duel.concede();
-            }}
-            accessibilityRole="button"
-            style={[styles.skip, { top: insets.top + 3, right: 8, borderColor: theme.line, backgroundColor: theme.bg }]}
-          >
-            <Text style={[styles.skipText, { color: theme.fgDim }]}>{i18n.tutorial.skip}</Text>
-          </Pressable>
-          <View
-            accessibilityRole="text"
-            pointerEvents="none"
-            style={[styles.marginNote, { bottom: marginNoteBottom, backgroundColor: theme.fg, borderColor: theme.bg }]}
-          >
-            <Text style={[styles.marginNoteText, { color: theme.bg }]}>
-              {i18n.tutorial.notes[tutorialNote as keyof typeof i18n.tutorial.notes]}
-            </Text>
-          </View>
-        </>
+      {/* Landscape: the controls column has no spare height, so the note docks as a
+        full-width strip under the room — still in flow, still never over a cell. */}
+      {landscape ? (
+        <View style={{ marginBottom: insets.bottom + 4, marginHorizontal: 8 }}>{coach}</View>
       ) : null}
 
       {/* J4/J3 — the vignette (web z-60) and the world dim (web z-80) paint OVER the
@@ -534,12 +523,6 @@ const styles = StyleSheet.create({
   toolBtn: { flex: 1, paddingVertical: 6, borderWidth: 1, borderRadius: 3, minHeight: layout.touch, alignItems: 'center', justifyContent: 'center' },
   toolText: { fontFamily: fonts.display, fontSize: 13, letterSpacing: 0.5 },
   skeleton: { width: 200, height: 12, marginTop: '40%', alignSelf: 'center' },
-  // top/right/bottom offsets are injected inline from useSafeAreaInsets / window height
-  // (web: top calc(safe-top + 3px), right 8px)
-  skip: { position: 'absolute', paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderRadius: 3, minHeight: layout.touch, justifyContent: 'center', zIndex: 10 },
-  skipText: { fontSize: 11, textDecorationLine: 'underline' },
-  marginNote: { position: 'absolute', left: '6%', right: '6%', borderWidth: 1, borderRadius: 3, padding: 8, zIndex: 10 },
-  marginNoteText: { fontSize: 13, textAlign: 'center' },
   // web `.reconnectBanner`: fixed, top calc(safe-top + 8px), horizontally centered —
   // alignSelf centers the absolute child the way the web's left:50% translateX(-50%) did
   offline: { position: 'absolute', alignSelf: 'center', borderWidth: 1, borderRadius: 3, padding: 8 },
