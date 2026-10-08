@@ -61,7 +61,9 @@
     "skipTitle": "Skip the lesson?",
     "skipBody": "You'll keep your 100 Ink and go straight to the hall. The Shade will keep the rest of the lesson for another day.",
     "skipGo": "Skip",
-    "skipStay": "Keep learning"
+    "skipStay": "Keep learning",
+    "relearn": "Relearn the Reckoning",
+    "relearnSub": "Sit the lesson again. The Shade of Orsolo waits."
   },
   "duel": {
     "toolbar": {

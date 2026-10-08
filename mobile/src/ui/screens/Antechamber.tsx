@@ -1,6 +1,7 @@
 // Antechamber — S03 home hub: header (portrait, name, rank emblem, Ink/Sigils),
 // hero card, Daily / Folios / Season / Friend / Practice / Echoes / Endless / Weekly
-// cards, the ⚙ gear, and the Ribbon at the bottom.
+// cards, the G13 "Relearn the Reckoning" tutorial replay row, the ⚙ gear, and the
+// Ribbon at the bottom.
 //
 // PORT of ../src/app/game/Antechamber.tsx (102 lines). Every card shows the REAL save
 // state, read straight off useSave each render and never cached (spec 2.3 done-when).
@@ -32,6 +33,7 @@ import { todayUtcKey } from '@shared';
 import { weekIndexFor, weeklyModDefs } from '@shared/weekly';
 import Ribbon from '@/ui/Ribbon';
 import { rankOfStanding } from './rank';
+import { tutorialReplayPayload } from './replayEntry';
 
 // Metro needs literal requires; these four are the hub's own chrome.
 const RANK_EMBLEMS: Record<string, number> = {
@@ -56,6 +58,8 @@ const inkDropUri = svgUriFor('/assets/icons/ink-drop.svg') ?? '';
 export default function Antechamber() {
   const go = useUi((s) => s.go);
   const save = useSave((s) => s.save);
+  // G13 — the replay entry bumps the nonce so a re-entry always remounts the duel.
+  const duelNonce = useUi((s) => s.duelNonce);
   const display = useDisplaySettings();
   const theme = useMemo(
     () => themeFor({ contrast: display.contrast, text: display.text }),
@@ -219,6 +223,15 @@ export default function Antechamber() {
             title={i18n.hub.weekly}
             sub={tf('hub.weeklySub', { mods: weekMods })}
             onPress={() => tap('weekly')}
+          />
+          {/* G13 — the lesson is re-playable from the hall: same shape as the G10
+              rematch routing, so a replay remounts the duel with a fresh runtime. */}
+          <HubCard
+            theme={theme}
+            fs={fs}
+            title={i18n.tutorial.relearn}
+            sub={i18n.tutorial.relearnSub}
+            onPress={() => tap('tutorial', tutorialReplayPayload(duelNonce))}
           />
         </View>
       </ScrollView>

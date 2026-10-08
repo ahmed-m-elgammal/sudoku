@@ -118,3 +118,48 @@ describe('LocalDuel · the tutorial cannot be lost (M1 G9)', () => {
     duel.destroy();
   });
 });
+
+describe('LocalDuel · the 12-mistake soak (M1 item 7 acceptance)', () => {
+  it('SOAK-1 twelve wrong placements in a row cannot lose the tutorial duel', () => {
+    const duel = tutorialDuel();
+    const sealsBefore = duel.state.players[0].seals;
+    for (let i = 0; i < 12; i++) {
+      const c = safeEmptyCell(duel);
+      expect(duel.place(c, wrongDigit(duel, c)).correct).toBe(false);
+      // every single mistake is forgiven: the Seal count NEVER moves, the duel NEVER ends
+      expect(duel.state.players[0].seals).toBe(sealsBefore);
+      expect(duel.state.phase).toBe('live');
+      expect(duel.ended).toBe(false);
+    }
+    const mistakes = [...duel.state.events].filter((e) => e.kind === 'mistake');
+    expect(mistakes.length).toBeGreaterThanOrEqual(12);
+    // ...and every one of them went through the FORGIVEN branch, not the Seal branch
+    expect(mistakes.every((e) => (e as { forgiven?: boolean }).forgiven === true)).toBe(true);
+    duel.destroy();
+  });
+
+  it('SOAK-2 the same 12-mistake soak at the one-Seal floor under a live Shade cannot lose', () => {
+    const duel = tutorialDuel();
+    const a = safeEmptyCell(duel);
+    duel.place(a, solution(duel, a));
+    const b = safeEmptyCell(duel);
+    duel.place(b, solution(duel, b));
+    duel.state.players[0].seals = 1; // the floor
+    duel.state.clockMs = 6_000; // the scripted race is due
+    const shadeBoardBefore = Buffer.from(duel.state.players[1].board).toString('hex');
+    duel.start();
+    vi.advanceTimersByTime(600);
+    for (let i = 0; i < 12; i++) {
+      const c = safeEmptyCell(duel);
+      expect(duel.place(c, wrongDigit(duel, c)).correct).toBe(false);
+      // forgiveness + the floor compose: one Seal is both never spent and never taken
+      expect(duel.state.players[0].seals).toBe(1);
+      expect(duel.state.phase).toBe('live');
+      expect(duel.ended).toBe(false);
+      vi.advanceTimersByTime(700); // the race wakes between mistakes — and holds its hand
+    }
+    // the Shade did NOTHING while the child flailed: no placement, no claim, no wound
+    expect(Buffer.from(duel.state.players[1].board).toString('hex')).toBe(shadeBoardBefore);
+    duel.destroy();
+  });
+});

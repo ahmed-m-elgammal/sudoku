@@ -40,6 +40,7 @@ import { SLOW_INK_MS } from '@/game/fx';
 import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
 import { weekIndexFor, weeklyInkBonus } from '@shared/weekly';
 import { useDuelSession, specFromUi, type DuelSessionSpec } from './useDuelSession';
+import { isGraduated, completeTutorialByWin, completeTutorialBySkip, GRADUATION_INK } from './tutorialGraduation';
 import TutorialCoach from './TutorialCoach';
 import Board from './Board';
 import NumPad from './NumPad';
@@ -170,14 +171,15 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         },
       }));
 
+      // G13 — the +100 graduation is ONCE PER SAVE. The lesson is now re-playable
+      // (Antechamber + Settings entries), and an unguarded +100 would be an Ink farm;
+      // the gate reads the SAVE, so every replay path (hub card, settings row, this
+      // rematch, an app kill) dedupes by the same source of truth. The ordinary duel
+      // Ink below still flows — a tutorial win pays like any other Shade duel.
       if (ui.duelMode === 'tutorial' && winner === 0) {
-        ledgerDelta += 100;
-        s.update((cur) => ({
-          ...cur,
-          tutorialDone: true,
-          antechamberUnlocked: true,
-          economy: { ...cur.economy, ink: cur.economy.ink + 100, reliquaryProgress: cur.economy.reliquaryProgress + 1 },
-        }));
+        const firstGraduation = !isGraduated(useSave.getState().save);
+        if (firstGraduation) ledgerDelta += GRADUATION_INK;
+        s.update(completeTutorialByWin);
       }
 
       // Campaign progression, unlocks and the narrative beats.
@@ -353,13 +355,11 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   const skipTutorial = useCallback(() => {
     setConfirmSkip(false);
     if (!duel) return;
-    useSave.getState().update((c) => ({
-      ...c,
-      tutorialDone: true,
-      antechamberUnlocked: true,
-      economy: { ...c.economy, ink: c.economy.ink + 100 },
-    }));
-    recordInk({ duelId: `tutorial-skip-${Date.now().toString(36)}`, mode: 'tutorial', delta: 100 });
+    // G13 — the first skip still lands in the Antechamber with its +100; a replay
+    // skip (the save already graduated) re-unlocks nothing and re-pays nothing.
+    const firstGraduation = !isGraduated(useSave.getState().save);
+    useSave.getState().update(completeTutorialBySkip);
+    if (firstGraduation) recordInk({ duelId: `tutorial-skip-${Date.now().toString(36)}`, mode: 'tutorial', delta: GRADUATION_INK });
     // The duel is abandoned, not lost: the screen unmounts and the session cleanup
     // destroys the runtime, so no verdict — and no defeat ledger entry — ever lands.
     ui.go('antechamber', { lastResult: null, serverDuel: null });

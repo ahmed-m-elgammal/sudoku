@@ -119,6 +119,25 @@ describe('TutorialCoach · the docked note (M1 G1/G4)', () => {
     renderer_act(tree, () => (pressables[0].props as { onPress: () => void }).onPress());
     expect(onSkip).toHaveBeenCalledTimes(1);
   });
+
+  it('COACH-7 (G3) no node of the docked banner is absolutely positioned — it can never cover a cell', () => {
+    // the G13 acceptance pins "no overlay covers any board cell": the coach is a
+    // layout-flow child, so this walk fails the moment anyone re-introduces
+    // position:absolute or a zIndex on any node of the banner tree
+    const tree = renderToJson(
+      <TutorialCoach duel={makeDuel()} note="select" theme={themeFor()} onSkip={() => {}} />,
+    );
+    const offenders: string[] = [];
+    const walk = (n: unknown): void => {
+      if (!n || typeof n !== 'object') return;
+      const node = n as { props?: { style?: unknown }; children?: unknown[] };
+      const flat = JSON.stringify(node.props?.style ?? '');
+      if (flat.includes('"position":"absolute"') || flat.includes('zIndex')) offenders.push(flat);
+      for (const c of node.children ?? []) walk(c);
+    };
+    walk(tree.toJSON());
+    expect(offenders).toEqual([]);
+  });
 });
 
 /** react-test-renderer.act, required lazily (see baseline.test.tsx for the law). */
