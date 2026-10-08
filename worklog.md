@@ -408,3 +408,21 @@ Work Log:
 Stage Summary:
 - Phase 6 ship gates are green everywhere a sandbox can reach: the audio stub is gone (the game now has its drone, tension swell, heat murmur and every sting), every referenced asset resolves and the quarantine art loads where the web paints it, the store P0s from the readiness audit are closed in-repo, and both workspaces pass tsc/eslint/vitest with the export clean.
 - What stands between HEAD and submission is now entirely off-sandbox: the on-device walk, the console forms/listing assets, and the five art regenerations — each listed with its owner action in docs/ship-gates-phase6.md.
+
+---
+Task ID: 6-fix (post ship-gate device findings)
+Agent: Super Z (main)
+Task: Fix the three on-device findings against Phase 6 HEAD (9399b04): react-native-svg "unsupported SVG filter" warnings (FeTurbulence et al.), Fabric "Text strings must be rendered within a <Text>" throws, and UI/JS frame drops to 0 fps while iterating screens.
+
+Work Log:
+- Diagnosed all three to ONE root cause: every kit asset rode <SvgUri> = runtime fetch + XML-parse + dynamic-children tree build per mount, on SVGs whose filters native cannot implement (120 of 140 files carry feTurbulence/feDisplacementMap/feComposite/feColorMatrix). Empirically verified with the library's own parser that the assets themselves yield zero raw string children, and with a TS-AST scan that the app's own JSX has no raw text outside <Text> — the render seam was the defect, not the markup.
+- tools/rasterize-game-art.mjs (new): bakes raster twins beside every assets/game SVG via sharp/librsvg (implements the full filter spec — the parchment grain now actually paints on device, a fidelity RESTORATION). Palette PNG for marks/chrome, WebP q95 for full-bleed noise textures (lossless PNG of fractal grain measured ~450 KB/sheet; q95 ~92 KB with the variance intact, verified by channel stddev). 2x intrinsic clamped [96, 1024]; +1.95 MB total; manifest raster-manifest.json pins the mapping.
+- src/ui/Art.tsx (new): the single render seam for bundled art — native <Image>, resizeMode 'contain' by default (the SVG 'meet' <SvgUri> had), 'cover' where the web said 'slice' (Ribbon grain, Antechamber panel), null on empty uri (the registries' degrade law), fadeDuration 0, opacity + accessibilityLabel passthrough.
+- Swapped all 130 .svg requires to twins across duelArt (ex duelSvgs — renamed with artUriFor/sigilArt/statusArt for honesty), cabinetArt, ledgerArt, Reliquary, Antechamber, Daily, ResultScreen, Ribbon, theme/assets; swapped all 14 render sites to <Art>. The AbilityBar cooldown ring lost its data-URI <SvgUri> (unpaintable by Image, dead fetch on iOS) for an inline procedural <Svg><Circle> — same two circles, same theme tokens, Fabric-safe. react-native-svg now serves procedural geometry only (rings, Ledger spark, seat circles, spinner).
+- Tests: +3 artSeam law tests (no .svg requires in src; no SvgUri/SvgXml usage outside comments; manifest↔disk integrity) → 754 total; PurseScreen/LedgerProfile assertions moved to the Image seam (source.uri + style geometry); vitest Image double gained resolveAssetSource → null (degrade, never throw).
+- Gates: mobile tsc/eslint clean, vitest 754/754 (53 files); root tsc clean, eslint 0, vitest 493/493; tools/audit-mobile-assets.mjs PASS; expo export ios+android clean — bundle now {ttf 6, wav 24, webp 38, png 105}, ZERO svgs, 3.8 MB hbc.
+- Documented: AGENTS.md asset-law bullet rewritten (raster-twin pipeline, SvgUri banned, react-native-svg scope); docs/ship-gates-phase6.md gained the follow-up section with the findings, root cause, fix and proof; metro.config.js comment reflects the new law (svg kept in assetExts as a safety net).
+
+Stage Summary:
+- Pushed as 8ee47f9. The three device findings are closed at the root: no runtime SVG parsing remains anywhere in the app (so no filter warnings, and the parse-storm frame drops are gone), the raw-text vector (SvgAst's dynamic children path) no longer exists in the tree, and the art gains the grain native never painted.
+- The remaining on-device checklist is unchanged (22-screen walk, a11y walks, airplane pass, first-EAS confirmations) — see docs/ship-gates-phase6.md.
