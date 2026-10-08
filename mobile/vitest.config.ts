@@ -34,6 +34,11 @@ function redirectWebRuntime(): Plugin {
 
 export default defineConfig({
   plugins: [redirectWebRuntime()],
+  // The audio registry's .wav files (specs/07 — the pre-rendered beds and
+  // one-shots) are ASSETS, not modules: teach the bundler-handling to hand back
+  // the file reference exactly as Metro does, so the whole app graph can import
+  // the audio backend without the runner trying to parse sound as JavaScript.
+  assetsInclude: ['**/*.wav'],
   test: {
     include: [
       '../shared/__tests__/**/*.test.ts',

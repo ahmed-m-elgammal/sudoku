@@ -156,7 +156,7 @@ describe('T9 tool pass on a fixture root', () => {
     m.pngCompression['portraits/clerk.png'] = null;
     m.pngCompression['brand/app-icon-512.png'] = 42;
     m.assets = 'not-an-array';
-    read; // keep lints honest
+    void read; // keep lints honest
     fs.writeFileSync(manifestPath, JSON.stringify(m));
     const r = await compressPngs({ root, manifestPath });
     expect(r.compressed).toHaveLength(3);

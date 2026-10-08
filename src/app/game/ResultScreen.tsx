@@ -12,7 +12,12 @@ export default function ResultScreen() {
   const r = ui.lastResult;
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => { if (r) { r.winner === 0 ? synth.victory() : r.winner === 'draw' ? synth.draw() : synth.defeat(); } }, [r]);
+  useEffect(() => {
+    if (!r) return;
+    if (r.winner === 0) synth.victory();
+    else if (r.winner === 'draw') synth.draw();
+    else synth.defeat();
+  }, [r]);
 
   if (!r || !save) return null;
   const won = r.winner === 0;

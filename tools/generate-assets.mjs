@@ -89,7 +89,7 @@ async function runRaster() {
     while (queue.length) {
       const a = queue.shift();
       const ok = await genOne(zai, sharp, a);
-      ok ? done++ : failed++;
+      if (ok) done++; else failed++;
       console.log(`  [${done + failed}/${todo.length}] ${a.id} ${ok ? 'OK' : 'FAILED'}`);
       save(`progress ${done + failed}/${todo.length}`);
     }

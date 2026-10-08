@@ -198,12 +198,15 @@ export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, hea
           return (
             <View
               key={`box${b}`}
-              style={[
-                styles.boxStamp,
-                { left: `${bc * 33.333}%`, top: `${br * 33.333}%` },
-                quarantined.has(`b${b}`) && styles.quarantined,
-              ]}
+              style={[styles.boxStamp, { left: `${bc * 33.333}%`, top: `${br * 33.333}%` }]}
             >
+              {/* web `.quarantined`: the SVG as a cover background — the layer sits
+                  UNDER the claim stamp exactly as a CSS background-image does */}
+              {quarantined.has(`b${b}`) ? (
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <SvgUri width="100%" height="100%" uri={duelSvgs.overlayQuarantine} />
+                </View>
+              ) : null}
               {owner !== null ? (
                 <SvgUri
                   width="72%"
@@ -222,10 +225,12 @@ export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, hea
         {Array.from({ length: 9 }, (_, r) => {
           const owner = stampFor(`r${r}`);
           return (
-            <View
-              key={`row${r}`}
-              style={[styles.gutterCell, quarantined.has(`r${r}`) && styles.quarantined]}
-            >
+            <View key={`row${r}`} style={styles.gutterCell}>
+              {quarantined.has(`r${r}`) ? (
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <SvgUri width="100%" height="100%" uri={duelSvgs.overlayQuarantine} />
+                </View>
+              ) : null}
               {owner !== null ? (
                 <SvgUri
                   width="80%"
@@ -242,10 +247,12 @@ export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, hea
         {Array.from({ length: 9 }, (_, c) => {
           const owner = stampFor(`c${c}`);
           return (
-            <View
-              key={`col${c}`}
-              style={[styles.gutterCell, quarantined.has(`c${c}`) && styles.quarantined]}
-            >
+            <View key={`col${c}`} style={styles.gutterCell}>
+              {quarantined.has(`c${c}`) ? (
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <SvgUri width="100%" height="100%" uri={duelSvgs.overlayQuarantine} />
+                </View>
+              ) : null}
               {owner !== null ? (
                 <SvgUri
                   width="80%"
@@ -366,5 +373,4 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   gutterCell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  quarantined: { opacity: 0.45 },
 });

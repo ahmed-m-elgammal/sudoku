@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.assize.game",
+      "buildNumber": "1",
       "requireFullScreen": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -17,6 +18,7 @@
     },
     "android": {
       "package": "com.assize.game",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0e0e0f",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -28,9 +30,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
     "plugins": [
       "expo-audio",
       "expo-sharing",

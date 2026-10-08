@@ -22,10 +22,37 @@ import type { AbilityId, Digit, OrderId } from '@shared/config';
 
 const DEFAULT_SERVER = 'http://localhost:3030';
 
+/**
+ * True when a production duel-server origin was configured AT BUILD TIME
+ * (EXPO_PUBLIC_ASSIZE_SERVER). The store-audit blocker P0-2.3: a build produced
+ * without it falls back to localhost — matchmaking cannot work from a phone —
+ * so the release pipeline (eas.json + `eas env:create`) must inject it, and the
+ * Versus flow's degradation must stay honest (Matchmaking's Shade fallback is the
+ * web's own server-down path, R7: a Shade is always labelled a Shade).
+ */
+export const isServerConfigured = (): boolean => !!process.env.EXPO_PUBLIC_ASSIZE_SERVER;
+
+/**
+ * Local cleartext hosts a DEVELOPER may point at (the Android emulator's loopback
+ * alias included). Anything else must be https: iOS ATS refuses cleartext and
+ * Android 9+ blocks it, so a plain-http origin would fail SILENTLY at the OS layer.
+ * This is the audit's fail-closed law: a misconfigured origin throws here — loudly,
+ * at the one place that names it — instead of dying on the wire.
+ */
+const LOCAL_CLEARTEXT = /^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$/;
+
 /** Resolve the server origin: explicit env -> Expo Go dev host -> localhost. */
 export function serverOrigin(): string {
   const configured = process.env.EXPO_PUBLIC_ASSIZE_SERVER;
-  if (configured) return configured.replace(/\/$/, '');
+  if (configured) {
+    const origin = configured.replace(/\/$/, '');
+    if (!LOCAL_CLEARTEXT.test(origin) && !origin.startsWith('https://')) {
+      throw new Error(
+        `EXPO_PUBLIC_ASSIZE_SERVER must be https (got "${configured}") — cleartext origins are blocked by iOS ATS and Android 9+, so the duel server would fail silently.`,
+      );
+    }
+    return origin;
+  }
   // In Expo Go / dev client the packager host is reachable from the device; the duel
   // server usually is not, so fall back to localhost unless told otherwise.
   return DEFAULT_SERVER;

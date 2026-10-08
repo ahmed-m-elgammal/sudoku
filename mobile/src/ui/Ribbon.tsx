@@ -3,8 +3,7 @@
 //
 // PORT of ../src/app/game/Ribbon.tsx (the web build, 51 lines), verbatim in
 // behaviour. Every hub screen mounts its own <Ribbon />; the duel and the result
-// screen never do. Hub screens are still Phase A stubs, so nothing mounts this yet —
-// it lands here first so 2.3+ can consume it exactly as the web does.
+// screen never do.
 //
 // Performance law: both zustand subscriptions are selector-scoped — `screen` plus the
 // stable `go` action — so unrelated hub-screen store traffic (lastResult, pendingFoe,

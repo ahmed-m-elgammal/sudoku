@@ -48,14 +48,12 @@ const recordedEcho = (): DuelReplay | null => {
   });
   const wake = (duel as unknown as { shadeWake: () => void });
   for (let i = 0; i < 30 && duel.state.phase === 'live'; i++) {
-    (duel as unknown as { state: { clockMs: number } });
     const st = duel.state;
     if (i % 3 === 0) {
       let cell = -1;
       for (let c = 0; c < 81; c++) if (st.players[0].board[c] === 0) { cell = c; break; }
       if (cell >= 0) duel.place(cell, st.solution![cell] as Digit);
     }
-    // eslint-disable-next-line
     tick500(duel);
     wake.shadeWake();
   }

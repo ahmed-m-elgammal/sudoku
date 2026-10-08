@@ -12,9 +12,7 @@ import { fonts, palette, type as typeScale } from '@/theme/tokens';
 
 function advance(go: ReturnType<typeof useUi.getState>['go'], tutorialDone: boolean) {
   // Web parity (spec 1.1 / R1): returning players land in the antechamber, first
-  // play lands directly in the tutorial duel. The Antechamber screen itself is
-  // still a Phase A stub — the routing law is the web build's, the hub catches
-  // up in Phase 2.3.
+  // play lands directly in the tutorial duel.
   if (tutorialDone) go('antechamber');
   else go('tutorial', { duelMode: 'tutorial' });
 }
