@@ -22,6 +22,14 @@
 //    The repair: only a WIN seals the week. A loss leaves it unsealed — the writ
 //    can be re-fought; a second win the same week is not a first win and re-pays
 //    nothing.
+//
+//  · PRACTICE/DAILY INK CAP (DAY3, report A15) — `CONFIG.ink.practiceDailyInkCap: 50`
+//    was referenced by nothing: daily and practice both duel the inert Tablet (an
+//    opponent that never plays), so a re-sit farm minted unlimited per-attempt ledger
+//    ids at up to 111 Ink each. The repair enforces the shipped cap as a per-UTC-day
+//    budget over BOTH Tablet modes combined — the first sit of the day pays up to the
+//    cap, everything past it credits 0. The purse, the ledger entry and the result
+//    screen all see the CREDITED amount, so the three never disagree.
 
 import { weeklyInkBonus } from '@shared/weekly';
 
@@ -65,7 +73,6 @@ export interface WeeklySealUpdate {
   bonus: number;
   firstWin: boolean;
 }
-
 /**
  * The weekly seal for a finished weekly duel. Only a win seals the week and only
  * the first seal pays the +120 (`weeklyInkBonus`); a loss leaves the writ open.
@@ -81,4 +88,41 @@ export function weeklySealFor(curLastWeek: number | null, week: number, won: boo
     bonus: firstWin ? weeklyInkBonus : 0,
     firstWin,
   };
+}
+
+/** The farm-budget rows this screen reads out of `save.daily`. */
+export interface PracticeInkState {
+  /** the UTC day key the running total belongs to */
+  day: string | null;
+  /** Ink credited so far from the Tablet modes, this day */
+  ink: number;
+}
+
+/** What the screen writes back, plus the amount that actually credits. */
+export interface PracticeInkUpdate {
+  /** the credited delta — what the purse, the ledger entry and the result show */
+  credited: number;
+  /** the rows to write back into `save.daily` */
+  farm: { day: string; ink: number };
+}
+
+/**
+ * The Tablet-modes Ink budget for a finished practice/daily duel (A15).
+ *
+ * The cap is the shipped `CONFIG.ink.practiceDailyInkCap` — a per-UTC-day budget
+ * shared by both Tablet modes. A new day refills it; a same-day re-sit spends what
+ * is left, and past the cap credits nothing (the ledger's own delta-0 guard then
+ * mints no entry at all).
+ *
+ * @param cur    the save's farm rows BEFORE the update
+ * @param key    today's UTC date key
+ * @param earned the duel's raw Ink (result + claims) before the cap
+ * @param cap    `CONFIG.ink.practiceDailyInkCap`
+ */
+export function practiceInkFor(cur: PracticeInkState, key: string, earned: number, cap: number): PracticeInkUpdate {
+  const sameDay = cur.day === key;
+  const spent = sameDay ? Math.max(0, cur.ink) : 0;
+  const budget = Math.max(0, cap - spent);
+  const credited = Math.max(0, Math.min(earned, budget));
+  return { credited, farm: { day: key, ink: spent + credited } };
 }

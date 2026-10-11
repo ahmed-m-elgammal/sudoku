@@ -14,6 +14,9 @@ import { loadIdentity, saveIdentity, generateName } from './identity';
 
 export interface PendingInk { duelId: string; mode: string; delta: number; t: number }
 
+/** The quarantine slot's shape (platform/storage.ts — A9). */
+interface QuarantineBlob { raw: string; at: number }
+
 export interface SaveStateV2 {
   v: 2;
   tutorialDone: boolean;
@@ -27,7 +30,9 @@ export interface SaveStateV2 {
     equipped: { board: string; wax: string; frame: string; numerals: string; stamps: string; banner: string };
   };
   season: { ink: number; claimed: string[]; patron: boolean; endsAt: number };
-  daily: { lastDate: string | null; streak: number; best: number; candlesToday: number; candlesDate: string | null; times: Record<string, number> };
+  daily: { lastDate: string | null; streak: number; best: number; candlesToday: number; candlesDate: string | null; times: Record<string, number>;
+    /** A15 — the Tablet-modes Ink budget: the UTC day the total belongs to, and the amount credited so far that day. */
+    farmInkDay: string | null; farmInk: number };
   achievements: Record<string, number>;
   stats: {
     duels: number; wins: number; losses: number; draws: number;
@@ -64,7 +69,7 @@ export const freshSave = (name: string): SaveStateV2 => ({
     equipped: { board: 'board-aged-vellum', wax: 'wax-oxblood', frame: 'frame-bronze', numerals: 'numerals-linocut', stamps: 'stamp-fleur', banner: 'banner-standard' },
   },
   season: { ink: 0, claimed: [], patron: false, endsAt: Date.now() + 8 * 7 * 86400_000 },
-  daily: { lastDate: null, streak: 0, best: 0, candlesToday: 0, candlesDate: null, times: {} },
+  daily: { lastDate: null, streak: 0, best: 0, candlesToday: 0, candlesDate: null, times: {}, farmInkDay: null, farmInk: 0 },
   achievements: {},
   stats: {
     duels: 0, wins: 0, losses: 0, draws: 0,
@@ -84,6 +89,8 @@ export const freshSave = (name: string): SaveStateV2 => ({
 interface SaveStore {
   save: SaveStateV2 | null;
   loaded: boolean;
+  /** A9 — when the last boot replaced a corrupt ledger: when it was quarantined. */
+  quarantinedAt: number | null;
   load: () => Promise<void>;
   update: (fn: (s: SaveStateV2) => SaveStateV2) => void;
   unlockAchievement: (id: string) => void;
@@ -99,6 +106,7 @@ const deepClone = <T,>(v: T): T => {
 export const useSave = create<SaveStore>((set, get) => ({
   save: null,
   loaded: false,
+  quarantinedAt: null,
   load: async () => {
     // DAY1 boot-race fix — `loaded` commits ONLY once the save is materialized. The
     // old order (`set({ save, loaded: true })` BEFORE the first-run identity/fresh
@@ -110,6 +118,19 @@ export const useSave = create<SaveStore>((set, get) => ({
     const existing = await storage.get<SaveStateV2>('save', 'me');
     const migrated = existing ? migrate(existing) : null;
     if (!migrated) {
+      // A9 — distinguish a FIRST RUN from a REPLACED ledger. storage.get already
+      // quarantined the unreadable bytes it met; if a quarantine exists for the save
+      // key, this boot is a replacement, and the wipe is not silent: the timestamp is
+      // surfaced on the store (the Ledger's recovery section reads it) and the
+      // breadcrumb lands in the log for support.
+      let quarantinedAt: number | null = null;
+      try {
+        const q = await storage.get<QuarantineBlob>('save', 'me.quarantine');
+        if (q && typeof q.at === 'number' && Number.isFinite(q.at)) {
+          quarantinedAt = q.at;
+          console.warn('[assize] save: corrupt ledger replaced — the previous blob is preserved under save/me.quarantine');
+        }
+      } catch { /* diagnostics only — never wedge the boot gate */ }
       let name = 'the Clerk';
       try {
         const id = await loadIdentity();
@@ -121,7 +142,7 @@ export const useSave = create<SaveStore>((set, get) => ({
       } catch { /* a hostile Keychain must not wedge the boot gate */ }
       const fresh = freshSave(name);
       try { await storage.set('save', 'me', fresh); } catch { /* in-memory save still runs the session */ }
-      set({ save: fresh, loaded: true });
+      set({ save: fresh, loaded: true, quarantinedAt });
     } else {
       if (existing && !existing.endless) {
         // T18 migration: persist the freshly minted endless state (its salt must
@@ -172,6 +193,19 @@ function migrate(s: SaveStateV2): SaveStateV2 {
       weekly: s.weekly && typeof s.weekly === 'object'
         ? { lastWeek: typeof s.weekly.lastWeek === 'number' && Number.isFinite(s.weekly.lastWeek) ? Math.floor(s.weekly.lastWeek) : null }
         : { lastWeek: null },
+      // A15 — the Tablet-modes Ink budget sanitises like its `daily` siblings: a
+      // hostile row degrades to an empty budget (a fresh day refills it anyway).
+      daily: {
+        ...s.daily,
+        farmInkDay: s.daily && typeof s.daily === 'object' && typeof (s.daily as { farmInkDay?: unknown }).farmInkDay === 'string'
+          && ((s.daily as { farmInkDay: string }).farmInkDay.length <= 10)
+          ? (s.daily as { farmInkDay: string }).farmInkDay
+          : null,
+        farmInk: s.daily && typeof s.daily === 'object' && typeof (s.daily as { farmInk?: unknown }).farmInk === 'number'
+          && Number.isFinite((s.daily as { farmInk: number }).farmInk)
+          ? Math.max(0, Math.floor((s.daily as { farmInk: number }).farmInk))
+          : 0,
+      },
     };
   }
   return { ...freshSave(s.name ?? 'the Clerk'), ...s, v: 2 };

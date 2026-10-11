@@ -51,6 +51,8 @@ export default function RecoverySection({ save, theme, fs }: RecoverySectionProp
   const [code, setCode] = useState<string | null>(null);
   const [saveText, setSaveText] = useState('');
   const [codeText, setCodeText] = useState('');
+  // A9 — the boot that replaced a corrupt ledger stamps this on the store
+  const quarantinedAt = useSave((s) => s.quarantinedAt);
 
   const writeCode = async () => {
     const c = generateRecoveryCode();
@@ -109,6 +111,15 @@ export default function RecoverySection({ save, theme, fs }: RecoverySectionProp
         {i18n.ledger.recovery}
       </Text>
       <Text style={[styles.body, { color: theme.fgDim, fontSize: fs.sm }]}>{i18n.ledger.recoveryBody}</Text>
+
+      {/* A9 — a replaced (corrupt) ledger is never silent: the boot that replaced it
+          stamped the store, and the recovery section — the save's own toolbench —
+          says so and asks for the ritual that protects the fresh one. */}
+      {quarantinedAt !== null ? (
+        <Text accessibilityLiveRegion="polite" style={[styles.body, { color: palette.oxblood, fontSize: fs.sm, marginTop: 6 }]}>
+          {i18n.ledger.quarantineNote.replace('{date}', new Date(quarantinedAt).toISOString().slice(0, 10))}
+        </Text>
+      ) : null}
 
       {/* web row 1: the code ritual */}
       <View style={styles.row}>

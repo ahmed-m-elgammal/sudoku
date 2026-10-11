@@ -40,8 +40,9 @@ import { SLOW_INK_MS } from '@/game/fx';
 import type { LocalDuelOpts } from '@/game/duelRuntime';
 import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
 import { weekIndexFor } from '@shared/weekly';
+import { CONFIG } from '@shared/config';
 import { useDuelSession, specFromUi, type DuelSessionSpec } from './useDuelSession';
-import { dailyStreakFor, weeklySealFor } from './economyLaw';
+import { dailyStreakFor, weeklySealFor, practiceInkFor } from './economyLaw';
 import { isGraduated, completeTutorialByWin, completeTutorialBySkip, GRADUATION_INK } from './tutorialGraduation';
 import TutorialCoach from './TutorialCoach';
 import TutorialBanner from './tutorial/TutorialBanner';
@@ -134,9 +135,29 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
       let ink = winner === 0 ? 30 : winner === 'draw' ? 15 : 10;
       ink += me.claimed.length * 3;
 
+      // A15 — the Tablet modes (daily and practice both duel the inert Tablet) spend
+      // the shipped `practiceDailyInkCap` budget: a per-UTC-day pool over BOTH modes.
+      // `credited` is what the purse gets, what the ledger entry carries, and what
+      // the result screen shows — the three can never disagree. A capped-to-zero
+      // finish mints no ledger entry at all (the ledger's own delta-0 guard).
+      const farmKey = new Date().toISOString().slice(0, 10);
+      let credited = ink;
+      let farm: { day: string; ink: number } | null = null;
+      if (ui.duelMode === 'practice' || ui.duelMode === 'daily') {
+        const cur = useSave.getState().save?.daily;
+        const law = practiceInkFor(
+          { day: cur?.farmInkDay ?? null, ink: cur?.farmInk ?? 0 },
+          farmKey,
+          ink,
+          CONFIG.economy.practiceDailyInkCap,
+        );
+        credited = law.credited;
+        farm = law.farm;
+      }
+
       // One ledger entry per duel. Re-sittable modes mint per-attempt ids so a legit
       // re-sit stays bounded instead of being swallowed.
-      let ledgerDelta = ink;
+      let ledgerDelta = credited;
       let dailyKey: string | null = null;
       let endlessRungFought: number | null = null;
       let weekIdx: number | null = null;
@@ -173,7 +194,9 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
       };
       s.update((cur) => ({
         ...cur,
-        economy: { ...cur.economy, ink: cur.economy.ink + ink },
+        economy: { ...cur.economy, ink: cur.economy.ink + credited },
+        // A15 — the budget write-back rides the same update as the credit it bounds
+        daily: farm ? { ...cur.daily, farmInkDay: farm.day, farmInk: farm.ink } : cur.daily,
         standing: ratingDelta !== null ? Math.max(100, cur.standing + ratingDelta) : cur.standing,
         stats: {
           ...cur.stats,
@@ -358,7 +381,7 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
           timeMs: st.clockMs,
           sealTimeline,
           ratingDelta,
-          ink,
+          ink: credited,
           shadeDuel,
           reliquaryWon,
         },
@@ -504,9 +527,14 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   const controls = (
     <View style={{ paddingBottom: insets.bottom + 8 }}>
       <View ref={toolbarRef} style={styles.toolbar}>
+        {/* A14 — under Miasma the pencil is BARRED (the shared law: "notes erased,
+            pencil disabled"). The button dims, reads disabled, cannot toggle on, and
+            the pad swallows pencil taps; the player is never silently handed ink. */}
         <ToolBtn
           label={i18n.duel.toolbar.pencil}
-          pressed={duel.pencil}
+          pressed={duel.pencil && !duel.flags().miasma}
+          disabled={duel.flags().miasma}
+          ariaLabel={duel.flags().miasma ? i18n.duel.toolbar.pencilBarred : i18n.duel.toolbar.pencil}
           theme={theme}
           onPress={() => {
             duel.togglePencil();
@@ -651,19 +679,24 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   );
 }
 
-/** One toolbar button. `aria-pressed` on the web becomes `accessibilityState.selected`. */
+/**
+ * One toolbar button. `aria-pressed` on the web becomes `accessibilityState.selected`.
+ * A14 — `disabled` renders the BARRED state: dimmed (the pad's own `complete` opacity),
+ * unpressed, `accessibilityState.disabled`, with `ariaLabel` telling the reader WHY.
+ */
 function ToolBtn({
-  label, pressed, theme, onPress,
-}: { label: string; pressed?: boolean; theme: ReturnType<typeof themeFor>; onPress: () => void }) {
+  label, pressed, theme, onPress, disabled, ariaLabel,
+}: { label: string; pressed?: boolean; theme: ReturnType<typeof themeFor>; onPress: () => void; disabled?: boolean; ariaLabel?: string }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={disabled ? undefined : onPress}
       accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ selected: !!pressed }}
+      accessibilityLabel={ariaLabel ?? label}
+      accessibilityState={{ selected: !!pressed, disabled: !!disabled }}
       style={[
         styles.toolBtn,
         { borderColor: pressed ? theme.focus : theme.lineStrong, backgroundColor: theme.bgRaised },
+        disabled && styles.toolBarred,
       ]}
     >
       <Text style={[styles.toolText, { color: pressed ? theme.focus : theme.fg }]}>{label}</Text>
@@ -680,6 +713,8 @@ const styles = StyleSheet.create({
   toolbar: { flexDirection: 'row', gap: 6, justifyContent: 'center', paddingVertical: 4 },
   toolBtn: { flex: 1, paddingVertical: 6, borderWidth: 1, borderRadius: 3, minHeight: layout.touch, alignItems: 'center', justifyContent: 'center' },
   toolText: { fontFamily: fonts.display, fontSize: 13, letterSpacing: 0.5 },
+  // A14 — the barred pencil wears the pad's own dimmed opacity
+  toolBarred: { opacity: 0.38 },
   skeleton: { width: 200, height: 12, marginTop: '40%', alignSelf: 'center' },
   // M2 §5.2 T1 — the taught stage's whisper: visual-only dimming (opacity never blocks
   // touches; the spotlight scrim is what absorbs them)

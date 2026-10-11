@@ -129,7 +129,3 @@ jest.mock('expo-sqlite', () => {
     })),
   };
 });
-
-// Keep the animation clock deterministic-ish and silence the Reanimated
-// "useNativeDriver" warnings that jest-expo surfaces as noise.
-jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));

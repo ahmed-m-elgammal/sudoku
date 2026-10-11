@@ -21,13 +21,14 @@ const _A = '../../assets/game'; // kept for documentation only
 
 export const images = {
   // ---- brand
-  icon192: require('../../assets/game/brand/app-icon-192.png'),
-  icon512: require('../../assets/game/brand/app-icon-512.png'),
-  iconMaster: require('../../assets/game/brand/app-icon-master.png'),
-  iconMaskable: require('../../assets/game/brand/app-icon-maskable.png'),
-  ogImage: require('../../assets/game/brand/og-image.png'),
-  splash828: require('../../assets/game/brand/splash-828.png'),
-  wordmark: require('../../assets/game/brand/wordmark.png'),
+  // B2 (pre-launch audit) — the seven brand PNGs (app-icon-192/512, app-icon-master,
+  // app-icon-maskable, og-image, splash-828, wordmark — ~1.49 MB) used to be require()'d
+  // here, which forced Metro to bundle every one of them although nothing renders them:
+  // the native icon/splash pipeline reads app.json's ./assets/* paths (a different tree),
+  // and every on-screen wordmark is a Text literal. require() is the bundling act, so
+  // the block was removed, not the files — assets/game/brand/ stays on disk as the
+  // brand kit of record. If a screen ever needs a brand raster, require it here
+  // deliberately and account for its weight.
 
   // ---- story plates
   platePrologue: require('../../assets/game/plates/plate-prologue.webp'),

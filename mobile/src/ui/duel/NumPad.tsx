@@ -35,6 +35,10 @@ export default function NumPad({ duel, frozen, heat, theme, onTap }: NumPadProps
   const flags = duel.flags();
   const pencil = duel.pencil;
   const hushed = flags.hushed;
+  // A14 — the pencil the pad actually honours. Under Miasma the shared law bars the
+  // pencil (config: "notes erased, pencil disabled"), so the labels must not claim a
+  // pencil mode the taps cannot deliver.
+  const pencilLive = pencil && !flags.miasma;
 
   // How many of each digit are already on the board (givens + placed).
   const counts = new Array<number>(10).fill(0);
@@ -48,8 +52,16 @@ export default function NumPad({ duel, frozen, heat, theme, onTap }: NumPadProps
     if (frozen) return;
     onTap();
     if (duel.selected === null) return;
-    if (pencil && !flags.miasma) duel.toggleNote(duel.selected, d);
-    else duel.place(duel.selected, d);
+    // A14 — read the bar FRESH at the tap, never from render scope: Miasma can land
+    // between the render and the press. The old fall-through silently PLACED
+    // seal-burning ink from a pad the player believed was in pencil mode — the one
+    // branch on this surface that burns a Seal.
+    if (duel.pencil) {
+      if (duel.flags().miasma) return; // the pencil is barred — the tap is swallowed
+      duel.toggleNote(duel.selected, d);
+    } else {
+      duel.place(duel.selected, d);
+    }
   };
 
   const erase = () => {
@@ -81,7 +93,7 @@ export default function NumPad({ duel, frozen, heat, theme, onTap }: NumPadProps
                 onPress={() => place(d)}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: complete }}
-                accessibilityLabel={`${d}, ${complete ? i18n.duel.pad.complete : tf('duel.pad.remaining', { n: remaining })}${pencil ? `, ${i18n.duel.pad.pencil}` : ''}`}
+                accessibilityLabel={`${d}, ${complete ? i18n.duel.pad.complete : tf('duel.pad.remaining', { n: remaining })}${pencilLive ? `, ${i18n.duel.pad.pencil}` : ''}`}
                 style={[
                   styles.tile,
                   { borderColor: theme.lineStrong, backgroundColor: theme.bgRaised },

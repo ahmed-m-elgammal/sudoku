@@ -163,6 +163,23 @@ export async function storageBackend(): Promise<StorageBackend> {
   return resolveBackend();
 }
 
+// ---------------------------------------------------------------- quarantine
+// A9 — a corrupt blob used to read as `undefined`, which every caller treats as
+// "never written", and the very next write overwrote it: a whole profile silently
+// gone. The bytes now survive first. One slot per key (`.quarantine`), latest wins,
+// bounded, wiped by clearAll like every owned key. `keys(store)` may list it, but
+// nothing iterates kv keys except tests (the echo ring lives on the SQLite port).
+interface Quarantine { raw: string; at: number }
+
+async function quarantine(store: StoreName, key: string, raw: string): Promise<void> {
+  try {
+    await storage.set(store, `${key}.quarantine`, { raw, at: Date.now() } satisfies Quarantine);
+    console.warn(`[assize] ${store}/${key}: corrupt blob quarantined (${raw.length} bytes)`);
+  } catch {
+    // the quarantine must never turn a failed read into a thrown one
+  }
+}
+
 export const storage: PlatformStorage = {
   async get<T>(store: StoreName, key: string): Promise<T | undefined> {
     try {
@@ -177,7 +194,14 @@ export const storage: PlatformStorage = {
         raw = memStore.get(mmkvKey(store, key));
       }
       if (raw === undefined || raw === null) return undefined;
-      return JSON.parse(raw) as T;
+      try {
+        return JSON.parse(raw) as T;
+      } catch {
+        // A9 — unreadable bytes: preserve them, THEN degrade to the absent-key
+        // contract every caller already handles.
+        await quarantine(store, key, raw);
+        return undefined;
+      }
     } catch {
       return undefined;
     }

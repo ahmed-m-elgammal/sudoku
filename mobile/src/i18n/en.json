@@ -114,6 +114,7 @@
   "duel": {
     "toolbar": {
       "pencil": "Pencil",
+      "pencilBarred": "Pencil — barred by Miasma",
       "erase": "Erase",
       "mute": "Mute",
       "unmute": "Unmute",
@@ -456,6 +457,7 @@
     "rename": "Amend",
     "recovery": "Recovery Code",
     "recoveryBody": "Four words and a checksum. They restore your Standing and purchases on another device. Keep them as you would keep your life.",
+    "quarantineNote": "The previous ledger was found corrupted on {date} and has been set aside. A fresh ledger was begun — export a Recovery Code now so this one can be restored.",
     "recoveryShow": "Write the code",
     "recoveryCopy": "Copy",
     "export": "Export save",

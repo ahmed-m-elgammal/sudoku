@@ -11,9 +11,16 @@
 //
 // The shipped first-sit law (the web build's, verbatim) is pinned too, so a future
 // "fix" cannot silently change the port-fidelity contract.
+//
+// DAY3 (report A15) adds `practiceInkFor`: `CONFIG.economy.practiceDailyInkCap: 50`
+// was referenced by NOTHING — daily and practice both duel the inert Tablet, so a
+// re-sit farm minted unlimited per-attempt ledger ids at up to 111 Ink each. The
+// law: a per-UTC-day budget over BOTH Tablet modes; a new day refills it.
 import { describe, expect, it } from 'vitest';
-import { dailyStreakFor, weeklySealFor } from '../economyLaw';
+import { dailyStreakFor, weeklySealFor, practiceInkFor } from '../economyLaw';
 import { weeklyInkBonus } from '@shared/weekly';
+import { CONFIG } from '@shared/config';
+import { freshSave } from '@/state/save';
 
 const KEY = '2026-10-11';
 
@@ -85,5 +92,57 @@ describe('weeklySealFor — the weekly seal (A13)', () => {
       bonus: weeklyInkBonus,
       firstWin: true,
     });
+  });
+});
+
+describe('practiceInkFor — the Tablet-modes Ink budget (A15)', () => {
+  const CAP = CONFIG.economy.practiceDailyInkCap; // 50
+
+  it('FARM-1 a fresh day pays in full up to the cap', () => {
+    const out = practiceInkFor({ day: null, ink: 0 }, KEY, 30 + 5 * 3, CAP);
+    expect(out.credited).toBe(45);
+    expect(out.farm).toEqual({ day: KEY, ink: 45 });
+  });
+
+  it('FARM-2 a fresh day clips everything past the cap — and the clip is the purse\'s truth', () => {
+    // a perfect Tablet sweep: 30 + 27 claims × 3 = 111 raw, capped at 50
+    const out = practiceInkFor({ day: null, ink: 0 }, KEY, 111, CAP);
+    expect(out.credited).toBe(50);
+    expect(out.farm.ink).toBe(50);
+  });
+
+  it('FARM-3 a same-day re-sit spends only the remainder', () => {
+    const out = practiceInkFor({ day: KEY, ink: 45 }, KEY, 40, CAP);
+    expect(out.credited).toBe(5);
+    expect(out.farm).toEqual({ day: KEY, ink: 50 });
+  });
+
+  it('FARM-4 an exhausted day credits nothing — the ledger\'s delta-0 guard then mints no entry', () => {
+    const out = practiceInkFor({ day: KEY, ink: 50 }, KEY, 111, CAP);
+    expect(out.credited).toBe(0);
+    expect(out.farm).toEqual({ day: KEY, ink: 50 });
+  });
+
+  it('FARM-5 a new day refills the budget and moves the rows', () => {
+    const out = practiceInkFor({ day: '2026-10-10', ink: 50 }, KEY, 60, CAP);
+    expect(out.credited).toBe(50);
+    expect(out.farm).toEqual({ day: KEY, ink: 50 });
+  });
+
+  it('FARM-6 both Tablet modes draw the SAME pool — the farm cannot move between them', () => {
+    // the daily drains the budget…
+    const daily = practiceInkFor({ day: null, ink: 0 }, KEY, 50, CAP);
+    expect(daily.credited).toBe(50);
+    // …and the practice duel after it earns nothing
+    const practice = practiceInkFor(daily.farm, KEY, 111, CAP);
+    expect(practice.credited).toBe(0);
+  });
+
+  it('FARM-7 the shipped cap is 50 and the fresh save boots with an empty budget', () => {
+    // the config contract cannot drift silently; the save shape carries the rows
+    expect(CAP).toBe(50);
+    const fresh = freshSave('test');
+    expect(fresh.daily.farmInkDay).toBeNull();
+    expect(fresh.daily.farmInk).toBe(0);
   });
 });
