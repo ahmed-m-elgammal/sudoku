@@ -26,6 +26,7 @@ import { audio } from '@/platform/audio';
 import { setHapticsEnabled } from '@/platform/haptics';
 import { palette } from '@/theme/tokens';
 import GameShell from '@/ui/GameShell';
+import ErrorBoundary from '@/ui/ErrorBoundary';
 
 export default function App() {
   return (
@@ -48,8 +49,13 @@ function Boot() {
   const fontsLoaded = useAssizeFonts();
 
   useEffect(() => {
-    void useSave.getState().load().then(() => flushInkLedger());
-    void loadIdentity();
+    // DAY1 — the boot chain must never land an unhandled rejection: load() already
+    // catches its own failure paths (it always opens the gate), and the Ink flush is
+    // best-effort by design. The catches here are the belt under that.
+    useSave.getState().load()
+      .then(() => flushInkLedger())
+      .catch(() => { /* the boot gate must never wedge on a rejected chain */ });
+    loadIdentity().catch(() => { /* identity heals on a later boot; never wedge boot */ });
   }, []);
 
   // the player's haptics + volume choices drive the platform seams, not the screens
@@ -69,7 +75,13 @@ function Boot() {
   return (
     <View style={styles.root} onTouchStart={unlock}>
       <StatusBar style="light" />
-      <GameShell />
+      {/* DAY1 — the root boundary: a render-time throw anywhere below GameShell is a
+          themed, recoverable plate instead of a dead app (audit P1: no boundary
+          anywhere). The screen machine lives in zustand, so Resume keeps the save
+          and the player's place. */}
+      <ErrorBoundary>
+        <GameShell />
+      </ErrorBoundary>
     </View>
   );
 }

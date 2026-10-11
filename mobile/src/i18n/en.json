@@ -45,6 +45,11 @@
     "sub": "The Ninefold Assize of Novem",
     "skipHint": "tap to enter"
   },
+  "errorBoundary": {
+    "title": "The ink smudged",
+    "body": "Something tore the page mid-session. The Ledger notes the failure; your save is intact. Resume where you stood.",
+    "retry": "Resume the session"
+  },
   "tutorial": {
     "shadeName": "Shade of Orsolo",
     "waits": "{name} waits.",
@@ -353,7 +358,9 @@
       "The bells mark the hour. No one else comes."
     ],
     "cancel": "Withdraw",
-    "shadeFallback": "No human answers. A Shade takes the plea."
+    "shadeFallback": "No human answers. A Shade takes the plea.",
+    "unavailableTitle": "The court is out of session",
+    "unavailable": "This build carries no duel-server seal — no Summons can be read, ranked or friend. The Shade, the Folios and the daily Tablet remain open."
   },
   "versus": {
     "stakes": "Tier {tier} · {rating}",

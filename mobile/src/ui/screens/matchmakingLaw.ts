@@ -26,6 +26,25 @@ export const SHADE_FALLBACK_NAMES = [
 /** Server fallback 4000 ms + the web's +500 ms margin. */
 export const SHADE_FALLBACK_WAIT_MS = CONFIG.matchmaking.shadeFallbackMs + 500;
 
+/**
+ * DAY1 release-config fix (store-audit P0-2.3 follow-up) — the Summoning gate.
+ *
+ * A release build produced without EXPO_PUBLIC_ASSIZE_SERVER falls back to
+ * `http://localhost:3030`: matchmaking cannot work from a phone, so running the
+ * queue theatre (hourglass, flavour lines, 4.5 s Shade fallback) would be a LIE
+ * with a timer on it. The screen must say so instead. Dev builds are exempt —
+ * localhost IS the intended developer target (net/client.ts header).
+ *
+ * The operator half of this fix is NOT in-repo: the EAS environment secret.
+ *   npx eas env:create --production \
+ *     --name EXPO_PUBLIC_ASSIZE_SERVER --value https://<duel-server> \
+ *     --type string --visibility plain
+ * EAS env secrets inject at build time and must not be committed in eas.json.
+ */
+export function pvpAvailable(opts: { configured: boolean; dev: boolean }): boolean {
+  return opts.configured || opts.dev;
+}
+
 /** No human answered: a local Shade takes the plea, honestly labelled (R7). */
 export function shadeFallbackName(): string {
   return `Shade of ${SHADE_FALLBACK_NAMES[Math.floor(Math.random() * SHADE_FALLBACK_NAMES.length)]}`;

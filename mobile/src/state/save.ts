@@ -100,22 +100,35 @@ export const useSave = create<SaveStore>((set, get) => ({
   save: null,
   loaded: false,
   load: async () => {
+    // DAY1 boot-race fix — `loaded` commits ONLY once the save is materialized. The
+    // old order (`set({ save, loaded: true })` BEFORE the first-run identity/fresh
+    // writes) let the BootScreen's 1.2 s timer beat the Keychain write on a slow
+    // first launch: GameShell mounted, specFromUi() dereferenced a null save, and —
+    // with no error boundary below it — the app died on the store-review path.
+    // Every await that could reject is caught: the boot gate must always open (an
+    // in-memory session beats a permanent black screen).
     const existing = await storage.get<SaveStateV2>('save', 'me');
     const migrated = existing ? migrate(existing) : null;
-    set({ save: migrated, loaded: true });
     if (!migrated) {
-      const id = await loadIdentity();
-      if (!id.name) {
-        id.name = generateName();
-        await saveIdentity(id);
+      let name = 'the Clerk';
+      try {
+        const id = await loadIdentity();
+        if (!id.name) {
+          id.name = generateName();
+          await saveIdentity(id);
+        }
+        name = id.name;
+      } catch { /* a hostile Keychain must not wedge the boot gate */ }
+      const fresh = freshSave(name);
+      try { await storage.set('save', 'me', fresh); } catch { /* in-memory save still runs the session */ }
+      set({ save: fresh, loaded: true });
+    } else {
+      if (existing && !existing.endless) {
+        // T18 migration: persist the freshly minted endless state (its salt must
+        // stick, or rung duels would re-derive from a new seed every load)
+        try { await storage.set('save', 'me', migrated); } catch { /* best-effort persist */ }
       }
-      const fresh = freshSave(id.name);
-      await storage.set('save', 'me', fresh);
-      set({ save: fresh });
-    } else if (existing && !existing.endless) {
-      // T18 migration: persist the freshly minted endless state (its salt must
-      // stick, or rung duels would re-derive from a new seed every load)
-      await storage.set('save', 'me', migrated);
+      set({ save: migrated, loaded: true });
     }
   },
   update: (fn) => {

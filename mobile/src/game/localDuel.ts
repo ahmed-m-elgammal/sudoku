@@ -61,6 +61,17 @@ export type TutorialNoteId = (typeof TUTORIAL_NOTE_ORDER)[number];
 /** The Shade's re-check cadence while it holds at the tutorial floor (G9/G10). */
 const TUTORIAL_FLOOR_HOLD_MS = 700;
 
+/**
+ * DAY1 integrity fix — the Shade's hold cadence while the player's clock is frozen.
+ * The engine clock (rAF) stops when the duel pauses or the app backgrounds, but the
+ * Shade's cadence lives on wall-clock setTimeout timers, which keep firing on Android
+ * with the app in the background. Without the hold, pausing or switching apps handed
+ * the foe ~1 placement per cadence while the player's clock did not move a millimetre.
+ * The hold re-arms a cheap no-op wake instead; the next real act happens within
+ * SHADE_HOLD_MS of the player's clock restarting.
+ */
+const SHADE_HOLD_MS = 500;
+
 export class LocalDuel implements DuelRuntime {
   state: DuelState;
   /**
@@ -101,6 +112,15 @@ export class LocalDuel implements DuelRuntime {
   private notifiedVersion = 0;
   ended = false;
   paused = false;
+  /**
+   * DAY1 integrity fix — true while the app is NOT foreground-active (driven from
+   * AppState by useDuelSession). The engine's rAF loop is suspended by the OS in the
+   * background, but JS timers are not (Android), so `shadeWake` must treat a
+   * backgrounded duel exactly like a paused one: hold the foe. Optional on the
+   * DuelRuntime contract — ServerDuel has no counterpart (ranked is server-clocked;
+   * backgrounding is fair there).
+   */
+  backgrounded = false;
 
   // S08 parity with ServerDuel: solo duels never disconnect, but the union type
   // must carry the same surface so the screens render both identically.
@@ -427,6 +447,13 @@ export class LocalDuel implements DuelRuntime {
     this.bump();
   }
 
+  /** DAY1 — driven by useDuelSession from AppState; see the field note above. */
+  setBackgrounded(backgrounded: boolean) {
+    if (this.backgrounded === backgrounded) return;
+    this.backgrounded = backgrounded;
+    this.bump();
+  }
+
   togglePencil() {
     this.pencil = !this.pencil;
     if (this.v2) this.directorEvent({ kind: 'pencil', on: this.pencil });
@@ -447,6 +474,16 @@ export class LocalDuel implements DuelRuntime {
 
   private shadeWake() {
     if (this.ended) return;
+    // DAY1 integrity fix — the frozen-clock hold. The engine clock only advances on
+    // the rAF loop (gated on `!this.paused`, and suspended by the OS in the
+    // background), so the Shade must not act on its wall-clock cadence while the
+    // player's clock is frozen. Re-arm a cheap no-op wake; when the clock restarts,
+    // the next wake proceeds within SHADE_HOLD_MS. Checked FIRST, before every
+    // acting path (floor, echo, script, calibrated Shade).
+    if (this.paused || this.backgrounded) {
+      this.scheduleShade(SHADE_HOLD_MS);
+      return;
+    }
     // G9/G10 — the tutorial floor: with the Clerk at 1 Seal the Shade holds its hand
     // ENTIRELY, so no claim can ever land the killing wound and the lesson can never
     // be lost. Unreachable while every tutorial mistake is forgiven (see place()) —

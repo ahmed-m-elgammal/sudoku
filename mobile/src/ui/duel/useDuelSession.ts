@@ -15,11 +15,12 @@
 // `AnyDuel` union did the same job with types; this does it with an interface.
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { AppState } from 'react-native';
 import { LocalDuel } from '@/game/localDuel';
 import { ServerDuel } from '@/game/serverDuel';
 import type { DuelRuntime, DuelSessionSpec, LocalDuelOpts, DuelEvent } from '@/game/duelRuntime';
 import { useUi } from '@/state/ui';
-import { useSave } from '@/state/save';
+import { useSave, freshSave } from '@/state/save';
 import { audio } from '@/platform/audio';
 import { haptics } from '@/platform/haptics';
 import {
@@ -132,6 +133,22 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
     () => duel?.getSnapshot() ?? 0,
   );
 
+  // DAY1 integrity fix — the background gate. The engine clock (rAF) is suspended by
+  // the OS in the background, but the foe's wall-clock cadence (setTimeout) keeps
+  // firing on Android — without this, switching apps handed the Shade free progress.
+  // LocalDuel holds its Shade while backgrounded; ServerDuel has no counterpart
+  // (optional contract member): a ranked duel is server-clocked, so backgrounding is
+  // fair there. iOS 'inactive' (app-switcher overlay) is held too — nothing good can
+  // happen while it is up.
+  useEffect(() => {
+    if (!duel) return;
+    duel.setBackgrounded?.(AppState.currentState !== 'active');
+    const sub = AppState.addEventListener('change', (s) => {
+      duel.setBackgrounded?.(s !== 'active');
+    });
+    return () => sub.remove();
+  }, [duel]);
+
   // Sound + fx for foe-side and duel-level events. `hookEvent` is local to this effect
   // and reads refs and the stable `fireShake`, so the effect deps stay [version, duel, fireShake].
   useEffect(() => {
@@ -224,7 +241,11 @@ function dailyTier(dateKey: string): PlayableTier {
  */
 export function specFromUi(): DuelSessionSpec {
   const ui = useUi.getState();
-  const save = useSave.getState().save!;
+  // DAY1 boot-race guard — the boot gate (App's `loaded`) now guarantees a
+  // materialized save in every shipped flow, but specFromUi is a pure public surface
+  // any remount path can reach; a null save must degrade to the fresh-Clerk defaults,
+  // never dereference `save!` and drop the app out from under the first session.
+  const save = useSave.getState().save ?? freshSave('the Clerk');
   const mode = ui.duelMode;
 
   if (mode === 'tutorial') {

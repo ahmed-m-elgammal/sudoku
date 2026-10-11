@@ -24,14 +24,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { loadIdentity } from '@/state/identity';
-import { net } from '@/game/net/client';
+import { net, isServerConfigured } from '@/game/net/client';
 import { audio } from '@/platform/audio';
 import { useDisplaySettings, useMotionReduced } from '@/platform/display';
 import { fonts, layout, palette, themeFor, type as typeScale } from '@/theme/tokens';
 import { i18n } from '@/i18n';
 import { sigilArt } from '@/ui/duel/duelAssets';
 import {
-  SHADE_FALLBACK_WAIT_MS, matchedToNav, shadeFallbackNav, type MatchedPayload,
+  SHADE_FALLBACK_WAIT_MS, matchedToNav, pvpAvailable, shadeFallbackNav, type MatchedPayload,
 } from './matchmakingLaw';
 
 export default function Matchmaking() {
@@ -46,11 +46,22 @@ export default function Matchmaking() {
   const [line, setLine] = useState(0);
   const joinedRef = useRef(false); // settled: matched, or the Shade fallback fired
 
+  // DAY1 release-config fix — the honest gate. A release build without the duel
+  // server's seal cannot matchmake from a phone (the client would dial
+  // localhost:3030); running the queue theatre and landing on the Shade fallback
+  // would read as "matchmaking is broken". Say so instead, and do not join.
+  // Dev builds are exempt: localhost is the intended developer target.
+  const pvpReady = useMemo(
+    () => pvpAvailable({ configured: isServerConfigured(), dev: process.env.NODE_ENV !== 'production' }),
+    [],
+  );
+
   // the rotating flavour lines — 1400 ms, the web's cadence
   useEffect(() => {
+    if (!pvpReady) return; // out of session: no hourglass spin, no flavour loop
     const t = setInterval(() => setLine((l) => (l + 1) % i18n.matchmaking.lines.length), 1400);
     return () => clearInterval(t);
-  }, []);
+  }, [pvpReady]);
 
   // THE QUEUE JOIN. Deps are [go] (stable) — the join lifecycle runs exactly once per
   // mount, so an unrelated save write mid-queue (the standing sync below, an Ink
@@ -60,6 +71,7 @@ export default function Matchmaking() {
   // through useSave.getState() at each await, so nothing stale is sent and no save
   // subscription re-renders the room while it waits.
   useEffect(() => {
+    if (!pvpReady) return; // out of session: never dial an origin that cannot answer
     const save0 = useSave.getState().save;
     if (!save0) return; // unreachable in practice: App gates the shell on the loaded save
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -115,7 +127,7 @@ export default function Matchmaking() {
       // never leave a ghost behind in the authoritative queue
       net.send('leave_queue', {});
     };
-  }, [go]);
+  }, [go, pvpReady]);
 
   const hourglass = sigilArt('sigil-hourglass');
 
@@ -129,9 +141,20 @@ export default function Matchmaking() {
         >
           {i18n.matchmaking.title}
         </Text>
-        <Text style={[styles.line, { color: theme.fgDim, fontSize: fs.sm, minHeight: 24 }]}>
-          {i18n.matchmaking.lines[line]}
-        </Text>
+        {pvpReady ? (
+          <Text style={[styles.line, { color: theme.fgDim, fontSize: fs.sm, minHeight: 24 }]}>
+            {i18n.matchmaking.lines[line]}
+          </Text>
+        ) : (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[styles.line, styles.unavailable, { color: theme.fgDim, fontSize: fs.sm }]}
+          >
+            {i18n.matchmaking.unavailableTitle}
+            {"\n\n"}
+            {i18n.matchmaking.unavailable}
+          </Text>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={i18n.matchmaking.cancel}
@@ -182,6 +205,13 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   title: { fontFamily: fonts.display }, // size/tracking ride inline from the text scale
   line: { fontFamily: fonts.bodyItalic, textAlign: 'center' },
+  // the out-of-session plate: body copy, not rotating flavour — wider measure, calmer
+  unavailable: {
+    fontFamily: fonts.body,
+    maxWidth: 460,
+    lineHeight: 22,
+    paddingHorizontal: 8,
+  },
   // web button.btn: marginTop 22
   cancel: {
     marginTop: 22,

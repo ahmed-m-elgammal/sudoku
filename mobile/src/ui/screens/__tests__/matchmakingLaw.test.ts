@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   SHADE_FALLBACK_NAMES, SHADE_FALLBACK_WAIT_MS,
-  matchedToNav, shadeFallbackName, shadeFallbackNav,
+  matchedToNav, pvpAvailable, shadeFallbackName, shadeFallbackNav,
 } from '@/ui/screens/matchmakingLaw';
 import { CONFIG } from '@shared/config';
 
@@ -23,6 +23,19 @@ describe('the Shade fallback clock', () => {
       expect(name).toMatch(/^Shade of /);
       expect(SHADE_FALLBACK_NAMES.some((n) => name === `Shade of ${n}`)).toBe(true);
     }
+  });
+});
+
+describe('the PvP availability gate (DAY1 release-config fix)', () => {
+  it('PVP-1 a release build without the duel server\'s seal is out of session', () => {
+    // localhost cannot be reached from a phone: the queue must not run its theatre
+    expect(pvpAvailable({ configured: false, dev: false })).toBe(false);
+  });
+
+  it('PVP-2 a configured origin sits the court, and dev builds always may', () => {
+    expect(pvpAvailable({ configured: true, dev: false })).toBe(true);
+    expect(pvpAvailable({ configured: false, dev: true })).toBe(true); // localhost IS the dev target
+    expect(pvpAvailable({ configured: true, dev: true })).toBe(true);
   });
 });
 

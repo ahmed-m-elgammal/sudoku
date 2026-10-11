@@ -55,6 +55,16 @@ export function serverOrigin(): string {
   }
   // In Expo Go / dev client the packager host is reachable from the device; the duel
   // server usually is not, so fall back to localhost unless told otherwise.
+  // DAY1 release-config guard — say it loudly in a production build: an unconfigured
+  // release cannot reach PvP from a phone, and Matchmaking now renders the honest
+  // out-of-session plate instead of queue theatre (matchmakingLaw.pvpAvailable).
+  if (process.env.NODE_ENV === 'production') {
+    console.warn(
+      '[assize] EXPO_PUBLIC_ASSIZE_SERVER is unset — this production build dials '
+      + `${DEFAULT_SERVER}, which no device can reach. Set it with: npx eas env:create `
+      + '--production --name EXPO_PUBLIC_ASSIZE_SERVER --value https://<duel-server>',
+    );
+  }
   return DEFAULT_SERVER;
 }
 

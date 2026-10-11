@@ -127,6 +127,13 @@ export interface DuelRuntime {
   toggleNote(cell: number, digit: number): void;
   concede(): void;
   setPaused(paused: boolean): void;
+  /**
+   * DAY1 integrity fix — OPTIONAL member. True while the app is not foreground-active.
+   * A wall-clock foe (LocalDuel's Shade) must hold while the engine clock is frozen;
+   * ServerDuel has no counterpart (ranked is server-clocked, backgrounding is fair),
+   * which is why the member is optional and the session hook calls it with `?.`.
+   */
+  setBackgrounded?(backgrounded: boolean): void;
   togglePencil(): void;
   setOnEnd(fn: (r: { winner: PlayerId | 'draw'; reason: string }) => void): void;
   flags(): CellFlags;
