@@ -1,0 +1,37 @@
+You were Magister Orsolo's clerk when they hanged him for forging the Great Ledger. Now an ink-echo wearing his voice — a Shade — teaches you the Reckoning.
+
+ASSIZE is a gothic 1v1 sudoku duel where law is settled by solving. Both pleaders face the same sealed Tablet. Wrong ink cracks your own wax Seals; completing a row, a column or a box claims it and wounds your foe. The first pleader to break the other's Seals — or fill the Tablet — prevails.
+
+THE DUEL
+· Race one sealed 9×9 sudoku Tablet against a living opponent or the Shade
+· Claim rows, columns and boxes — each claim wounds the pleader across the aisle
+· Wrong ink is punished: every error cracks your own wax Seals
+· First to shatter the foe's Seals — or to fill the Tablet — wins the plea
+
+RITES AND RELICS
+· Cast engraved rites to hinder your rival: Chains, Smudges, Hushes, Miasmas, Quarantines
+· Bear passive relics that answer the rites of others
+· Shade Echoes — duel the recorded ink of any past duel, including your own
+
+THE CAMPAIGN — NINE FOLIOS
+· 9 Magistrates, 27 duels, Easy to Expert
+· Each Magistrate duels with a named arc: Halbrecht's Grip, Vael's Drip, Ilse's Peals, Marchetti's Ledger, Nox's Exhumation
+· Magistrates lean in when losing, coast when crushing — their skill rises with your Standing
+· Margin-note teaching in a scripted opening duel: learn the law by pleading it
+· At the top of the ledger waits the only choice the Ledger remembers forever: balance the truth, or burn it
+
+ALWAYS A DUEL
+· Ranked 1v1 with Elo standings, matchmaking and a Shade fallback when the hall is quiet
+· The Daily Assize: one seeded puzzle per day, the same for every soul — keep your Unbroken Days
+· Friend duels by code or link, unrated
+· Practice any difficulty, with a daily Ink cap
+· The Endless Assize: the Nine ride again, forever
+
+CRAFTED, NOT GENERATED
+· An engraved grimoire, not a kids' game: parchment, wax, iron — adult, grim, restrained
+· A full offline campaign — the duel needs no signal; the ledger keeps itself
+· Original score of drones and murmurs; page-turns, wax and pencils
+
+The Tablet does not forgive. Neither, we find, do we.
+
+Download ASSIZE and plead your first duel — free.
