@@ -1,0 +1,38 @@
+# ASSIZE duel server on Fly.io — single machine BY LAW.
+# Rooms + matchmaking queue live in RAM (Map), so this service cannot be scaled
+# horizontally without a room registry rewrite. One machine + a volume for SQLite
+# is the production shape. WebSocket (socket.io) rides the same port as REST.
+app = "assize-duel"
+primary_region = "ams"
+
+[build]
+  dockerfile = "mini-services/assize-server/Dockerfile"
+
+[env]
+  PORT = "3030"
+  ASSIZE_DB = "/data/assize.db"
+
+# The ledger needs a real filesystem (WAL mode). Create once:
+#   fly volumes create assize_data --size 1 --region ams
+[mounts]
+  source = "assize_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3030
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

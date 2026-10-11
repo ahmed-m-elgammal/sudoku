@@ -15,7 +15,7 @@ import { sanitizeInkEntries, settleInkEntries, parseLedgerColumn, type InkEntry 
 import type { AbilityId, Digit, OrderId, PlayerId, Tier } from '../../shared/config';
 import { q, hash, adjustRating, todayKey } from './db';
 
-const PORT = 3030; // fixed port per sandbox gateway contract (XTransformPort)
+const PORT = Number(process.env.PORT ?? 3030); // sandbox contract kept as the default; hosts override via env
 const SHADE_FALLBACK_MS = 4000; // spec §7 (configurable, spec M2)
 const GRACE_MS = 20_000;
 const app = Fastify({ logger: false });

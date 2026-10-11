@@ -1,0 +1,25 @@
+# Docker build context for the duel server (mini-services/assize-server/Dockerfile).
+# The context is the repo root because the server imports ../../shared/* — everything
+# else is dead weight and must never enter the image.
+.git
+**/node_modules
+**/.bun
+mobile
+db
+download
+docs
+specs
+scripts
+tools
+tests
+examples
+upload
+tool-results
+store
+public
+src
+prisma
+assets
+*.db
+*.db-shm
+*.db-wal

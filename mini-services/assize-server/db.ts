@@ -1,8 +1,14 @@
 // ASSIZE authoritative server — SQLite via bun:sqlite (spec §6 said better-sqlite3; the same
 // SQLite engine under the bun runtime, zero native-build risk in this sandbox — documented in README).
 import { Database } from 'bun:sqlite';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
-const db = new Database('/home/z/my-project/db/assize.db', { create: true });
+// DEPLOY: the path is env-configurable so a production volume can own the ledger
+// (Fly.io mounts /data; docker run passes -v). Local dev keeps the sandbox default.
+const DB_PATH = process.env.ASSIZE_DB ?? '/home/z/my-project/db/assize.db';
+mkdirSync(dirname(DB_PATH), { recursive: true });
+const db = new Database(DB_PATH, { create: true });
 db.exec('PRAGMA journal_mode = WAL;');
 db.exec(`
 CREATE TABLE IF NOT EXISTS accounts (
