@@ -130,6 +130,12 @@
       "confirm": "Concede",
       "cancel": "Fight on"
     },
+    "abandonConfirm": {
+      "title": "Leave the duel?",
+      "body": "A duel abandoned is a duel conceded — the verdict stands as a loss.",
+      "confirm": "Concede and leave",
+      "cancel": "Fight on"
+    },
     "status": {
       "chain": "Chained",
       "smudge": "Smudged",

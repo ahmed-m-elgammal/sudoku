@@ -25,6 +25,7 @@ const DisplayContext = createContext<DisplaySettings>({
   contrast: false,
   reducedMotion: false,
   leftHand: false,
+  highlights: true,
   systemReducedMotion: false,
   motionReduced: () => false,
 });
@@ -54,10 +55,11 @@ export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
       contrast: settings?.contrast ?? false,
       reducedMotion,
       leftHand: settings?.leftHand ?? false,
+      highlights: settings?.highlights ?? true,
       systemReducedMotion,
       motionReduced: () => reducedMotion || systemReducedMotion,
     };
-  }, [settings?.text, settings?.contrast, settings?.reducedMotion, settings?.leftHand, systemReducedMotion]);
+  }, [settings?.text, settings?.contrast, settings?.reducedMotion, settings?.leftHand, settings?.highlights, systemReducedMotion]);
 
   return <DisplayContext.Provider value={value}>{children}</DisplayContext.Provider>;
 }

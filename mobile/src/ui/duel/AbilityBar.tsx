@@ -23,6 +23,7 @@ import type { DuelRuntime } from '@/game/duelRuntime';
 import { duelArt, sigilArt } from './duelAssets';
 import { i18n } from '@/i18n';
 import { audio } from '@/platform/audio';
+import { useDisplaySettings } from '@/platform/display';
 import { fonts, layout, type Theme } from '@/theme/tokens';
 
 export interface AbilityBarProps {
@@ -36,6 +37,11 @@ const RING_C = 2 * Math.PI * RING_R;
 
 export default function AbilityBar({ duel, theme }: AbilityBarProps) {
   const [descFor, setDescFor] = useState<AbilityId | null>(null);
+  // A6 — "Left-hand abilities" was a stored, advertised, silent no-op. The rites row
+  // is the control row a thumb actually works, so the setting mirrors it: the first
+  // rite (the one every Order opens with) moves under the other thumb. The long-press
+  // description is full-width and reads the same either way.
+  const leftHand = useDisplaySettings().leftHand;
   const me = duel.state.players[0];
   useEffect(() => {
     if (descFor === null) return;
@@ -47,7 +53,7 @@ export default function AbilityBar({ duel, theme }: AbilityBarProps) {
   const copy = i18n.orders[me.order].abilities;
 
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, leftHand ? styles.barMirrored : null]}>
       {abilities.map((id, idx) => {
         const rt = me.abilities[id];
         const full = (CONFIG.abilityCdMs as Record<string, number>)[id] ?? 1;
@@ -147,6 +153,8 @@ function CooldownRing({ pct, theme }: { pct: number; theme: Theme }) {
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', gap: 6 },
+  // A6 — the left-hand mirror of the rites row (the tiles render right-to-left).
+  barMirrored: { flexDirection: 'row-reverse' },
   tile: {
     flex: 1,
     height: 60,

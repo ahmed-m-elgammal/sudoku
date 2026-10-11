@@ -85,6 +85,8 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
           ? new LocalDuel({
               ...s,
               onPhase: () => fireShake(3), // J2 — a boss phase ENTRY shakes T3
+              // A6 — the notes sweep reads the setting fresh at each placement.
+              settingsAutoNotes: () => useSave.getState().save?.settings.autoNotes ?? true,
             })
           : null,
     [fireShake],

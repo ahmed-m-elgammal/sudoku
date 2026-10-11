@@ -7,6 +7,11 @@
 // New in this port, and the only addition over the web build: Android hardware back
 // and the iOS swipe-back gesture pop to `ui.goBack()`, which is a no-op at a root
 // screen so the OS closes the app instead of trapping the player in the shell.
+//
+// DAY2 back-nav hardening: ONE listener owns the gesture. Before popping, it consults
+// the screen-owned back guard (ui.backGuard) FRESH at the call — the duel screen uses
+// it to confirm an abandon and to shield the disconnect grace. No coexisting handlers,
+// no LIFO-order reasoning between GameShell and the screens.
 
 import { useEffect } from 'react';
 import { BackHandler, Platform } from 'react-native';
@@ -45,12 +50,16 @@ export default function GameShell() {
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () =>
-      // `true` only when goBack popped a screen. Returning true unconditionally — the
-      // old behaviour — SWALLOWS the event at a root screen, which is precisely what
-      // stops the OS from ever closing the app with the back button.
-      goBack(),
-    );
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      // `true` only when the gesture was consumed — by the screen's guard (a live
+      // duel confirms, a grace modal shields) or by an actual pop. Returning true
+      // unconditionally — the old behaviour — SWALLOWS the event at a root screen,
+      // which is precisely what stops the OS from ever closing the app with the
+      // back button.
+      const guard = useUi.getState().backGuard;
+      if (guard && guard()) return true;
+      return goBack();
+    });
     return () => sub.remove();
   }, [goBack]);
 

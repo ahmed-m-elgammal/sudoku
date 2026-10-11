@@ -190,7 +190,19 @@ export default function ResultScreen() {
       </View>
 
       <View style={styles.btnRow}>
-        <Btn label={i18n.result.rematch} variant="primary" theme={theme} onPress={rematch} />
+        {/* A7 — the Reliquary loop, delivered: every third win prints "the wax is
+            warm" and now also OPENS the chest. The ritual is entered, never
+            re-entered — its back route is the hub, so the award cannot be re-rolled
+            off a stale result. */}
+        {r.reliquaryWon ? (
+          <Btn
+            label={i18n.reliquary.open}
+            variant="primary"
+            theme={theme}
+            onPress={() => ui.go('reliquary', { prev: 'antechamber' })}
+          />
+        ) : null}
+        <Btn label={i18n.result.rematch} variant="default" theme={theme} onPress={rematch} />
         <Btn label={i18n.result.antechamber} variant="default" theme={theme} onPress={() => ui.go('antechamber')} />
         <Btn label={i18n.result.share} variant="ghost" theme={theme} onPress={share} />
       </View>

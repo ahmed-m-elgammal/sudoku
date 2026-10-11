@@ -21,7 +21,7 @@ import type { DuelRuntime } from '@/game/duelRuntime';
 import { cellsOfFlood, centroidOfUnit, ownerOfCell } from '@/game/fx';
 import Cell from './Cell';
 import { boardWarmthMix } from './motionLaw';
-import { useMotionReduced } from '@/platform/display';
+import { useDisplaySettings, useMotionReduced } from '@/platform/display';
 import { duelArt } from './duelAssets';
 import { palette, type Theme } from '@/theme/tokens';
 
@@ -46,6 +46,9 @@ const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
 
 export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, heat, theme, size }: BoardProps) {
   const motionReduced = useMotionReduced();
+  // A6 — "Same-digit highlight" was a stored, silent no-op: the board always rendered
+  // it. The setting now owns the feature.
+  const highlights = useDisplaySettings().highlights;
   const st = duel.state;
   const me = st.players[0];
   const flags = duel.flags();
@@ -55,12 +58,12 @@ export default function Board({ duel, flood, hitStop, frozen, cold, slowInk, hea
   const sameDigit = useMemo(() => {
     void duel.version;
     const set = new Set<number>();
-    if (sel !== null) {
+    if (sel !== null && highlights) {
       const v = me.board[sel];
       if (v) for (let c = 0; c < 81; c++) if (me.board[c] === v) set.add(c);
     }
     return set;
-  }, [sel, me.board, duel.version]);
+  }, [sel, me.board, duel.version, highlights]);
 
   // J1 — the current flood's cells and its splash anchor (fail-closed helpers: a null
   // flood floods nothing, and an unknown unit resolves to nothing).

@@ -342,7 +342,9 @@ export class LocalDuel implements DuelRuntime {
     if (res.correct) {
       audio.place();
       haptics.tick();
-      this.autoCleanNotes(cell, digit);
+      // A6 — "Auto-remove solved notes" now owns the sweep it names (it ran
+      // unconditionally, making the settings row a silent no-op).
+      if (this.opts.settingsAutoNotes?.() ?? true) this.autoCleanNotes(cell, digit);
       this.lastWrong = null;
       this.mistakeNoteHold = false; // G2 — a correct placement yields the held Seal note
       // tutorial pacing: mark the first claim

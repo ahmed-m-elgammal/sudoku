@@ -173,6 +173,12 @@ export interface LocalDuelOpts {
   mods?: DuelState['rules'];
   replay?: DuelReplay;
   settingsHaptics?: () => boolean;
+  /**
+   * DAY2 (A6) — "Auto-remove solved notes". When false, a correct placement leaves
+   * the peer cells' pencil marks untouched. Read FRESH at each placement (the
+   * settingsHaptics seam); absent reads as on — the shipped default.
+   */
+  settingsAutoNotes?: () => boolean;
   onEnd?: (r: { winner: PlayerId | 'draw'; reason: string }) => void;
   onEvent?: (e: DuelEvent) => void;
   onPhase?: (phaseIdx: number) => void;

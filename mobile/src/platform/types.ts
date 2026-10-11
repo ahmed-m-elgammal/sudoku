@@ -125,6 +125,8 @@ export interface DisplaySettings {
   contrast: boolean;
   reducedMotion: boolean;
   leftHand: boolean;
+  /** A6 — the same-digit highlight on the Tablet (was a stored, silent no-op) */
+  highlights: boolean;
   /** the OS-level Reduce Motion switch, OR-ed with the in-game setting */
   systemReducedMotion: boolean;
   /** true when EITHER reduced-motion source is on — the single check animations use */

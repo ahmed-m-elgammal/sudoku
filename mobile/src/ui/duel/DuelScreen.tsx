@@ -39,8 +39,9 @@ import { storyJson, i18n } from '@/i18n';
 import { SLOW_INK_MS } from '@/game/fx';
 import type { LocalDuelOpts } from '@/game/duelRuntime';
 import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
-import { weekIndexFor, weeklyInkBonus } from '@shared/weekly';
+import { weekIndexFor } from '@shared/weekly';
 import { useDuelSession, specFromUi, type DuelSessionSpec } from './useDuelSession';
+import { dailyStreakFor, weeklySealFor } from './economyLaw';
 import { isGraduated, completeTutorialByWin, completeTutorialBySkip, GRADUATION_INK } from './tutorialGraduation';
 import TutorialCoach from './TutorialCoach';
 import TutorialBanner from './tutorial/TutorialBanner';
@@ -54,7 +55,7 @@ import HudHeader from './HudHeader';
 import MirrorStrip from './MirrorStrip';
 import Ticker from './Ticker';
 import { ShakeLayer, WorldDim, HeatVignette } from './FxLayers';
-import { PauseModal, ConcedeModal, DisconnectModal, SkipModal, SwapBanner } from './Modals';
+import { PauseModal, ConcedeModal, AbandonModal, DisconnectModal, SkipModal, SwapBanner } from './Modals';
 
 export default function DuelScreen() {
   const ui = useUi();
@@ -84,6 +85,8 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   const [paused, setPaused] = useState(false);
   const [confirmConcede, setConfirmConcede] = useState(false);
   const [confirmSkip, setConfirmSkip] = useState(false);
+  // DAY2 back-nav hardening — hardware back on a live duel asks before it leaves.
+  const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [muted, setMuted] = useState(audio.muted());
   const [boardSize, setBoardSize] = useState<number>(0);
   const endedRef = useRef(false);
@@ -236,14 +239,15 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         const key = new Date().toISOString().slice(0, 10);
         dailyKey = key;
         const timeMs = st.clockMs + me.mistakes * 10000;
-        const prevStreak = save?.daily.lastDate === key ? save.daily.streak : 0;
+        // A13 — the streak law is economyLaw.ts's, pinned by the gate: the day's
+        // first verdict seals streak/best; a same-day re-sit may better the TIME
+        // below, never the ledger. (The old inline line inflated the streak on
+        // every re-win and zeroed it on every re-loss.)
         s.update((cur) => ({
           ...cur,
           daily: {
             ...cur.daily,
-            lastDate: key,
-            streak: winner === 0 ? Math.max(cur.daily.streak, prevStreak + 1) : 0,
-            best: Math.max(cur.daily.best, prevStreak + 1),
+            ...dailyStreakFor(cur.daily, key, winner === 0),
             times: { ...cur.daily.times, [key]: Math.min(cur.daily.times[key] ?? Infinity, timeMs) },
           },
         }));
@@ -293,11 +297,18 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
       if (ui.duelMode === 'weekly') {
         const week = weekIndexFor(Date.now());
         weekIdx = week;
-        const firstWin = winner === 0 && save?.weekly?.lastWeek !== week;
-        const wBonus = firstWin ? weeklyInkBonus : 0;
-        ledgerDelta += wBonus;
-        s.update((cur) => ({ ...cur, weekly: { lastWeek: week }, economy: { ...cur.economy, ink: cur.economy.ink + wBonus } }));
-        if (firstWin) s.unlockAchievement('weekly-sat');
+        // A13 — only a WIN seals the week. The seal used to be written on EVERY
+        // finish, so losing the weekly duel permanently forfeited its +120 (a loss
+        // had placed the seal); now a loss leaves the writ open and re-fightable,
+        // and a second win the same week still re-pays nothing.
+        const seal = weeklySealFor(useSave.getState().save?.weekly?.lastWeek ?? null, week, winner === 0);
+        ledgerDelta += seal.bonus;
+        s.update((cur) => ({
+          ...cur,
+          weekly: { lastWeek: seal.lastWeek },
+          economy: { ...cur.economy, ink: cur.economy.ink + seal.bonus },
+        }));
+        if (seal.firstWin) s.unlockAchievement('weekly-sat');
       }
 
       // The single ledger entry for this duel. Ranked/friend carry the SERVER's duel id
@@ -330,6 +341,10 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
 
       ui.go('result', {
         serverDuel: null,
+        // A8 — the result's back route is the HUB. The old pop went to 'duel',
+        // which remounted a brand-new duel with the same spec; finishing that
+        // replayed daily re-awarded its ink (the duplicate-reward path).
+        prev: 'antechamber',
         lastResult: {
           winner,
           reason: r.reason,
@@ -404,6 +419,29 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
     // destroys the runtime, so no verdict — and no defeat ledger entry — ever lands.
     ui.go('antechamber', { lastResult: null, serverDuel: null });
   }, [duel, ui]);
+
+  // DAY2 back-nav hardening — the duel owns hardware back while it is mounted. The
+  // guard registers in the ui store; GameShell's single BackHandler consults it FRESH
+  // at the call, so there are no coexisting listeners and no order to reason about.
+  // A live duel is left only through this flow — confirm, then concede (the tested
+  // verdict path) — never a raw unmount: the old back destroyed the solo runtime and
+  // walked out of ranked rooms with no forfeit, and popped the nav stack under the
+  // disconnect grace. Re-registered whenever any read state changes, so the closure
+  // is always current.
+  useEffect(() => {
+    const guard = (): boolean => {
+      if (!duel) return false; // the skeleton — let the shell pop
+      if (endedRef.current) return true; // the verdict is flowing; finish() owns the route
+      if (duel.disconnect) return true; // S08 grace — server-ticked, self-resolving
+      if (paused) { setPaused(false); return true; } // back dismisses the pause
+      if (confirmConcede || confirmSkip || confirmAbandon) return true; // the open dialog owns the gesture
+      if (ui.duelMode === 'tutorial') { requestSkip(); return true; } // the lesson's exit is its skip flow
+      setConfirmAbandon(true); // leaving is conceding — ask first
+      return true;
+    };
+    useUi.getState().setBackGuard(guard);
+    return () => { useUi.getState().setBackGuard(null); };
+  }, [duel, paused, confirmConcede, confirmSkip, confirmAbandon, ui.duelMode, requestSkip]);
 
   const foeName = spec?.names[1] ?? i18n.duel.log.theTablet;
 
@@ -597,6 +635,14 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
           theme={theme}
           onConfirm={skipTutorial}
           onCancel={() => setConfirmSkip(false)}
+        />
+      ) : null}
+
+      {confirmAbandon ? (
+        <AbandonModal
+          theme={theme}
+          onConfirm={() => { setConfirmAbandon(false); duel.concede(); }}
+          onCancel={() => setConfirmAbandon(false)}
         />
       ) : null}
 

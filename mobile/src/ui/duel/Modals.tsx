@@ -109,6 +109,44 @@ export function ConcedeModal({ theme, onConfirm, onCancel }: ConcedeModalProps) 
   );
 }
 
+/**
+ * DAY2 back-nav hardening — hardware back on a LIVE duel. The old behaviour popped
+ * the nav stack underneath the player: the solo runtime was destroyed and a ranked
+ * room was abandoned with no forfeit at all. Back now asks first, in every mode:
+ * leaving is conceding (the same law the pause menu's concede already applies), the
+ * copy reads honestly for both a Shade duel and a Standing duel, and the request
+ * routes through `duel.concede()` — the tested verdict path — never a raw unmount.
+ */
+export interface AbandonModalProps {
+  theme: Theme;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function AbandonModal({ theme, onConfirm, onCancel }: AbandonModalProps) {
+  return (
+    <DuelModal title={i18n.duel.abandonConfirm.title} theme={theme} onRequestClose={onCancel}>
+      <Text style={[styles.body, { color: theme.fgDim }]}>{i18n.duel.abandonConfirm.body}</Text>
+      <View style={styles.actions}>
+        <Pressable
+          onPress={onConfirm}
+          accessibilityRole="button"
+          style={[styles.btn, { backgroundColor: theme.accent }]}
+        >
+          <Text style={[styles.btnText, { color: theme.fg }]}>{i18n.duel.abandonConfirm.confirm}</Text>
+        </Pressable>
+        <Pressable
+          onPress={onCancel}
+          accessibilityRole="button"
+          style={[styles.btn, { borderColor: theme.lineStrong, borderWidth: 1 }]}
+        >
+          <Text style={[styles.btnText, { color: theme.fg }]}>{i18n.duel.abandonConfirm.cancel}</Text>
+        </Pressable>
+      </View>
+    </DuelModal>
+  );
+}
+
 export interface DisconnectModalProps {
   state: { secondsLeft: number; graceS: number; who: string };
   theme: Theme;
@@ -152,7 +190,10 @@ export function SkipModal({ theme, onConfirm, onCancel }: SkipModalProps) {
 export function DisconnectModal({ state, theme }: DisconnectModalProps) {
   const drain = Math.max(0, Math.min(1, state.secondsLeft / Math.max(1, state.graceS)));
   return (
-    <RNModal transparent animationType="fade" visible>
+    // DAY2 (A12 belt-and-braces) — an explicit no-op onRequestClose: back must never
+    // dismiss the grace (it is server-ticked and self-resolving: rekindle or forfeit).
+    // The duel screen's back guard swallows the gesture at the app layer too.
+    <RNModal transparent animationType="fade" visible onRequestClose={() => {}}>
       <View
         accessibilityRole="alert"
         accessibilityLiveRegion="assertive"
