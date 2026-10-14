@@ -78,7 +78,7 @@ export function murmurSource(heat: number): number {
   return clampUnit(heat) * MURMUR_CEIL;
 }
 
-/** The cast variants on disk (cast-0..cast-3.wav cover the four Orders' rites). */
+/** The cast variants on disk (cast-0..cast-3.m4a cover the four Orders' rites). */
 export const CAST_VARIANTS = 4;
 
 /** cast(kind) → which file plays: the web's base = 340 + kind*40, folded to disk. */

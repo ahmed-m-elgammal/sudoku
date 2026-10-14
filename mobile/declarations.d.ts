@@ -5,7 +5,7 @@
 // so the type is the honest "opaque asset" — a number under Metro, where
 // expo-audio's AudioSource accepts it directly.
 
-declare module '*.wav' {
+declare module '*.m4a' {
   const asset: number;
   export default asset;
 }

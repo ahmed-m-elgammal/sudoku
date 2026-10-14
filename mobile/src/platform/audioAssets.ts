@@ -1,8 +1,13 @@
 // ASSIZE mobile — the audio asset registry.
 //
 // The sounds on disk are produced by `node tools/render-audio.mjs` (repo root),
-// which renders the web build's synth graph offline into 16-bit mono WAV — the
-// settled porting decision of specs/07. This file is the only place that names
+// which renders the web build's synth graph offline into 16-bit mono WAV, then
+// encoded to gapless AAC-in-M4A (loops 80 kbps, one-shots 64 kbps, mono,
+// +faststart). M4A is the gapless-safe intersection of the two players:
+// ExoPlayer (Android) and AVPlayer (iOS) both honour the MP4 edit list, so the
+// three beds loop with no click — verified by decoding and correlating the
+// wrap point against the WAV masters (fidelity r > 0.999, wrap step a fraction
+// of bed RMS). This file is the only place that names
 // them: the imports are what make Metro bundle the files, so a renamed sound
 // breaks the BUILD here, loudly, at the one place you would look — the same law
 // `src/theme/assets.ts` established for the art.
@@ -11,7 +16,7 @@
 // under the whole app's import graph (every screen reaches `audio`), so it must
 // EVALUATE everywhere the app runs — including the logic-test runner, where a
 // binary require() would be parsed as JavaScript. The runner is taught to treat
-// .wav as an asset (vitest.config.ts assetsInclude); Metro already knows the
+// .m4a as an asset (vitest.config.ts assetsInclude); Metro already knows the
 // extension. Same bytes, same bundle, no environment can crash on it.
 //
 // Three of these are CONTINUOUS beds (drone / tension / murmur) rendered as
@@ -19,30 +24,30 @@
 // `setHeat(heat)` through the gain law in `./gainLaw`. The rest are ONE-SHOTS
 // played at trigger time on the fx bus.
 
-import droneLoop from '../../assets/audio/drone-loop.wav';
-import tensionLoop from '../../assets/audio/tension-loop.wav';
-import murmurLoop from '../../assets/audio/murmur-loop.wav';
-import placeWav from '../../assets/audio/place.wav';
-import wrongWav from '../../assets/audio/wrong.wav';
-import pencilWav from '../../assets/audio/pencil.wav';
-import errorWav from '../../assets/audio/error.wav';
-import uiTapWav from '../../assets/audio/ui-tap.wav';
-import pageTurnWav from '../../assets/audio/page-turn.wav';
-import stampWav from '../../assets/audio/stamp.wav';
-import claimWonWav from '../../assets/audio/claim-won.wav';
-import claimLostWav from '../../assets/audio/claim-lost.wav';
-import statusAppliedWav from '../../assets/audio/status-applied.wav';
-import statusEndedWav from '../../assets/audio/status-ended.wav';
-import padlockWav from '../../assets/audio/padlock.wav';
-import orderSwapWav from '../../assets/audio/order-swap.wav';
-import cast0Wav from '../../assets/audio/cast-0.wav';
-import cast1Wav from '../../assets/audio/cast-1.wav';
-import cast2Wav from '../../assets/audio/cast-2.wav';
-import cast3Wav from '../../assets/audio/cast-3.wav';
-import victoryWav from '../../assets/audio/victory.wav';
-import defeatWav from '../../assets/audio/defeat.wav';
-import drawWav from '../../assets/audio/draw.wav';
-import reliquaryWav from '../../assets/audio/reliquary.wav';
+import droneLoop from '../../assets/audio/drone-loop.m4a';
+import tensionLoop from '../../assets/audio/tension-loop.m4a';
+import murmurLoop from '../../assets/audio/murmur-loop.m4a';
+import placeM4a from '../../assets/audio/place.m4a';
+import wrongM4a from '../../assets/audio/wrong.m4a';
+import pencilM4a from '../../assets/audio/pencil.m4a';
+import errorM4a from '../../assets/audio/error.m4a';
+import uiTapM4a from '../../assets/audio/ui-tap.m4a';
+import pageTurnM4a from '../../assets/audio/page-turn.m4a';
+import stampM4a from '../../assets/audio/stamp.m4a';
+import claimWonM4a from '../../assets/audio/claim-won.m4a';
+import claimLostM4a from '../../assets/audio/claim-lost.m4a';
+import statusAppliedM4a from '../../assets/audio/status-applied.m4a';
+import statusEndedM4a from '../../assets/audio/status-ended.m4a';
+import padlockM4a from '../../assets/audio/padlock.m4a';
+import orderSwapM4a from '../../assets/audio/order-swap.m4a';
+import cast0M4a from '../../assets/audio/cast-0.m4a';
+import cast1M4a from '../../assets/audio/cast-1.m4a';
+import cast2M4a from '../../assets/audio/cast-2.m4a';
+import cast3M4a from '../../assets/audio/cast-3.m4a';
+import victoryM4a from '../../assets/audio/victory.m4a';
+import defeatM4a from '../../assets/audio/defeat.m4a';
+import drawM4a from '../../assets/audio/draw.m4a';
+import reliquaryM4a from '../../assets/audio/reliquary.m4a';
 
 export const loopAssets = {
   /** the courtroom drone — three detuned saws under a breathing lowpass */
@@ -57,31 +62,31 @@ export type LoopKey = keyof typeof loopAssets;
 
 export const sfxAssets = {
   // the duel's placement voices
-  place: placeWav,
-  wrong: wrongWav,
-  pencil: pencilWav,
-  error: errorWav,
-  uiTap: uiTapWav,
-  pageTurn: pageTurnWav,
+  place: placeM4a,
+  wrong: wrongM4a,
+  pencil: pencilM4a,
+  error: errorM4a,
+  uiTap: uiTapM4a,
+  pageTurn: pageTurnM4a,
   // the wax and the claims
-  stamp: stampWav,
-  claimWon: claimWonWav,
-  claimLost: claimLostWav,
+  stamp: stampM4a,
+  claimWon: claimWonM4a,
+  claimLost: claimLostM4a,
   // statuses, rites and the Order swap
-  statusApplied: statusAppliedWav,
-  statusEnded: statusEndedWav,
-  padlock: padlockWav,
-  orderSwap: orderSwapWav,
-  cast0: cast0Wav,
-  cast1: cast1Wav,
-  cast2: cast2Wav,
-  cast3: cast3Wav,
+  statusApplied: statusAppliedM4a,
+  statusEnded: statusEndedM4a,
+  padlock: padlockM4a,
+  orderSwap: orderSwapM4a,
+  cast0: cast0M4a,
+  cast1: cast1M4a,
+  cast2: cast2M4a,
+  cast3: cast3M4a,
   // verdicts
-  victory: victoryWav,
-  defeat: defeatWav,
-  draw: drawWav,
+  victory: victoryM4a,
+  defeat: defeatM4a,
+  draw: drawM4a,
   // S10 — the Reliquary chest ritual
-  reliquary: reliquaryWav,
+  reliquary: reliquaryM4a,
 } as const;
 
 export type SfxKey = keyof typeof sfxAssets;
