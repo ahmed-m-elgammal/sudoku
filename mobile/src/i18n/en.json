@@ -460,6 +460,7 @@
     "quarantineNote": "The previous ledger was found corrupted on {date} and has been set aside. A fresh ledger was begun — export a Recovery Code now so this one can be restored.",
     "recoveryShow": "Write the code",
     "recoveryCopy": "Copy",
+    "recoveryDonor": "Donor account ID",
     "export": "Export save",
     "import": "Import save",
     "importPlaceholder": "Paste the exported save…",

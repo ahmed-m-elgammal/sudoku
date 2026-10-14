@@ -49,8 +49,12 @@ export interface RecoverySectionProps {
 
 export default function RecoverySection({ save, theme, fs }: RecoverySectionProps) {
   const [code, setCode] = useState<string | null>(null);
+  // SEC-03: the donor account id shown beside the code — the restore side must
+  // name the donor (server 400s without it), so the show side exposes it.
+  const [donorIdShown, setDonorIdShown] = useState<string | null>(null);
   const [saveText, setSaveText] = useState('');
   const [codeText, setCodeText] = useState('');
+  const [donorIdText, setDonorIdText] = useState('');
   // A9 — the boot that replaced a corrupt ledger stamps this on the store
   const quarantinedAt = useSave((s) => s.quarantinedAt);
 
@@ -61,6 +65,7 @@ export default function RecoverySection({ save, theme, fs }: RecoverySectionProp
     const id = await loadIdentity();
     id.recoveryHash = hash;
     await saveIdentity(id);
+    setDonorIdShown(id.id);
     void net.auth({ id: id.id, secret: id.secret, name: save.name, recoveryHash: hash });
   };
 
@@ -84,12 +89,16 @@ export default function RecoverySection({ save, theme, fs }: RecoverySectionProp
   };
 
   const importCode = async () => {
-    if (!validateRecoveryCode(codeText)) {
+    // the code field may hold a pasted two-line copy (code + donor id)
+    const lines = codeText.split(/\r?\n/).map((s) => s.trim()).filter((s) => s.length > 0);
+    const c = lines[0] ?? '';
+    if (!validateRecoveryCode(c)) {
       audio.error();
       return;
     }
+    const donor = donorIdText.trim() || lines[1] || '';
     const id = await loadIdentity();
-    const res = await net.recovery({ code: codeText, id: id.id, secret: id.secret });
+    const res = await net.recovery({ code: c, id: id.id, secret: id.secret, donorId: donor || undefined });
     // T13 — the response carries the server-known Ink: apply it (max — the
     // client may hold un-synced local ink the server never heard about).
     const ink = recoveryInkFrom(res);
@@ -134,10 +143,19 @@ export default function RecoverySection({ save, theme, fs }: RecoverySectionProp
         {code && (
           <>
             <Text style={[styles.code, { color: palette.brass, fontSize: fs.sm }]}>{code}</Text>
+            {/* SEC-03: the donor id the restore side must name — same affordance row, no new ritual */}
+            {donorIdShown ? (
+              <Text
+                accessibilityLabel={i18n.ledger.recoveryDonor}
+                style={[styles.body, { color: theme.fgDim, fontSize: fs.sm }]}
+              >
+                {donorIdShown}
+              </Text>
+            ) : null}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={i18n.ledger.recoveryCopy}
-              onPress={() => { void clipboard.copy(code); }}
+              onPress={() => { void clipboard.copy(donorIdShown ? `${code}\n${donorIdShown}` : code); }}
               style={[styles.btn, styles.btnGhost, { borderColor: theme.lineStrong }]}
             >
               <Text style={[styles.btnText, { color: theme.fg, fontSize: fs.md, letterSpacing: 0.06 * fs.md }]}>{i18n.ledger.recoveryCopy}</Text>
@@ -180,6 +198,16 @@ export default function RecoverySection({ save, theme, fs }: RecoverySectionProp
           placeholderTextColor={theme.fgDim}
           autoCapitalize="none"
           accessibilityLabel="Recovery code"
+          style={[styles.field, { backgroundColor: palette.charcoal, borderColor: theme.lineStrong, color: theme.fg, flex: 1, fontSize: fs.sm }]}
+        />
+        {/* SEC-03: the donor account the code came from — the server refuses nameless restores */}
+        <TextInput
+          value={donorIdText}
+          onChangeText={setDonorIdText}
+          placeholder={i18n.ledger.recoveryDonor}
+          placeholderTextColor={theme.fgDim}
+          autoCapitalize="none"
+          accessibilityLabel={i18n.ledger.recoveryDonor}
           style={[styles.field, { backgroundColor: palette.charcoal, borderColor: theme.lineStrong, color: theme.fg, flex: 1, fontSize: fs.sm }]}
         />
         <Pressable

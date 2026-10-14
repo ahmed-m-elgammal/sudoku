@@ -203,7 +203,7 @@ class NetClient {
       return null;
     }
   }
-  async recovery(body: { code: string; id: string; secret: string }) {
+  async recovery(body: { code: string; id: string; secret: string; donorId?: string }) {
     try {
       const r = await rest('/api/recovery', { method: 'POST', body: JSON.stringify(body) });
       return r.ok ? ((await r.json()) as { ok: boolean; standing?: number; purchases?: string[]; ink?: number }) : null;
@@ -234,7 +234,7 @@ export const proto = {
   ability: (duelId: string, ability: AbilityId, arg: { cell?: number; unit?: string }) => net.send('ability', { duelId, ability, ...arg }),
   pencil: (duelId: string, cell: number, digits: number[]) => net.send('pencil', { duelId, cell, digits }),
   concede: (duelId: string) => net.send('concede', { duelId }),
-  reconnect: (duelId: string, secret: string) => net.send('reconnect', { duelId, secret }),
+  reconnect: (duelId: string, secret: string, accountId: string) => net.send('reconnect', { duelId, secret, accountId }),
   // The server's join_duel handler authenticates accountId + secret; the web build sent
   // only the secret, so every re-join (the S08 reconnect path) failed server-side and a
   // reconnected duel froze. ServerDuel passes both (reported web defect, fixed here).
