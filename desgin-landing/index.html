@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASSIZE. Law is settled by solving.</title>
+<meta name="description" content="A 1v1 sudoku duel in the plague-walled city of Novem. Race the same sealed Tablet against a Shade, claim rows, columns and boxes, cast engraved rites. 27 campaign duels, four Orders, ranked play, a daily Assize.">
+<meta name="theme-color" content="#0e0e0f">
+<meta name="application-name" content="ASSIZE">
+<link rel="canonical" href="https://assize.example/">
+<meta name="robots" content="index, follow">
+
+<!-- Open Graph / Twitter -->
+<meta property="og:site_name" content="ASSIZE">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ASSIZE. Law is settled by solving.">
+<meta property="og:description" content="A 1v1 sudoku duel in the plague-walled city of Novem. The Tablet does not forgive.">
+<meta property="og:image" content="https://assize.example/assets/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ASSIZE">
+<meta name="twitter:description" content="Law is settled by solving.">
+<meta name="twitter:image" content="https://assize.example/assets/brand/og-image.png">
+
+<link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg">
+<link rel="apple-touch-icon" href="assets/brand/app-icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<!-- Structured data for search + answer engines -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ASSIZE",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Web, Android, iOS",
+  "description": "A 1v1 sudoku duel in the plague-walled city of Novem where law is settled by solving.",
+  "image": "https://assize.example/assets/brand/og-image.png",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Organization", "name": "ASSIZE" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "ASSIZE",
+  "url": "https://assize.example/",
+  "description": "Official site and game for ASSIZE, a 1v1 sudoku duel."
+}
+</script>
+
+<link rel="stylesheet" href="fonts.css">
+<link rel="preload" href="fonts/im-fell-english-sc.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/im-fell-dw-pica.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/libre-caslon-400.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* tastemaker build stamp: macrostructure=long-scroll-narrative; archetypes=hero-split/claim-list/orders-grid/folio-strip/mode-grid/ending-pair; mood=grim-engraved mat; palette-seed=assize-tokens; contrast=text/bg UI/legal per lock; motion=gsap-scrollreveal+hero-parallax; section-rhythm=space32+ */
+/* Design tokens (ASSIZE / engraved grimoire) */
+:root {
+  --ink-black:#0e0e0f; --charcoal:#17171a; --charcoal-2:#1d1d21;
+  --parchment:#b8a27c; --parchment-light:#cdb992; --parchment-dim:#9a8560;
+  --ink:#1a1410; --brass:#a58849; --brass-dim:#6f5b31;
+  --oxblood:#7b1a1f; --oxblood-deep:#5c1216; --bone:#d8d2c4; --verdigris:#3e6b5a;
+  --ash:#8d8a82; --line:#3a352c; --line-strong:#574e3d;
+  --bg:var(--ink-black); --bg-raised:var(--charcoal); --fg:var(--parchment-light);
+  --fg-dim:var(--parchment-dim); --fg-bright:var(--bone); --accent:var(--oxblood);
+  --focus:var(--brass); --ok:var(--verdigris);
+  --font-display:'IM Fell English SC','IM Fell DW Pica',Georgia,serif;
+  --font-body:'IM Fell DW Pica',Georgia,'Times New Roman',serif;
+  --font-digit:'Libre Caslon Text',Georgia,serif;
+  --radius:4px; --radius-lg:8px;
+  --ease-page:cubic-bezier(0.2,0,0.1,1);
+  --t-fast:120ms; --t-med:260ms;
+  --max:1200px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer}
+
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:400;letter-spacing:.02em}
+.digits{font-family:var(--font-digit);font-variant-numeric:lining-nums}
+
+.skip{position:absolute;left:-9999px;top:0;background:var(--charcoal);color:var(--parchment-light);padding:8px 12px;z-index:100}
+.skip:focus{left:12px;top:12px}
+
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+
+/* Nav */
+nav.top{position:sticky;top:0;z-index:50;background:rgba(14,14,15,.88);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:12px 0}
+nav.top .inner{display:flex;align-items:center;gap:20px;max-width:var(--max);margin:0 auto;padding:0 24px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:22px;letter-spacing:.12em;color:var(--parchment-light)}
+.brand img{height:28px;width:auto}
+nav.top ul{display:flex;gap:18px;list-style:none;margin-left:auto;font-family:var(--font-body);font-size:14px}
+nav.top a.link{opacity:.82;transition:opacity var(--t-fast)}
+nav.top a.link:hover{opacity:1;color:var(--parchment)}
+.nav-cta{border:1px solid var(--brass);padding:8px 14px;border-radius:var(--radius);font-family:var(--font-display);font-size:14px;letter-spacing:.06em;background:var(--charcoal);transition:background var(--t-fast),border-color var(--t-fast)}
+.nav-cta:hover{background:var(--charcoal-2);border-color:var(--brass)}
+
+/* Hero */
+.hero{padding:96px 0 64px;position:relative;overflow:hidden}
+.hero .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.eyebrow{font-family:var(--font-body);font-style:italic;color:var(--parchment-dim);font-size:15px;margin-bottom:18px;letter-spacing:.04em}
+h1.hero-title{font-family:var(--font-display);font-size:clamp(52px,7vw,96px);line-height:1.02;letter-spacing:.04em;color:var(--parchment-light)}
+h1.hero-title .mark{color:var(--oxblood)}
+.hero-sub{margin-top:22px;font-size:19px;color:var(--parchment-dim);max-width:46ch}
+.hero-actions{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap;align-items:center}
+.store-badge{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border:1.5px solid var(--brass-dim);background:var(--charcoal);border-radius:var(--radius);transition:border-color var(--t-fast),transform var(--t-fast)}
+.store-badge:hover{border-color:var(--brass)}
+.store-badge .glyph{width:22px;height:22px;fill:var(--parchment-light)}
+.store-badge span{display:block;font-family:var(--font-display);letter-spacing:.06em;font-size:15px}
+.store-badge small{display:block;font-family:var(--font-body);font-size:11px;color:var(--parchment-dim);margin-top:2px}
+.hero-note{margin-top:16px;font-size:13px;color:var(--ash);font-style:italic}
+
+.tablet-frame{position:relative;border:1px solid var(--line-strong);background:var(--charcoal);padding:12px;border-radius:var(--radius-lg)}
+.tablet-frame::before{content:'';position:absolute;inset:6px;border:1px solid var(--line);pointer-events:none;border-radius:4px}
+.tablet-frame img{width:100%;height:auto;filter:contrast(1.02) saturate(.95)}
+.tablet-glow{position:absolute;inset:-40px;background:radial-gradient(circle,rgba(123,26,31,.12) 0%,transparent 60%);pointer-events:none;z-index:-1}
+.hero-seal{position:absolute;bottom:-14px;right:-14px;width:92px;height:92px;opacity:.85;pointer-events:none}
+
+/* Sections */
+section{padding:88px 0;position:relative}
+.section-head{max-width:640px;margin:0 0 48px}
+.section-head .label{font-family:var(--font-body);font-style:italic;color:var(--brass);font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+h2.section-title{font-size:clamp(34px,4vw,56px);line-height:1.05;margin-top:8px;color:var(--parchment-light)}
+.section-lead{margin-top:14px;font-size:17px;color:var(--parchment-dim);max-width:56ch}
+.hr{border:none;border-top:1px solid var(--line-strong);margin:0 0 48px;max-width:var(--max);margin-left:auto;margin-right:auto}
+
+/* Duel block: image + claims */
+.duel-block{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.duel-list{list-style:none;display:flex;flex-direction:column;gap:18px;margin-top:24px}
+.duel-list li{display:grid;grid-template-columns:36px 1fr;gap:14px;padding:14px;border:1px solid var(--line);background:var(--bg-raised);border-radius:var(--radius)}
+.duel-list .n{font-family:var(--font-digit);color:var(--brass);font-size:22px;line-height:1}
+.duel-list strong{font-family:var(--font-display);color:var(--parchment-light);display:block;margin-bottom:2px}
+.duel-list p{font-size:15px;color:var(--parchment-dim)}
+
+/* Orders */
+.orders-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.order{background:var(--bg-raised);border:1px solid var(--line-strong);border-radius:var(--radius-lg);padding:22px 18px;text-align:center;transition:border-color var(--t-med),transform var(--t-med)}
+.order:hover{border-color:var(--brass)}
+.order-crest{width:56px;height:56px;margin:0 auto 14px}
+.order h3{font-size:24px;margin-bottom:4px}
+.order .passive{font-style:italic;color:var(--parchment-dim);font-size:14px;margin:6px 0 10px}
+.order ul{list-style:none;font-size:13px;color:var(--parchment-dim);text-align:left;display:flex;flex-direction:column;gap:4px}
+.order ul li::before{content:'· ';color:var(--brass)}
+
+/* Folios horizontal strip */
+.folios{display:flex;gap:14px;overflow-x:auto;padding:4px 0 16px;-webkit-overflow-scrolling:touch}
+.folio{flex:0 0 150px;border:1px solid var(--line-strong);background:var(--bg-raised);border-radius:var(--radius);overflow:hidden;text-align:center}
+.folio img{width:100%;height:170px;object-fit:cover;filter:contrast(1.05) saturate(.9)}
+.folio .meta{padding:10px 8px}
+.folio .roman{font-family:var(--font-display);color:var(--brass);font-size:13px;letter-spacing:.08em}
+.folio .name{font-family:var(--font-display);font-size:16px;color:var(--parchment-light);margin-top:2px}
+.folio .arc{font-size:12px;color:var(--parchment-dim);margin-top:4px;font-style:italic}
+.folios::-webkit-scrollbar{height:6px}
+.folios::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
+
+/* Mode grid */
+.mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.mode-card{background:var(--bg-raised);border:1px solid var(--line-strong);border-radius:var(--radius-lg);overflow:hidden}
+.mode-card img{width:100%;height:160px;object-fit:cover;filter:contrast(1.05) saturate(.9)}
+.mode-card .body{padding:16px 18px}
+.mode-card h3{font-size:22px;margin-bottom:6px}
+.mode-card p{font-size:14px;color:var(--parchment-dim)}
+.mode-tag{display:inline-block;font-family:var(--font-body);font-style:italic;font-size:12px;color:var(--brass);margin-bottom:6px}
+
+/* Ending plates */
+.ending{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch}
+.ending figure{border:1px solid var(--line-strong);background:var(--bg-raised);border-radius:var(--radius-lg);overflow:hidden;margin:0}
+.ending img{width:100%;height:240px;object-fit:cover;filter:contrast(1.05) saturate(.9)}
+.ending figcaption{padding:16px 18px}
+.ending figcaption h3{font-size:22px;margin-bottom:4px}
+.ending figcaption p{font-size:14px;color:var(--parchment-dim)}
+
+/* Download block */
+.download-block{text-align:center;padding:96px 0;border-top:1px solid var(--line);background:linear-gradient(180deg,transparent 0%,rgba(123,26,31,.08) 100%)}
+/* keep matte: gradient above is subtle scrim-like; override to flat to honor tokens */
+.download-block{background:var(--bg)}
+.download-block h2{font-size:clamp(34px,4vw,56px);margin-bottom:12px}
+.download-block p{color:var(--parchment-dim);max-width:52ch;margin:0 auto 32px;font-size:17px}
+.download-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+
+/* Footer */
+footer{padding:48px 0 32px;border-top:1px solid var(--line-strong);background:var(--bg-raised)}
+footer .cols{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px}
+footer h4{font-size:16px;margin-bottom:10px;color:var(--parchment)}
+footer ul{list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--parchment-dim)}
+footer ul a:hover{color:var(--parchment)}
+footer .legal{margin-top:32px;padding-top:20px;border-top:1px solid var(--line);font-size:13px;color:var(--ash);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+/* Reveal defaults */
+[data-reveal]{opacity:1}
+/* JS will set opacity 0 before animating; if no JS, content visible */
+
+/* Arena */
+.arena{border:1px solid var(--line-strong);background:var(--bg);border-radius:var(--radius-lg);padding:24px}
+.arena-board{display:grid;grid-template-columns:1fr auto 1fr;gap:24px;align-items:center}
+.arena-side{text-align:center}
+.arena-name{font-family:var(--font-display);font-size:18px;margin-bottom:10px;letter-spacing:.06em}
+.arena-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:180px;margin:0 auto 10px}
+.arena-grid .cell{aspect-ratio:1;display:grid;place-items:center;border:1px solid var(--line-strong);background:var(--charcoal);font-family:var(--font-digit);font-size:20px;color:var(--parchment-light);border-radius:2px;transition:background var(--t-fast)}
+.arena-grid .cell.filledA{background:var(--charcoal-2);border-color:var(--brass-dim)}
+.arena-grid .cell.filledB{background:#2a1416;border-color:var(--oxblood)}
+.arena-grid .cell.mistake{animation:ink-mistake .28s ease-out}
+.arena-grid .cell.claim{animation:ink-claim .28s ease-out}
+@keyframes ink-mistake{0%{background:#3a0f13}100%{background:var(--charcoal)}}
+@keyframes ink-claim{0%{box-shadow:0 0 0 2px var(--brass)}100%{box-shadow:0 0 0 0 var(--brass)}}
+.arena-seals{font-family:var(--font-body);font-size:14px;color:var(--parchment-dim)}
+.arena-seals span{font-family:var(--font-digit);color:var(--parchment-light);margin-left:6px}
+.arena-center{text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+.arena-vs{font-family:var(--font-body);font-style:italic;color:var(--ash);font-size:13px}
+.arena-log{font-family:var(--font-body);font-size:14px;color:var(--parchment-dim);min-height:40px;max-width:220px}
+.arena-banner{font-family:var(--font-display);font-size:16px;color:var(--brass);min-height:20px;letter-spacing:.06em}
+@media (max-width:600px){.arena-board{grid-template-columns:1fr}.arena-center{order:-1}}
+
+/* Responsive */
+@media (max-width:960px){
+  .hero .grid,.duel-block,.ending,.orders-grid{grid-template-columns:1fr}
+  .orders-grid{grid-template-columns:repeat(2,1fr)}
+  .mode-grid{grid-template-columns:repeat(2,1fr)}
+  footer .cols{grid-template-columns:1fr 1fr}
+}
+@media (max-width:600px){
+  .orders-grid,.mode-grid{grid-template-columns:1fr}
+  nav.top ul{display:none}
+  nav.top.open ul{display:flex;flex-direction:column;position:absolute;top:100%;left:0;right:0;padding:12px 24px;background:rgba(14,14,15,.96);border-bottom:1px solid var(--line);gap:10px}
+  .nav-toggle{display:inline-flex}
+  .hero{padding:64px 0 40px}
+  section{padding:60px 0}
+}
+.nav-toggle{display:none;align-items:center;justify-content:center;padding:6px 12px;border:1px solid var(--brass-dim);border-radius:var(--radius);background:var(--charcoal);font-family:var(--font-display);font-size:14px;letter-spacing:.06em;color:var(--parchment-light)}
+
+/* Reduced motion */
+@media (prefers-reduced-motion:reduce){[data-reveal],[data-reveal-group] *{opacity:1!important;transform:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav class="top" aria-label="primary">
+  <div class="inner">
+    <a href="index.html" class="brand"><img src="assets/brand/favicon.svg" alt="" width="28" height="28">ASSIZE</a>
+    <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="primary-menu" aria-label="Open menu">Menu</button>
+    <ul id="primary-menu">
+      <li><a class="link" href="#duel">The duel</a></li>
+      <li><a class="link" href="#orders">Orders</a></li>
+      <li><a class="link" href="#folios">Folios</a></li>
+      <li><a class="link" href="#play">Play</a></li>
+      <li><a class="link" href="privacy.html">Privacy</a></li>
+      <li><a class="link" href="terms.html">Terms</a></li>
+    </ul>
+    <a href="#download" class="nav-cta">Download</a>
+  </div>
+</nav>
+
+<main id="main">
+
+<!-- HERO -->
+<header class="hero wrap" data-reveal>
+  <div class="grid">
+    <div>
+      <p class="eyebrow">The Assize of Novem · a 1v1 sudoku duel</p>
+      <h1 class="hero-title">Law is settled<br><span class="mark">by solving.</span></h1>
+      <p class="hero-sub">You are a Clerk. The Shade wears your master's voice. Both solve the same sealed Tablet; wrong ink cracks your own wax Seals, and claiming a row, a column or a box wounds your foe. Rites hinder, passives protect, and the Ledger remembers the choice you make at the top.</p>
+      <div class="hero-actions">
+        <a class="store-badge" href="#download" aria-label="Download on Google Play (link placeholder)">
+          <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 2.3C3.2 2.7 3 3.3 3 4v16c0 .7.2 1.3.6 1.7L3.7 21.8l9.8-9.8-9.9-9.7zM13.5 12l3 3 4.3-2.5c1.2-.7 1.2-1.8 0-2.5L16.5 9zm-1.4-1.4L2.3 1.1 1 2.4l9.4 9.2zM12.1 13.4l-9.4 9.2 1.3 1.3 9.8-9.9-1.7-1.6z"/></svg>
+          <span>Google Play<small>link to be set before launch</small></span>
+        </a>
+        <a class="store-badge" href="#download" aria-label="Download on the App Store (link placeholder)">
+          <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.7 12.4c0-3.1 2.5-4.6 2.6-4.7-1.4-2-3.6-2.3-4.4-2.3-1.9-.2-3.7 1.1-4.6 1.1-.9 0-2.4-1.1-3.9-1-2 .0-3.9 1.2-5 3-2.1 3.6-.5 8.8 1.5 11.7 1 1.4 2.1 3 3.6 2.9 1.5-.1 2-.9 3.7-.9 1.7 0 2.2.9 3.8.9 1.6 0 2.6-1.5 3.6-2.9 1.1-1.6 1.6-3.2 1.6-3.3zM16.1 3.6c.8-1 1.3-2.3 1.2-3.6-1.1.0-2.5.7-3.3 1.7-.7.8-1.3 2.2-1.1 3.5 1.3.1 2.5-.7 3.2-1.6z"/></svg>
+          <span>App Store<small>link to be set before launch</small></span>
+        </a>
+      </div>
+      <p class="hero-note">Instant play. No login before your first board.</p>
+    </div>
+    <div class="tablet-frame" data-reveal aria-label="A live Tablet mid-duel">
+      <div class="tablet-glow"></div>
+      <img src="assets/shots/j1-flood-mid.png" alt="A 9 by 9 Tablet mid-duel, digits in ink on parchment, one cell highlighted" width="1200" height="800" fetchpriority="high">
+    </div>
+  </div>
+</header>
+
+<hr class="hr wrap">
+
+<!-- DUEL -->
+<section id="duel" class="wrap">
+  <div class="section-head" data-reveal>
+    <p class="label">The duel, in thirty seconds</p>
+    <h2 class="section-title">Same puzzle. Separate boards. One winner.</h2>
+    <p class="section-lead">Placement, claims, wounds. Every rule of the Assize fits on the back of a chit; none of them forgive.</p>
+  </div>
+  <div class="duel-block">
+    <ul class="duel-list" data-reveal-group>
+      <li><span class="n">I</span><div><strong>Placement</strong><p>Tap a cell, tap a numeral. A wrong digit costs one Seal and Flinches your cooldowns for three seconds.</p></div></li>
+      <li><span class="n">II</span><div><strong>Claims</strong><p>Complete a row, column or box to claim it: one Seal of damage, two if the claim is Clean. Wrong ink in that unit costs the bonus forever.</p></div></li>
+      <li><span class="n">III</span><div><strong>Momentum</strong><p>Every correct placement shaves half a second off all your cooldowns. Speed is a weapon.</p></div></li>
+      <li><span class="n">IV</span><div><strong>Rites</strong><p>Twelve abilities across four Orders, each with its own cooldown; the first cast of each begins at half cooldown. Statuses run on a four-second global gap and immunity rules.</p></div></li>
+      <li><span class="n">V</span><div><strong>A judgment</strong><p>Seal death, then Reckoning (fill the Tablet), then Sudden Judgment at ten minutes, then forfeit. In that order. Always.</p></div></li>
+    </ul>
+    <div class="tablet-frame" data-reveal aria-label="A duel's result screen">
+      <img src="assets/shots/t13-result.png" alt="Result screen showing victory, seals broken and grades after a duel" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<!-- ORDERS -->
+<section id="orders" style="background:var(--bg-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="section-head" data-reveal>
+      <p class="label">The four Orders</p>
+      <h2 class="section-title">Choose your ink. Each wears a different wound.</h2>
+      <p class="section-lead">Free via play. Apothecary unlocks after Folio II, Warden after Folio IV. All four are viable; none is the answer.</p>
+    </div>
+    <div class="orders-grid" data-reveal-group>
+      <article class="order">
+        <img class="order-crest" src="assets/sigils/sigil-quill.svg" alt="Scholar crest">
+        <h3>Scholar</h3>
+        <p class="passive">Marginalia : first mistake forgiven.</p>
+        <ul><li>Augur : reveal a digit</li><li>Unseal : clear statuses, 6 s immunity</li><li>Fair Copy : auto-candidates for a box</li></ul>
+      </article>
+      <article class="order">
+        <img class="order-crest" src="assets/sigils/sigil-axe.svg" alt="Executioner crest">
+        <h3>Executioner</h3>
+        <p class="passive">Last Rites : claims deal +1 when foe is at three Seals or fewer.</p>
+        <ul><li>Sever : Chain their tightest unit</li><li>Hush : their number pad dies for 2.5 s</li><li>Reckoning : next claim deals +1</li></ul>
+      </article>
+      <article class="order">
+        <img class="order-crest" src="assets/sigils/sigil-vial.svg" alt="Apothecary crest">
+        <h3>Apothecary</h3>
+        <p class="passive">Distiller : statuses you cast last two seconds longer.</p>
+        <ul><li>Smudge : five digits blur for 7 s</li><li>Tincture : +1 Seal, twice per duel</li><li>Miasma : erase their notes for 10 s</li></ul>
+      </article>
+      <article class="order">
+        <img class="order-crest" src="assets/sigils/sigil-lantern.svg" alt="Warden crest">
+        <h3>Warden</h3>
+        <p class="passive">Bulwark : the first incoming status is negated.</p>
+        <ul><li>Ward : negate the next status for 15 s</li><li>Mirror : reflect the next status for 10 s</li><li>Quarantine : deny a unit for 12 s</li></ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- FOLIOS -->
+<section id="folios" class="wrap">
+  <div class="section-head" data-reveal>
+    <p class="label">The Nine Folios</p>
+    <h2 class="section-title">Twenty-seven duels. Nine Magistrates. One revelation.</h2>
+    <p class="section-lead">Campaign difficulty climbs Easy to Expert; every Magistrate fights with a named arc, and the final duel adapts: at four Seals, Magistrate Orsolo sets his Order aside and answers yours.</p>
+  </div>
+  <div class="folios" data-reveal>
+    <div class="folio"><img src="assets/portraits/mag-halbrecht.webp" alt="Portrait of Magistrate Halbrecht" loading="lazy"><div class="meta"><div class="roman">Folio I</div><div class="name">Halbrecht</div><div class="arc">Grip</div></div></div>
+    <div class="folio"><img src="assets/portraits/mag-vael.webp" alt="Portrait of Magistrate Vael" loading="lazy"><div class="meta"><div class="roman">Folio II</div><div class="name">Vael</div><div class="arc">Drip</div></div></div>
+    <div class="folio"><img src="assets/portraits/mag-ilse.webp" alt="Portrait of Magistrate Ilse" loading="lazy"><div class="meta"><div class="roman">Folio III</div><div class="name">Ilse</div><div class="arc">Peals</div></div></div>
+    <div class="folio"><img src="assets/portraits/mag-anselm.webp" alt="Portrait of Magistrate Anselm" loading="lazy"><div class="meta"><div class="roman">Folio IV</div><div class="name">Anselm</div><div class="arc">Lantern</div></div></div>
+    <div class="folio"><img src="assets/portraits/mag-corvane.webp" alt="Portrait of Magistrate Corvane" loading="lazy"><div class="meta"><div class="roman">Folio V</div><div class="name">Corvane</div><div class="arc">Map</div></div></div>
+    <div class="folio"><img src="assets/portraits/mag-quill.webp" alt="Portrait of Magistrate Quill" loading="lazy"><div class="meta"><div class="roman">Folio VI</div><div class="name">Quill</div><div class="arc">Forgery</div></div></div>
+    <div class="folio"><img src="assets/portraits/mag-marchetti.webp" alt="Portrait of Magistrate Marchetti" loading="lazy"><div class="meta"><div class="roman">Folio VII</div><div class="name">Marchetti</div><div class="arc">Ledger</div></div></div>
+    <div class="folio"><img src="assets/portraits/mag-nox.webp" alt="Portrait of Magistrate Nox" loading="lazy"><div class="meta"><div class="roman">Folio VIII</div><div class="name">Nox</div><div class="arc">Exhumation</div></div></div>
+    <div class="folio"><img src="assets/portraits/mag-orsolo.webp" alt="Portrait of Magistrate Orsolo" loading="lazy"><div class="meta"><div class="roman">Folio IX</div><div class="name">Orsolo</div><div class="arc">The Ninth</div></div></div>
+  </div>
+  <p class="section-lead" style="margin-top:24px" data-reveal>At the top waits the only choice the Ledger remembers forever: balance the truth, or burn it. Then the Endless Assize begins.</p>
+</section>
+
+<!-- ENDINGS -->
+<section style="background:var(--bg-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="section-head" data-reveal>
+      <p class="label">The verdict</p>
+      <h2 class="section-title">Balance the Ledger, or burn it.</h2>
+      <p class="section-lead">First clear of the ninth folio carries you past the result screen into two engraved panels, a confirm, and a final StoryCard. The save records which hand you played. The Endless Assize continues identically after either.</p>
+    </div>
+    <div class="ending" data-reveal-group>
+      <figure><img src="assets/plates/plate-ending-balance.webp" alt="Balance the Ledger ending plate" loading="lazy"><figcaption><h3>Balance the Ledger</h3><p>Brass, scales. The truth counted and kept.</p></figcaption></figure>
+      <figure><img src="assets/plates/plate-ending-burn.webp" alt="Burn the Ledger ending plate" loading="lazy"><figcaption><h3>Burn the Ledger</h3><p>Oxblood, fire. The truth counted and erased.</p></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ARENA -->
+<section id="arena" style="background:var(--bg-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="section-head" data-reveal>
+      <p class="label">A duel, observed</p>
+      <h2 class="section-title">Watch one Tablet settle a law.</h2>
+      <p class="section-lead">A miniature played on a 3x3 of a 9x9. The real game runs the same logic at full size, with twelve rites and five statuses in play.</p>
+    </div>
+    <div class="arena" data-reveal>
+      <div class="arena-board" aria-hidden="true">
+        <div class="arena-side">
+          <div class="arena-name">Clerk</div>
+          <div class="arena-grid" id="gridA"></div>
+          <div class="arena-seals">Seals <span id="sealsA">8</span></div>
+        </div>
+        <div class="arena-center">
+          <div class="arena-log" id="arenaLog">A placement. B placement. The clock runs.</div>
+          <div class="arena-vs">versus</div>
+          <div class="arena-banner" id="arenaBanner">Tablet sealed</div>
+        </div>
+        <div class="arena-side">
+          <div class="arena-name">Shade</div>
+          <div class="arena-grid" id="gridB"></div>
+          <div class="arena-seals">Seals <span id="sealsB">8</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLAY -->
+<section id="play">
+  <div class="wrap">
+    <div class="section-head" data-reveal>
+      <p class="label">Ways to play</p>
+      <h2 class="section-title">One engine. Six doors.</h2>
+      <p class="section-lead">Every mode runs on the same seeded, deterministic engine. Practice and campaign duels need no server; ranked, daily and friends do.</p>
+    </div>
+    <div class="mode-grid" data-reveal-group>
+      <article class="mode-card">
+        <img src="assets/shots/t18-endless-screen.png" alt="Endless Assize rung screen" loading="lazy">
+        <div class="body"><span class="mode-tag">ranked-by-rung</span><h3>Endless Assize</h3><p>Wins ascend; losses send you back to the foot. Best rung is forever. A Magistrate waits every third rung.</p></div>
+      </article>
+      <article class="mode-card">
+        <img src="assets/shots/t17-your-shade-duel.png" alt="Dueling a personal Shade" loading="lazy">
+        <div class="body"><span class="mode-tag">personal</span><h3>Your Shade</h3><p>Your newest Echo is mined: pace, burned ink, rite density, turned back against you at your own tempo.</p></div>
+      </article>
+      <article class="mode-card">
+        <img src="assets/shots/desktop-hub.png" alt="Hub screen of the Antechamber" loading="lazy">
+        <div class="body"><span class="mode-tag">daily</span><h3>Daily Assize</h3><p>One seeded Tablet per UTC day, same for every soul. Plus ten seconds per mistake. Top one hundred globally.</p></div>
+      </article>
+      <article class="mode-card">
+        <img src="assets/shots/t20-swap-banner.png" alt="Adaptive swap banner mid campaign duel" loading="lazy">
+        <div class="body"><span class="mode-tag">campaign</span><h3>The Nine Folios</h3><p>Twenty-seven duels with arcs, interludes, and the adaptive ninth. The story bible closes here.</p></div>
+      </article>
+      <article class="mode-card">
+        <img src="assets/shots/t19-chit-shelf.png" alt="Echo shelf with sealed chits" loading="lazy">
+        <div class="body"><span class="mode-tag">connection</span><h3>Ranked and friends</h3><p>Server matchmaking with widening Standing windows and a four-second Shade fallback. Friend duels use a code; sharing an Echo mints a sealed chit with no name on it.</p></div>
+      </article>
+      <article class="mode-card">
+        <img src="assets/shots/j1-flood-mid.png" alt="A practice Tablet" loading="lazy">
+        <div class="body"><span class="mode-tag">solo</span><h3>Practice</h3><p>Any difficulty, hints allowed, small daily Ink cap. The honest room where you learn the rites before you trust them.</p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ENDGAME polish quote -->
+<section class="wrap" style="text-align:center;padding:72px 0">
+  <blockquote data-reveal style="font-family:var(--font-display);font-size:clamp(24px,3vw,40px);color:var(--parchment-light);max-width:26ch;margin:0 auto;line-height:1.15">The Tablet does not forgive. Neither, I find, do I.</blockquote>
+  <cite data-reveal style="display:block;margin-top:18px;font-style:italic;color:var(--parchment-dim)">the marginal note on every wasted cell</cite>
+</section>
+
+<!-- DOWNLOAD -->
+<section id="download" class="download-block">
+  <div class="wrap">
+    <h2 data-reveal>Enter the Antechamber.</h2>
+    <p data-reveal>Free to play. Ranked and the Daily Assize need a connection; the board in your hands does not.</p>
+    <div class="download-actions" data-reveal-group>
+      <a class="store-badge" href="#download" aria-label="Download on Google Play (link placeholder)">
+        <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 2.3C3.2 2.7 3 3.3 3 4v16c0 .7.2 1.3.6 1.7L3.7 21.8l9.8-9.8-9.9-9.7zM13.5 12l3 3 4.3-2.5c1.2-.7 1.2-1.8 0-2.5L16.5 9zm-1.4-1.4L2.3 1.1 1 2.4l9.4 9.2zM12.1 13.4l-9.4 9.2 1.3 1.3 9.8-9.9-1.7-1.6z"/></svg>
+        <span>Google Play<small>link to be set before launch</small></span>
+      </a>
+      <a class="store-badge" href="#download" aria-label="Download on the App Store (link placeholder)">
+        <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.7 12.4c0-3.1 2.5-4.6 2.6-4.7-1.4-2-3.6-2.3-4.4-2.3-1.9-.2-3.7 1.1-4.6 1.1-.9 0-2.4-1.1-3.9-1-2 .0-3.9 1.2-5 3-2.1 3.6-.5 8.8 1.5 11.7 1 1.4 2.1 3 3.6 2.9 1.5-.1 2-.9 3.7-.9 1.7 0 2.2.9 3.8.9 1.6 0 2.6-1.5 3.6-2.9 1.1-1.6 1.6-3.2 1.6-3.3zM16.1 3.6c.8-1 1.3-2.3 1.2-3.6-1.1.0-2.5.7-3.3 1.7-.7.8-1.3 2.2-1.1 3.5 1.3.1 2.5-.7 3.2-1.6z"/></svg>
+        <span>App Store<small>link to be set before launch</small></span>
+      </a>
+      <a class="store-badge" href="index.html#play" aria-label="Play in browser">
+        <span>Play in browser</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <a href="index.html" class="brand" style="font-size:20px"><img src="assets/brand/favicon.svg" alt="" width="24" height="24">ASSIZE</a>
+        <p style="margin-top:12px;font-size:14px;color:var(--parchment-dim);max-width:38ch">A 1v1 sudoku duel in the plague-walled city of Novem. Typefaces IM Fell English SC, IM Fell DW Pica, Libre Caslon Text, all OFL.</p>
+      </div>
+      <div>
+        <h4>Game</h4>
+        <ul><li><a href="#duel">The duel</a></li><li><a href="#orders">Orders</a></li><li><a href="#folios">Folios</a></li><li><a href="#play">Play</a></li></ul>
+      </div>
+      <div>
+        <h4>Legal</h4>
+        <ul><li><a href="privacy.html">Privacy</a></li><li><a href="terms.html">Terms</a></li><li><a href="llms.txt">llms.txt</a></li></ul>
+      </div>
+      <div>
+        <h4>For engines</h4>
+        <ul><li><a href="llm.txt">llm.txt</a></li><li><a href="robots.txt">robots.txt</a></li><li><a href="sitemap.xml">sitemap.xml</a></li></ul>
+      </div>
+    </div>
+    <div class="legal">
+      <span>© ASSIZE. All art, audio, text and code generated for this build.</span>
+      <span>The Tablet does not forgive.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
+<script src="gsap-starter.js"></script>
+<script>
+  (function(){
+    if (window.TastemakerMotion) TastemakerMotion.init({duration:0.55,distance:18,ease:'power3.out',staggerStep:0.07});
+    // Respect reduced motion for hero parallax
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var frame = document.querySelector('.tablet-frame img');
+    if (frame && !reduced) {
+      window.addEventListener('scroll', function(){
+        var y = window.scrollY * 0.08;
+        frame.style.transform = 'translateY(' + y + 'px)';
+      }, {passive:true});
+    }
+  })();
+</script>
+<script>
+(function(){
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var gA = document.getElementById('gridA');
+  var gB = document.getElementById('gridB');
+  if (!gA || !gB) return;
+  function build(g){
+    g.innerHTML = '';
+    for (var i=0;i<9;i++){ var c=document.createElement('div'); c.className='cell'; c.textContent=''; g.appendChild(c); }
+  }
+  build(gA); build(gB);
+  var cellsA = gA.querySelectorAll('.cell');
+  var cellsB = gB.querySelectorAll('.cell');
+  var sealsA = document.getElementById('sealsA');
+  var sealsB = document.getElementById('sealsB');
+  var log = document.getElementById('arenaLog');
+  var banner = document.getElementById('arenaBanner');
+
+  function reset(){
+    cellsA.forEach(function(c){ c.textContent=''; c.classList.remove('filledA','filledB','mistake','claim'); });
+    cellsB.forEach(function(c){ c.textContent=''; c.classList.remove('filledA','filledB','mistake','claim'); });
+    sealsA.textContent='8'; sealsB.textContent='8';
+    log.textContent='A placement. B placement. The clock runs.';
+    banner.textContent='Tablet sealed';
+  }
+
+  function play(){
+    reset();
+    var tl = gsap.timeline({ delay: 0.6 });
+    // Round 1: P0 correct placement cell0
+    tl.call(function(){ log.textContent='Clerk places 7 in cell 1.'; });
+    tl.to(cellsA[0], {duration:0.01, onComplete:function(){ cellsA[0].textContent='7'; cellsA[0].classList.add('filledA'); }});
+    // P1 placement cell4
+    tl.to({}, {duration:0.7});
+    tl.call(function(){ log.textContent='Shade places 3 in cell 5.'; });
+    tl.to(cellsB[4], {duration:0.01, onComplete:function(){ cellsB[4].textContent='3'; cellsB[4].classList.add('filledB'); }});
+    // P0 two more to complete a row in own box (cells1,2) via instant visual
+    tl.to({}, {duration:0.7});
+    tl.call(function(){ log.textContent='Clerk places 1 in cell 2.'; });
+    tl.to(cellsA[1], {duration:0.01, onComplete:function(){ cellsA[1].textContent='1'; cellsA[1].classList.add('filledA'); }});
+    tl.to({}, {duration:0.6});
+    tl.call(function(){ log.textContent='Clerk places 4 in cell 3.'; });
+    tl.to(cellsA[2], {duration:0.01, onComplete:function(){ cellsA[2].textContent='4'; cellsA[2].classList.add('filledA'); }});
+    // Claim flash + damage
+    tl.to({}, {duration:0.5});
+    tl.call(function(){
+      cellsA[0].classList.add('claim'); cellsA[1].classList.add('claim'); cellsA[2].classList.add('claim');
+      log.textContent='CLAIM. Clean row. 2 Seal damage.';
+      sealsB.textContent='6';
+      banner.textContent='Claim registered';
+    });
+    tl.to({}, {duration:0.9});
+    // Shade makes a mistake
+    tl.call(function(){ log.textContent='Shade miswrites 9.'; });
+    tl.to(cellsB[5], {duration:0.01, onComplete:function(){ cellsB[5].textContent='9'; cellsB[5].classList.add('mistake'); }});
+    tl.to({}, {duration:0.3});
+    tl.call(function(){ sealsB.textContent='5'; log.textContent='Wrong ink. Self-cracked Seal. Flinch.'; });
+    // Rite: Clerk casts Smudge (visual badge)
+    tl.to({}, {duration:0.8});
+    tl.call(function(){ log.textContent='Rite: Smudge. Five digits blur.'; banner.textContent='Smudge cast'; });
+    // P1 places, claims something smaller
+    tl.to({}, {duration:0.9});
+    tl.call(function(){ log.textContent='Shade places 2 in cell 1.'; });
+    tl.to(cellsB[0], {duration:0.01, onComplete:function(){ cellsB[0].textContent='2'; cellsB[0].classList.add('filledB'); }});
+    tl.to({}, {duration:0.7});
+    tl.call(function(){ log.textContent='Shade places 8 in cell 2.'; });
+    tl.to(cellsB[1], {duration:0.01, onComplete:function(){ cellsB[1].textContent='8'; cellsB[1].classList.add('filledB'); }});
+    // final blow
+    tl.to({}, {duration:0.8});
+    tl.call(function(){ sealsB.textContent='3'; log.textContent='Claim. 2 damage again.'; banner.textContent='Wounded'; });
+    tl.to({}, {duration:0.9});
+    tl.call(function(){ sealsB.textContent='0'; log.textContent='Seal death.'; banner.textContent='VICTORY . Clerk'; });
+    // loop reset
+    tl.to({}, {duration:2.2, onComplete:function(){ play(); }});
+  }
+
+  if (!reduced && window.gsap) {
+    play();
+  } else {
+    // reduced: static mid-duel tableau
+    cellsA[0].textContent='7'; cellsA[0].classList.add('filledA');
+    cellsA[1].textContent='1'; cellsA[1].classList.add('filledA');
+    cellsA[2].textContent='4'; cellsA[2].classList.add('filledA');
+    cellsB[4].textContent='3'; cellsB[4].classList.add('filledB');
+    sealsB.textContent='0';
+    log.textContent='Seal death.';
+    banner.textContent='VICTORY . Clerk';
+  }
+})();
+</script>
+<script>
+(function(){
+  var t=document.querySelector('.nav-toggle');
+  var n=document.querySelector('nav.top');
+  if(!t||!n) return;
+  t.addEventListener('click',function(){
+    var open=n.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+    t.textContent = open ? 'Close' : 'Menu';
+  });
+})();
+</script>
+</body>
+</html>

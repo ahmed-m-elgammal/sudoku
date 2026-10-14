@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Delete your data : ASSIZE</title>
+<meta name="description" content="How to request deletion of your ASSIZE guest account and all associated server-side data.">
+<meta name="theme-color" content="#0e0e0f">
+<link rel="canonical" href="https://assize.example/delete-account.html">
+<link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg">
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{--ink-black:#0e0e0f;--charcoal:#17171a;--parchment:#b8a27c;--parchment-light:#cdb992;--parchment-dim:#9a8560;--brass:#a58849;--bone:#d8d2c4;--ash:#8d8a82;--line:#3a352c;--line-strong:#574e3d;--bg:var(--ink-black);--fg:var(--parchment-light);--font-display:'IM Fell English SC','IM Fell DW Pica',Georgia,serif;--font-body:'IM Fell DW Pica',Georgia,'Times New Roman',serif;--font-digit:'Libre Caslon Text',Georgia,serif;--radius:4px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:32px 24px}
+nav.top{border-bottom:1px solid var(--line);padding:14px 0;background:rgba(14,14,15,.9);backdrop-filter:blur(6px);position:sticky;top:0}
+nav.top .inner{max-width:760px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:18px}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:20px;letter-spacing:.12em;color:var(--parchment-light)}
+.brand img{height:24px}
+nav.top a.l{color:var(--parchment-dim);font-size:14px;margin-left:auto}
+h1{font-size:clamp(34px,5vw,52px);margin-bottom:6px}
+.lede{color:var(--parchment-dim);font-style:italic;margin-bottom:32px}
+h2{font-family:var(--font-display);font-size:24px;margin:32px 0 10px;color:var(--parchment)}
+p{margin-bottom:14px;color:var(--fg)}
+ul{margin:0 0 14px 22px;color:var(--fg)}
+li{margin-bottom:6px}
+code{font-family:var(--font-digit);font-size:.9em;background:var(--charcoal);padding:1px 5px;border-radius:3px;border:1px solid var(--line)}
+.meta{font-size:13px;color:var(--ash);font-style:italic;margin-top:40px;padding-top:20px;border-top:1px solid var(--line)}
+footer{border-top:1px solid var(--line);padding:32px 0;margin-top:48px;background:var(--charcoal)}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--ash)}
+footer a{color:var(--parchment-dim)}
+a{color:var(--parchment)}
+.step{background:var(--charcoal);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin:10px 0}
+.step strong{color:var(--parchment);font-family:var(--font-display)}
+</style>
+</head>
+<body>
+<nav class="top"><div class="inner"><a class="brand" href="index.html"><img src="assets/brand/favicon.svg" alt="">ASSIZE</a><a class="l" href="privacy.html">Privacy</a><a class="l" href="terms.html">Terms</a></div></nav>
+<div class="wrap">
+<h1>Delete your account and data</h1>
+<p class="lede">You can delete everything ASSIZE holds about you in two steps. The first clears your device immediately; the second removes the server-side record by request, within 30 days.</p>
+
+<h2>Step 1 — Wipe the device (instant, self-serve)</h2>
+<div class="step">
+<strong>In the app:</strong> Settings → <strong>Delete my data</strong>.<br>
+This wipes your local save, echoes, identity, preferences and session on this device, and mints a fresh guest identity so you can keep playing. No email or account is needed.
+</div>
+<p>What is removed locally: campaign position, cosmetics, echoes, Ink and Season progress, Story flags, device-stored identity. These never reached the server unless you played ranked or daily.</p>
+
+<h2>Step 2 — Remove the server-side record (by request)</h2>
+<p>Server-side Standing, duel history, daily results and streaks, Ink audit ledger and recovery code link are keyed to your guest id, which never left your device. Because we hold no email, we cannot find your record without your help. To delete it:</p>
+<div class="step">
+<strong>Email <a href="mailto:privacy@assize.example?subject=Account%20deletion%20request">privacy@assize.example</a></strong><br>
+Include the <strong>guest id</strong> or your <strong>four-word recovery code</strong> (Settings → Recovery), with the subject line "Account deletion request". We delete the matching record within 30 days and confirm by reply.
+</div>
+<p>If you lost both the guest id and recovery code, we cannot locate your record and no data remains linked to you after your device wipe (Step 1) — the server record becomes orphaned and unidentifiable.</p>
+
+<h2>What is deleted vs. kept</h2>
+<ul>
+<li><strong>Deleted (device):</strong> save game, cosmetics, echoes, preferences, identity (immediate).</li>
+<li><strong>Deleted (server, on request):</strong> Standing, duel history, daily results/streaks, Ink audit ledger, recovery code link, any anti-cheat rows tied to the guest id.</li>
+<li><strong>Kept:</strong> anonymised aggregate metrics (duel counts, bot timings) with no identifier, and back-up copies up to 35 days during the deletion window.</li>
+<li><strong>Retention period:</strong> device data immediately on Step 1; server data within 30 days of the request (max 35 days incl. back-ups).</li>
+</ul>
+
+<h2>Telemetry opt-out (no account deletion needed)</h2>
+<p>Settings → <strong>Minimal telemetry</strong> toggle. Anti-cheat security rows generated by the server (impossible placement intervals, uniform timing) cannot be switched off per account and are removed only with Step 2.</p>
+
+<h2>Children's data</h2>
+<p>ASSIZE is not directed at children under 13. If you believe a child submitted data, contact <a href="mailto:privacy@assize.example">privacy@assize.example</a> and we will delete it.</p>
+
+<h2>Contact</h2>
+<p>Privacy: <a href="mailto:privacy@assize.example">privacy@assize.example</a>. Reference your guest id or recovery code so we can find your record.</p>
+
+<p class="meta">This page is provided for transparency and pending counsel review (tracked internally as TODO T11). Store-listing declarations mirror it once counsel signs off.</p>
+</div>
+<footer><div class="wrap"><span>&copy; ASSIZE</span><span><a href="index.html">Home</a> &middot; <a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a></span></div></footer>
+</body>
+</html>

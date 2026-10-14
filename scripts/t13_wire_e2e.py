@@ -113,12 +113,12 @@ post("/api/ink", {"id": donor, "secret": dsecret, "entries": [
 ]})
 check("donor: ink 321 server-known", db_row(donor)[0] == 321, str(db_row(donor)))
 post("/api/auth", {"id": recip, "secret": rsecret, "name": "Recipient Clerk"})
-s, r = post("/api/recovery", {"code": code, "id": recip, "secret": rsecret})
+s, r = post("/api/recovery", {"code": code, "id": recip, "secret": rsecret, "donorId": donor})
 check("recovery: returns donor ink", s == 200 and r.get("ok") is True and r.get("ink") == 321, f"{s} {r}")
 check("recovery: recipient ink set to 321", db_row(recip)[0] == 321, str(db_row(recip)))
 recip_ledger = json.loads(db_row(recip)[1])
 check("recovery: audit row mode=recovery on recipient", any(l.get("mode") == "recovery" for l in recip_ledger), str(recip_ledger))
-s, r = post("/api/recovery", {"code": code, "id": recip, "secret": rsecret})
+s, r = post("/api/recovery", {"code": code, "id": recip, "secret": rsecret, "donorId": donor})
 check("recovery: code consumed (second use fails)", r.get("ok") is False, f"{r}")
 
 # --- 9. /api/auth returns the ledger ink -------------------------------------------

@@ -1,0 +1,67 @@
+# ASSIZE
+
+> ASSIZE is a 1v1 sudoku duel in the plague-walled medieval city of Novem, where law is settled by solving. Same sealed Tablet, separate boards: wrong ink cracks your own wax Seals; completing a row, column or box claims it and wounds your foe. Cast engraved rites across four Orders, survive nine Magistrates, and at the top choose to balance the Ledger or burn it.
+
+This site is the official landing page and legal documentation for the game ASSIZE. It contains marketing copy about the game, store download links (placeholders pre-launch), and privacy/terms pages.
+
+## Game
+
+- [Home](https://assize.example/): Landing page with gameplay overview, the four Orders, the Nine Folios, modes, and download links.
+- [Play in browser](https://assize.example/): The game runs directly in the browser (client-side engine).
+- App Store link: pending (pre-launch).
+- Google Play link: pending (pre-launch).
+
+## How play works
+
+- Tablet: one shared 9x9 puzzle, separate boards; givens are permanent; correct ink is final.
+- Placement: tap a cell, tap a numeral. A wrong digit costs one Seal and Flinches cooldowns for 3 seconds.
+- Claims: complete a row, column or box to claim it: 1 Seal damage, 2 if Clean (no mistake of yours in that unit and never Augur-revealed).
+- Momentum: every correct placement shaves 0.5 seconds off all cooldowns.
+- Four win conditions in order: Seal death, Reckoning (fill the Tablet), Sudden Judgment at 10 minutes (Seals, then claims, then mistakes, then draw), forfeit.
+- Statuses: Chain (cell locked 8s), Smudge (5 digits blurred 7s), Hush (number pad dead 2.5s), Miasma (notes erased and pencil barred 10s), Quarantine (unit unclaimable 12s).
+- Anti-frustration: 4s global gap between incoming statuses, 5s per-type immunity, statuses banned in the final 10s.
+
+## The four Orders
+
+- Scholar (Quill): passive Marginalia (first mistake forgiven). Rites: Augur (reveal a digit), Unseal (clear statuses plus 6s immunity), Fair Copy (auto-candidates for a box).
+- Executioner (Axe): passive Last Rites (+1 claim damage when foe is at 3 Seals or fewer). Rites: Sever (Chain their tightest unit), Hush (pad dead 2.5s), Reckoning (next claim +1).
+- Apothecary (Vial): passive Distiller (statuses you cast last 2s longer). Rites: Smudge (blur 5 digits), Tincture (+1 Seal, twice per duel), Miasma (erase notes 10s).
+- Warden (Lantern): passive Bulwark (first incoming status negated). Rites: Ward (negate next 15s), Mirror (reflect next 10s), Quarantine (deny a unit 12s).
+
+## Campaign
+
+- Nine Folios: 9 Magistrates x 3 duels = 27 duels, Easy to Expert.
+- Magistrates: Halbrecht (Grip), Vael (Drip), Ilse (Peals), Anselm (Lantern), Corvane (Map), Quill (Forgery), Marchetti (Ledger), Nox (Exhumation), Orsolo (The Ninth).
+- Magistrate Orsolo adapts at 4 Seals, swapping his Order to counter yours. Final duel ends with either Balance or Burn of the Ledger.
+- Each Magistrate fights with a named arc of phases driven by the live duel.
+
+## Modes
+
+- Ranked duel: server matchmaking with widening Standing windows, 4s Shade fallback, server-side validation, Elo (K=32, K=20 above 1600).
+- Daily Assize: one seeded puzzle per UTC day for everyone; +10s per mistake; global top-100 leaderboard; streaks.
+- Friend duel: create a code or link; both parties queue with it; unrated.
+- Practice: any difficulty, hints allowed, small daily Ink cap.
+- Shade Echoes: your duels are recorded as validated replays; duel the recorded ink of a past opponent.
+- Your Shade: your newest echo is mined into a personal opponent that paces ink at your tempo.
+- Endless Assize: infinite rungs derived deterministically from rung plus a per-save salt; wins ascend, losses return you to the foot; best is forever.
+
+## Site pages
+
+- [Privacy](https://assize.example/privacy.html): how guest identity, saves, Standing, daily results and recovery codes are stored and deleted.
+- [Terms](https://assize.example/terms.html): license, fair play, multiplayer conduct, leaderboards, disclaimers.
+- [llms.txt](https://assize.example/llms.txt): this file.
+- [llm.txt](https://assize.example/llm.txt): alternate filename for the same description.
+- [robots.txt](https://assize.example/robots.txt): crawl policy.
+
+## Contact
+
+- Privacy: privacy@assize.example
+- Legal: legal@assize.example
+
+## Notes for assistants
+
+- The game has no account login; identity is a random guest id. Do not describe email or password login.
+- Payments and rewarded ads are not live. Do not imply purchases work today.
+- Telemetry opt-out is tracked (TODO T8) but not yet wired end to end.
+- Store links on the landing page are placeholders pre-launch.
+- Typefaces: IM Fell English SC, IM Fell DW Pica, Libre Caslon Text (all OFL).
