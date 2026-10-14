@@ -69,6 +69,8 @@ export function pvpOutcome(
   row: { p0: string | null; p1: string | null; winner: string | null },
   accountId: string,
 ): 'win' | 'loss' | 'draw' | null {
+  // self-played duel log (p0 === p1) proves nothing about anybody — never verifiable
+  if (row.p0 !== null && row.p0 === row.p1) return null;
   const seat = row.p0 === accountId ? 0 : row.p1 === accountId ? 1 : -1;
   if (seat < 0) return null; // the duel log does not involve this account
   if (row.winner === 'draw') return 'draw';

@@ -55,7 +55,18 @@ CREATE TABLE IF NOT EXISTS telemetry (
   event TEXT NOT NULL,
   at INTEGER NOT NULL
 );
+-- SEC-12: settled Ink claims. The accounts.ink_ledger column is a 200-row sliding
+-- window — once an id evicts, the history can't prove it was paid. This table can:
+-- one row per accepted claim, forever. (CREATE TABLE IF NOT EXISTS backfills
+-- itself on old databases; ids evicted before this fix remain replayable ONCE.)
+CREATE TABLE IF NOT EXISTS settled_claims (
+  account_id TEXT NOT NULL,
+  duel_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (account_id, duel_id)
+);
 CREATE INDEX IF NOT EXISTS idx_daily_time ON daily_results (date_key, time_ms);
+CREATE INDEX IF NOT EXISTS idx_telemetry_at ON telemetry (at);
 `);
 
 // T13 migration — databases created before the Ink ledger lack its columns.
@@ -80,7 +91,10 @@ export const q = {
   updateInkLedger: db.query('UPDATE accounts SET ink_ledger = ? WHERE id = ?'),
   dailyUpsert: db.query(`INSERT INTO daily_results (date_key, account_id, name, time_ms, mistakes, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT (date_key, account_id) DO UPDATE SET time_ms = MIN(time_ms, excluded.time_ms), mistakes = MIN(mistakes, excluded.mistakes)`),
+    ON CONFLICT (date_key, account_id) DO UPDATE SET time_ms = excluded.time_ms, mistakes = excluded.mistakes, name = excluded.name, created_at = excluded.created_at
+    -- SEC-08: whole-attempt comparison (effective score = time + 10s per mistake).
+    -- MIN() per column frankened rows (fastest time × fewest mistakes from different runs).
+    WHERE (excluded.time_ms + excluded.mistakes * 10000) < (time_ms + mistakes * 10000)`),
   dailyBoard: db.query('SELECT name, account_id, time_ms, mistakes FROM daily_results WHERE date_key = ? ORDER BY time_ms ASC LIMIT 100'),
   dailyRankOf: db.query('SELECT COUNT(*) + 1 AS rank FROM daily_results WHERE date_key = ? AND time_ms < (SELECT time_ms FROM daily_results WHERE date_key = ? AND account_id = ?)'),
   dailyBest: db.query('SELECT time_ms, mistakes FROM daily_results WHERE date_key = ? AND account_id = ?'),
@@ -88,6 +102,9 @@ export const q = {
   streakUpsert: db.query(`INSERT INTO streaks (account_id, last_date, streak, best) VALUES (?, ?, ?, ?)
     ON CONFLICT (account_id) DO UPDATE SET last_date = excluded.last_date, streak = excluded.streak, best = MAX(best, excluded.streak)`),
   telemetry: db.query('INSERT INTO telemetry (event, at) VALUES (?, ?)'),
+  claimGet: db.query('SELECT duel_id FROM settled_claims WHERE account_id = ? AND duel_id = ?'),
+  claimAdd: db.query('INSERT OR IGNORE INTO settled_claims (account_id, duel_id, created_at) VALUES (?, ?, ?)'),
+  telemetryPrune: db.query('DELETE FROM telemetry WHERE at < ? OR id <= (SELECT MAX(id) - ? FROM telemetry)'),
 };
 
 export function hash(s: string): string {

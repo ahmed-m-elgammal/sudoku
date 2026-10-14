@@ -18,7 +18,7 @@ import { q, hash, adjustRating, todayKey } from './db';
 const PORT = Number(process.env.PORT ?? 3030); // sandbox contract kept as the default; hosts override via env
 const SHADE_FALLBACK_MS = 4000; // spec §7 (configurable, spec M2)
 const GRACE_MS = 20_000;
-const app = Fastify({ logger: false });
+const app = Fastify({ logger: false, trustProxy: true }); // trustProxy: behind Caddy every socket reads 127.0.0.1 — without it per-IP throttles collapse to one global bucket
 await app.register(cors, { origin: true });
 
 const http = createServer();
@@ -40,19 +40,24 @@ interface Room {
   accounts: [string | null, string | null];
   names: [string, string];
   lastPlaceAt: [number, number];
-  intervals: number[];
+  intervals: [number[], number[]]; // SEC-09: per-seat rings (never interleaved, never the epoch gap)
   disconnectAt: [number | null, number | null];
   lastGraceEmitAt: [number, number];  // reconnect_grace is re-emitted at 1s cadence
   shadeSeat?: PlayerId;
+  shadeNextAtMs?: number; // SEC-05 pacing gate (performance.now basis, cp. shadeAct untilMs)
+  shadeRng?: Rng | null; // SEC-05 persistent bot stream (never re-seeded per tick)
   tier: Tier;
   startedAt: number;
-  lastBroadcastSeq: number;
+  settled: boolean; // finishRoom runs exactly once; natural (tick) ends settle here too
 }
 
 const rooms = new Map<string, Room>();
 const queue: Array<{ socketId: string; accountId: string; name: string; standing: number; order: OrderId; joinedAt: number; friendCode?: string }> = [];
 
 const GRACE_S = GRACE_MS / 1000;
+
+// SEC-05: the Shade profile is fixed (standing 1000) — build once, not per tick per room.
+const SHADE_PROFILE = profileForStanding(1000);
 
 // S08 (TODO T2): tell the remaining seat that its peer dropped, and re-emit the
 // remaining grace every second while the room is live.
@@ -65,6 +70,19 @@ function emitGrace(r: Room, goneSeat: PlayerId, now: number) {
     }
   }
   if (now - r.lastGraceEmitAt[goneSeat] >= 1000) r.lastGraceEmitAt[goneSeat] = now;
+}
+
+// SEC-10: ability secrets are per-seat. Augur's digit and Fair Copy's candidates
+// solve cells neither board has filled (same puzzle both sides) — the foe's client
+// gets the cast (cell/box, for fx) but never the solution-derived payload.
+function scrubEventFor<T>(e: T, seat: PlayerId): T {
+  const ev = e as unknown as { kind?: unknown; player?: unknown; ability?: unknown };
+  if (ev.kind !== 'ability' || ev.player === seat) return e;
+  if (ev.ability !== 'augur' && ev.ability !== 'fairCopy') return e;
+  const rest = { ...(e as Record<string, unknown>) };
+  delete rest.digit;
+  delete rest.candidates;
+  return rest as T;
 }
 
 const publicState = (r: Room, seat: PlayerId) => {
@@ -88,23 +106,23 @@ const publicState = (r: Room, seat: PlayerId) => {
       statuses: s.players[seat === 0 ? 1 : 0].statuses,
     },
     unitOwner: s.unitOwner,
-    events: s.events.slice(-30),
+    events: s.events.slice(-30).map((e) => scrubEventFor(e, seat)),
     eventSeq: s.eventSeq,
   };
 };
 
-const broadcast = (r: Room, event: string, payload: unknown) => {
-  for (const [sid, seat] of r.seats) io.to(sid).emit(event, payload);
-};
-
 function finishRoom(r: Room, winner: PlayerId | 'draw', reason: string) {
-  if ((r.state as { phase: string }).phase === 'ended') return;
-  resign(r.state, winner === 0 ? 1 : winner === 1 ? 0 : (winner as unknown as PlayerId));
+  if (r.settled) return;
+  r.settled = true;
   if (winner === 'draw') {
     // sudden judgment draw already handled by tick; force draw end
     (r.state as { phase: string; winner: unknown; winReason: string }).phase = 'ended';
     (r.state as { winner: unknown }).winner = 'draw';
     (r.state as { winReason: string }).winReason = 'suddenJudgment';
+  } else {
+    // resign() takes the RESIGNER and no-ops unless live: on tick-resolved ends
+    // the engine verdict stands untouched; on concede/forfeit it records the loss.
+    resign(r.state, winner === 0 ? 1 : 0);
   }
   const ratings: [number | null, number | null] = [null, null];
   if (r.mode === 'ranked' && r.accounts[0] && r.accounts[1]) {
@@ -119,7 +137,8 @@ function finishRoom(r: Room, winner: PlayerId | 'draw', reason: string) {
   q.insertDuel.run(r.id, r.mode, r.accounts[0], r.accounts[1], r.state.seed, r.tier, String(winner), reason, ratings[0], ratings[1], Date.now());
   for (const [sid, seat] of r.seats) {
     io.to(sid).emit('end', {
-      duelId: r.id, winner: seat === 0 ? winner : winner === 0 ? 1 : winner === 1 ? 0 : 'draw',
+      // winner is the ABSOLUTE seat (0/1/'draw'): each client maps to relative once.
+      duelId: r.id, winner,
       reason, you: publicState(r, seat), ratingDelta: ratings[seat as 0 | 1],
     });
   }
@@ -130,16 +149,35 @@ function finishRoom(r: Room, winner: PlayerId | 'draw', reason: string) {
 setInterval(() => {
   try {
   for (const r of rooms.values()) {
+    // SEC-01: settle async-ended rooms FIRST — place()/ability() flip phase outside
+    // the tick, and the live-skip below would otherwise starve finishRoom forever.
+    if ((r.state as { phase: string }).phase === 'ended') {
+      if (!r.settled) finishRoom(r, (r.state as { winner: unknown }).winner as PlayerId | 'draw', (r.state as { winReason: string }).winReason ?? 'suddenJudgment');
+      continue;
+    }
     if ((r.state as { phase: string }).phase !== 'live') continue;
     tick(r.state, 250);
-    // Shade action for bot seats
-    if (r.shadeSeat !== undefined) {
+    // Shade action for bot seats (SEC-05): paced, never per-tick. A `wait` gates
+    // the next act on its own untilMs; placements/abilities respect the profile's
+    // placeDelayMs band. The RNG stream persists across ticks — the old code
+    // re-seeded from a static eventSeq, freezing on `wait` until the human moved.
+    if (r.shadeSeat !== undefined && r.shadeRng) {
+      const rng: Rng = r.shadeRng;
       const st = r.state;
-      const me = r.shadeSeat;
-      const rng = new Rng(`${r.id}-${st.eventSeq}`);
-      const act = shadeAct(st, me, profileForStanding(1000), () => rng.next(), performance.now());
-      if (act.kind === 'place') place(st, me, act.cell, act.digit);
-      else if (act.kind === 'ability') useAbility(st, me, act.id, { cell: act.cell, unit: act.unit });
+      const now = performance.now();
+      if (now >= (r.shadeNextAtMs ?? 0)) {
+        const me = r.shadeSeat;
+        const act = shadeAct(st, me, SHADE_PROFILE, () => rng.next(), now);
+        if (act.kind === 'place') {
+          place(st, me, act.cell, act.digit);
+          r.shadeNextAtMs = now + rng.range(SHADE_PROFILE.placeDelayMs[0], SHADE_PROFILE.placeDelayMs[1]);
+        } else if (act.kind === 'ability') {
+          useAbility(st, me, act.id, { cell: act.cell, unit: act.unit });
+          r.shadeNextAtMs = now + rng.range(SHADE_PROFILE.placeDelayMs[0], SHADE_PROFILE.placeDelayMs[1]);
+        } else {
+          r.shadeNextAtMs = act.untilMs;
+        }
+      }
     }
     // disconnect grace (S08): forfeit at 20s, ticking countdown to the seat that stayed
     const now = Date.now();
@@ -152,7 +190,8 @@ setInterval(() => {
       finishRoom(r, (r.state as { winner: unknown }).winner as PlayerId, (r.state as { winReason: string }).winReason ?? 'suddenJudgment');
       continue;
     }
-    broadcast(r, 'state_delta', { seq: r.state.eventSeq, state: null });
+    // state_delta removed: no client subscribes (was 4Hz dead traffic per room).
+    // Per-seat snapshots below are the live channel.
     for (const [sid, seat] of r.seats) io.to(sid).emit('you', publicState(r, seat));
   }
   } catch (e) { console.error('[assize-server] tick error', e); }
@@ -173,8 +212,8 @@ setInterval(() => {
       if (j === i) continue;
       const o = queue[j];
       if (!o) continue;
-      if (p.friendCode && o.friendCode && p.friendCode === o.friendCode && o.socketId !== p.socketId) { opponentIdx = j; break; }
-      if (!p.friendCode && !o.friendCode && Math.abs(o.standing - p.standing) <= window) { opponentIdx = j; break; }
+      if (p.friendCode && o.friendCode && p.friendCode === o.friendCode && o.socketId !== p.socketId && o.accountId !== p.accountId) { opponentIdx = j; break; }
+      if (!p.friendCode && !o.friendCode && o.accountId !== p.accountId && Math.abs(o.standing - p.standing) <= window) { opponentIdx = j; break; }
     }
     if (opponentIdx >= 0) {
       const o = queue[opponentIdx];
@@ -216,13 +255,14 @@ function startHumanDuel(a: typeof queue[number], b: typeof queue[number]) {
   const puz = generatePuzzle(seed, tier);
   const state = createDuel({
     seed, givens: Uint8Array.from(puz.givens),
+    solution: Uint8Array.from(puz.solution), // server-private: place() rejects everything without it
     names: [a.name, b.name],
     orders: [a.order, b.order],
   });
   const room: Room = {
     id, mode: a.friendCode ? 'friend' : 'ranked', state, solution: Uint8Array.from(puz.solution),
     seats: new Map(), accounts: [a.accountId, b.accountId], names: [a.name, b.name],
-    lastPlaceAt: [0, 0], intervals: [], disconnectAt: [null, null], lastGraceEmitAt: [0, 0], tier, startedAt: Date.now(), lastBroadcastSeq: 0,
+    lastPlaceAt: [0, 0], intervals: [[], []], disconnectAt: [null, null], lastGraceEmitAt: [0, 0], tier, startedAt: Date.now(), settled: false,
   };
   rooms.set(id, room);
   const sa = io.sockets.sockets.get(a.socketId);
@@ -246,13 +286,14 @@ function startShadeDuel(p: typeof queue[number]) {
   const puz = generatePuzzle(seed, tier);
   const state = createDuel({
     seed, givens: Uint8Array.from(puz.givens),
+    solution: Uint8Array.from(puz.solution), // server-private: place() rejects everything without it
     names: [p.name, `Shade of ${p.name.split(' ').slice(-1)[0]}`],
     orders: [p.order, 'executioner'],
   });
   const room: Room = {
     id, mode: 'ranked', state, solution: Uint8Array.from(puz.solution),
     seats: new Map(), accounts: [p.accountId, null], names: [p.name, `Shade of ${p.name.split(' ').slice(-1)[0]}`],
-    lastPlaceAt: [0, 0], intervals: [], disconnectAt: [null, null], lastGraceEmitAt: [0, 0], shadeSeat: 1, tier, startedAt: Date.now(), lastBroadcastSeq: 0,
+    lastPlaceAt: [0, 0], intervals: [[], []], disconnectAt: [null, null], lastGraceEmitAt: [0, 0], shadeSeat: 1, shadeNextAtMs: performance.now() + 1500, shadeRng: new Rng(`shade-${id}`), tier, startedAt: Date.now(), settled: false,
   };
   rooms.set(id, room);
   const s = io.sockets.sockets.get(p.socketId);
@@ -274,14 +315,25 @@ io.on('connection', (socket: Socket) => {
     if (!acc) { socket.emit('error', { code: 'auth' }); return; }
     // anticheat: shadow-queued accounts only meet Shades (spec §6)
     if (acc.shadow) { startShadeDuel({ socketId: socket.id, accountId: acc.id, name: acc.name, standing: acc.standing, order: p.order, joinedAt: Date.now() }); return; }
+    // SEC-06: one queue slot per socket AND per account. Same-socket resubscribe
+    // (remount/retry) refreshes intent in place but keeps its fairness timestamp;
+    // a second socket for an already-queued account is rejected, never appended.
+    const sameSocket = queue.find((e) => e.socketId === socket.id);
+    if (sameSocket) {
+      sameSocket.order = p.order;
+      sameSocket.friendCode = p.friendCode;
+      return;
+    }
+    if (queue.some((e) => e.accountId === acc.id)) { socket.emit('error', { code: 'already_queued' }); return; }
     queue.push({ socketId: socket.id, accountId: acc.id, name: acc.name, standing: acc.standing, order: p.order, joinedAt: Date.now(), friendCode: p.friendCode });
   });
 
   socket.on('join_duel', (p: { duelId: string; accountId: string; secret: string }) => {
     const acc = auth(p.accountId, p.secret);
     const r = rooms.get(p.duelId);
-    if (!acc || !r) { socket.emit('error', { code: 'duel' }); return; }
-    const seat: PlayerId = r.accounts[0] === acc.id ? 0 : r.accounts[1] === acc.id ? 1 : 0;
+    // hijack guard: only a seated account may join its duel (never default a seat)
+    if (!acc || !r || (r.accounts[0] !== acc.id && r.accounts[1] !== acc.id)) { socket.emit('error', { code: 'duel' }); return; }
+    const seat: PlayerId = r.accounts[0] === acc.id ? 0 : 1;
     const resumed = r.disconnectAt[seat] !== null;
     r.seats.set(socket.id, seat);
     r.disconnectAt[seat] = null;
@@ -294,10 +346,12 @@ io.on('connection', (socket: Socket) => {
     }
   });
 
-  // the client left matchmaking (Shade fallback / withdraw): drop its queue entry
+  // the client left matchmaking (Shade fallback / withdraw): drop ALL of its
+  // queue entries (SEC-06: duplicates must never survive a leave)
   socket.on('leave_queue', () => {
-    const qi = queue.findIndex((e) => e.socketId === socket.id);
-    if (qi >= 0) queue.splice(qi, 1);
+    for (let i = queue.length - 1; i >= 0; i--) {
+      if (queue[i]?.socketId === socket.id) queue.splice(i, 1);
+    }
   });
 
   socket.on('place', (p: { duelId: string; cell: number; digit: number }) => {
@@ -306,20 +360,28 @@ io.on('connection', (socket: Socket) => {
     if (!r || seat === undefined || (r.state as { phase: string }).phase !== 'live') return;
     // anticheat: impossible placement interval (spec §6)
     const now = Date.now();
-    const gap = now - r.lastPlaceAt[seat];
-    if (r.lastPlaceAt[seat] && gap < 120) { q.telemetry.run(`anticheat:fast-place:${r.id}`, now); return; }
-    r.intervals.push(gap);
-    if (r.intervals.length > 24) {
-      const mean = r.intervals.reduce((a, b) => a + b, 0) / r.intervals.length;
-      const cv = Math.sqrt(r.intervals.reduce((a, b) => a + (b - mean) ** 2, 0) / r.intervals.length) / mean;
-      const acc0 = r.accounts[seat];
-      if (cv < 0.02 && mean > 0 && r.intervals.length >= 20) {
-        if (acc0) q.shadow.run(acc0);
-        q.telemetry.run(`anticheat:uniform-timing:${r.id}:${seat}`, now);
-        r.intervals.length = 0;
+    const prev = r.lastPlaceAt[seat];
+    const gap = now - prev;
+    if (prev && gap < 120) { q.telemetry.run(`anticheat:fast-place:${r.id}`, now); return; }
+    r.lastPlaceAt[seat] = now;
+    // SEC-09: per-seat timing ring. The epoch gap (first placement, prev === 0)
+    // is skipped — it poisoned the mean forever; rings are bounded at 24.
+    if (prev > 0) {
+      const iv = r.intervals[seat];
+      iv.push(gap);
+      if (iv.length > 24) iv.splice(0, iv.length - 24);
+      if (iv.length >= 20) {
+        const mean = iv.reduce((a, b) => a + b, 0) / iv.length;
+        const variance = iv.reduce((a, b) => a + (b - mean) ** 2, 0) / iv.length;
+        const cv = mean > 0 ? Math.sqrt(variance) / mean : 1;
+        if (cv < 0.02) {
+          const acc0 = r.accounts[seat];
+          if (acc0) q.shadow.run(acc0);
+          q.telemetry.run(`anticheat:uniform-timing:${r.id}:${seat}`, now);
+          iv.length = 0;
+        }
       }
     }
-    r.lastPlaceAt[seat] = now;
     place(r.state, seat, p.cell, p.digit as Digit);
   });
 
@@ -342,7 +404,8 @@ io.on('connection', (socket: Socket) => {
   socket.on('reconnect', (p: { duelId: string; accountId: string; secret: string }) => {
     const acc = auth(p.accountId, p.secret);
     const r = rooms.get(p.duelId);
-    if (!acc || !r) return;
+    // hijack guard: same as join_duel — strangers get nothing, not seat 1
+    if (!acc || !r || (r.accounts[0] !== acc.id && r.accounts[1] !== acc.id)) return;
     const seat: PlayerId = r.accounts[0] === acc.id ? 0 : 1;
     const resumed = r.disconnectAt[seat] !== null;
     r.seats.set(socket.id, seat);
@@ -367,8 +430,10 @@ io.on('connection', (socket: Socket) => {
         if (s !== seat) io.to(sid).emit('peer_disconnected', { seat, graceS: GRACE_S, name: r.names[seat] });
       }
     }
-    const qi = queue.findIndex((e) => e.socketId === socket.id);
-    if (qi >= 0) queue.splice(qi, 1);
+    // SEC-06: reap ALL entries for the socket, not just the first
+    for (let i = queue.length - 1; i >= 0; i--) {
+      if (queue[i]?.socketId === socket.id) queue.splice(i, 1);
+    }
   });
 });
 
@@ -376,10 +441,15 @@ io.on('connection', (socket: Socket) => {
 await app.post('/api/auth', async (req, reply) => {
   const { id, secret, name, recoveryHash } = req.body as { id: string; secret: string; name?: string; recoveryHash?: string | null };
   if (!id || !secret) return reply.code(400).send({ ok: false });
-  const existing = q.getAccount.get(id) as { secret_hash: string; name: string; standing: number; ink: number } | null;
+  const existing = q.getAccount.get(id) as { secret_hash: string; name: string; standing: number; ink: number; recovery_hash: string | null } | null;
   if (existing) {
     if (existing.secret_hash !== hash(secret)) return reply.code(401).send({ ok: false });
     if (name && name !== existing.name) q.updateName.run(name.slice(0, 24), id);
+    // SEC-02: existing accounts register recovery codes AFTER creation — persist the
+    // hash here too, or recovery stays NULL forever and /api/recovery can never match.
+    if (typeof recoveryHash === 'string' && recoveryHash.length > 0 && recoveryHash !== existing.recovery_hash) {
+      q.updateRecovery.run(recoveryHash, id);
+    }
     const acc = q.getAccount.get(id) as { name: string; standing: number; ink: number };
     return { ok: true, name: acc.name, standing: acc.standing, ink: acc.ink };
   }
@@ -403,13 +473,43 @@ await app.post('/api/friend/create', async (req, reply) => {
   return { ok: true, code };
 });
 
+// SEC-11: bounded daily-puzzle cache. The old single-slot cache was evicted by
+// alternating ?date= params (each miss blocks the loop 3-12ms in generation),
+// so two alternating dates = 100% miss rate. 8 FIFO slots cover real use
+// (today + a few neighbours) while junk keys can never pollute it (validated
+// below) and history scans can't grow it.
+const DAILY_CACHE_MAX = 8;
+const DAILY_DATE_RE = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
+function sanitizeDailyDateKey(raw: unknown, fallback: string): string {
+  if (typeof raw !== 'string' || !DAILY_DATE_RE.test(raw)) return fallback;
+  const d = new Date(`${raw}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return fallback;
+  // reject rollover dates like 2024-02-31 (Date normalizes them to March)
+  if (d.toISOString().slice(0, 10) !== raw) return fallback;
+  return raw;
+}
+const dailyCache = new Map<string, { tier: Tier; givensCount: number }>();
+
 await app.get('/api/daily', async (req, reply) => {
-  const dateKey = String((req.query as { date?: string }).date ?? todayUtcKey());
-  const puz = generateDaily(dateKey);
+  void reply;
+  const rawDate = (req.query as { date?: string }).date;
+  const dateKey = sanitizeDailyDateKey(rawDate, todayUtcKey());
+  // the daily puzzle is identical all day: generate once per date key instead of
+  // re-running backtracking generation on every request (DoS amplifier)
+  let cached = dailyCache.get(dateKey);
+  if (!cached) {
+    const puz = generateDaily(dateKey);
+    cached = { tier: puz.tier, givensCount: puz.givensCount };
+    if (dailyCache.size >= DAILY_CACHE_MAX) {
+      const oldest = dailyCache.keys().next().value;
+      if (oldest !== undefined) dailyCache.delete(oldest);
+    }
+    dailyCache.set(dateKey, cached);
+  }
   const board = (q.dailyBoard.all(dateKey) as Array<{ name: string; account_id: string; time_ms: number; mistakes: number }>).map((r2, i) => ({
     rank: i + 1, name: r2.name, timeMs: r2.time_ms, mistakes: r2.mistakes, accountId: r2.account_id,
   }));
-  return { ok: true, dateKey, seed: dailySeed(dateKey), tier: puz.tier, givensCount: puz.givensCount, leaderboard: board };
+  return { ok: true, dateKey, seed: dailySeed(dateKey), tier: cached.tier, givensCount: cached.givensCount, leaderboard: board };
 });
 
 await app.post('/api/daily/result', async (req, reply) => {
@@ -417,8 +517,9 @@ await app.post('/api/daily/result', async (req, reply) => {
   const acc = auth(id, secret);
   if (!acc) return reply.code(401).send({ ok: false });
   if (dateKey !== todayKey()) return reply.code(400).send({ ok: false, error: 'stale' });
-  // sanity: a 9x9 cannot be honestly solved in under 25s
-  if (timeMs < 25_000 || mistakes < 0) { q.telemetry.run(`anticheat:daily:${id}`, Date.now()); return reply.code(400).send({ ok: false }); }
+  // sanity: a 9x9 cannot be honestly solved in under 25s — plus type armor: NaN
+  // or string inputs sailed past the old comparison straight into SQLite (500s)
+  if (typeof timeMs !== 'number' || typeof mistakes !== 'number' || !Number.isFinite(timeMs) || !Number.isInteger(mistakes) || timeMs < 25_000 || mistakes < 0) { q.telemetry.run(`anticheat:daily:${id}`, Date.now()); return reply.code(400).send({ ok: false }); }
   q.dailyUpsert.run(dateKey, acc.id, name ?? acc.name, Math.round(timeMs), mistakes, Date.now());
   // streaks (server-tracked, UTC days)
   const st = (q.streakGet.get(acc.id) as { last_date: string | null; streak: number; best: number } | null) ?? { last_date: null, streak: 0, best: 0 };
@@ -427,18 +528,40 @@ await app.post('/api/daily/result', async (req, reply) => {
   const yester = todayKey(y);
   const streak = st.last_date === today ? st.streak : st.last_date === yester ? st.streak + 1 : 1;
   q.streakUpsert.run(acc.id, today, streak, Math.max(st.best, streak));
-  const rank = (q.dailyRankOf.get(dateKey, acc.id) as { rank: number }).rank;
+  const rank = (q.dailyRankOf.get(dateKey, dateKey, acc.id) as { rank: number }).rank;
   const best = q.dailyBest.get(dateKey, acc.id) as { time_ms: number; mistakes: number } | null;
   return { ok: true, rank, streak, best: best ? { timeMs: best.time_ms, mistakes: best.mistakes } : null };
 });
 
+// SEC-03: brute-force throttle for /api/recovery (18-bit code space). Hourly
+// buckets per source IP and per requester; survivors still need the donor id.
+const recoveryHits = new Map<string, { n: number; resetAt: number }>();
+function recoveryAllowed(key: string, limit: number): boolean {
+  const now = Date.now();
+  if (recoveryHits.size > 5000) {
+    for (const [k, v] of recoveryHits) if (now > v.resetAt) recoveryHits.delete(k);
+  }
+  const e = recoveryHits.get(key);
+  if (!e || now > e.resetAt) { recoveryHits.set(key, { n: 1, resetAt: now + 3600_000 }); return true; }
+  e.n += 1;
+  return e.n <= limit;
+}
+
 await app.post('/api/recovery', async (req, reply) => {
-  const { code, id, secret } = req.body as { code: string; id: string; secret: string };
+  const { code, id, secret, donorId } = req.body as { code: string; id: string; secret: string; donorId?: string };
   const acc = q.getAccount.get(id) as { recovery_hash: string | null; secret_hash: string; ink: number; ink_ledger: string } | null;
   if (!acc || acc.secret_hash !== hash(secret)) return reply.code(401).send({ ok: false });
-  const h = hash(code.trim().toLowerCase());
-  const donor = q.byRecovery.get(h) as { id: string; standing: number; purchases: string; ink: number } | null;
+  // SEC-03: the donor must be NAMED — the old global hash search let anyone sweep
+  // all issued codes and drain every account. No identifier, no lookup.
+  if (typeof donorId !== 'string' || donorId.length === 0 || donorId.length > 120) {
+    return reply.code(400).send({ ok: false, error: 'donor' });
+  }
+  if (!recoveryAllowed(`ip:${req.ip}`, 20) || !recoveryAllowed(`acc:${id}`, 10) || !recoveryAllowed(`donor:${donorId}`, 10)) {
+    return reply.code(429).send({ ok: false, error: 'throttled' });
+  }
+  const donor = q.getAccount.get(donorId) as { id: string; standing: number; purchases: string; ink: number; recovery_hash: string | null } | null;
   if (!donor || donor.id === id) return { ok: false };
+  if (typeof code !== 'string' || donor.recovery_hash !== hash(code.trim().toLowerCase())) return { ok: false };
   q.updateStanding.run(donor.standing, id);
   q.updatePurchases.run(donor.purchases, id);
   // T13 — Ink is now a server-known part: the donor's balance is restored to the
@@ -462,6 +585,16 @@ await app.post('/api/ink', async (req, reply) => {
   if (!acc) return reply.code(401).send({ ok: false });
   const clean = sanitizeInkEntries(entries);
   const cur = q.getAccount.get(acc.id) as { ink: number; ink_ledger: string };
+  // SEC-12: replay gate. The ledger column slides (200 rows) so its own history
+  // can't dedupe forever — this table can. The whole handler is synchronous (no
+  // awaits), so check→settle→record is atomic on the event loop: no double-pay race.
+  const fresh: InkEntry[] = [];
+  const replayed: string[] = [];
+  for (const e of clean) {
+    const duelId = (e as { duelId?: unknown }).duelId;
+    if (typeof duelId === 'string' && q.claimGet.get(acc.id, duelId)) replayed.push(duelId);
+    else fresh.push(e);
+  }
   const lookup = (e: InkEntry) => ({
     duelRow: (e.mode === 'ranked' || e.mode === 'friend')
       ? ((q.getDuel.get(e.duelId) as { p0: string | null; p1: string | null; winner: string | null } | null) ?? null)
@@ -472,7 +605,25 @@ await app.post('/api/ink', async (req, reply) => {
       ? !!(e.duelId.match(/^daily-(\d{4}-\d{2}-\d{2})/)?.[1] && q.dailyBest.get(e.duelId.match(/^daily-(\d{4}-\d{2}-\d{2})/)![1]!, acc.id))
       : false,
   });
-  const out = settleInkEntries(clean, acc.id, lookup, cur.ink_ledger, cur.ink);
+  const out = settleInkEntries(fresh, acc.id, lookup, cur.ink_ledger, cur.ink);
+  // record every accepted claim BEFORE persisting balances, then re-assemble
+  // results IN REQUEST ORDER (settle's positional contract holds; replays are drops)
+  const claimedAt = Date.now();
+  for (const res of out.results) {
+    if (res.verdict !== 'dropped') q.claimAdd.run(acc.id, res.duelId, claimedAt);
+  }
+  const replayedSet = new Set(replayed);
+  const queues = new Map<string, typeof out.results>();
+  for (const res of out.results) {
+    const list = queues.get(res.duelId) ?? [];
+    list.push(res);
+    queues.set(res.duelId, list);
+  }
+  out.results = clean.map((e) => {
+    const id = String((e as { duelId?: unknown }).duelId ?? '');
+    if (replayedSet.has(id)) return { duelId: id, verdict: 'dropped' as const, applied: 0 };
+    return queues.get(id)!.shift()!;
+  });
   if (out.results.length) {
     q.updateInkLedger.run(JSON.stringify(out.ledger), acc.id);
     q.updateInk.run(out.balance, acc.id);
@@ -495,6 +646,14 @@ await app.post('/api/telemetry', async (req, reply) => {
 });
 
 await app.get('/api/health', async () => ({ ok: true, rooms: rooms.size, queue: queue.length, t: Date.now() }));
+
+// telemetry is client-writable and append-only: prune by age + cap rows every
+// 5 min so a flood (or years of uptime) can't fill the volume under the ledger
+setInterval(() => {
+  try {
+    q.telemetryPrune.run(Date.now() - 7 * 86400_000, 20000);
+  } catch (e) { console.error('[assize-server] telemetry prune error', e); }
+}, 5 * 60_000);
 
 // REST on Fastify; socket.io shares the port on its default engine path (/socket.io),
 // which the sandbox gateway forwards via the XTransformPort query param.
