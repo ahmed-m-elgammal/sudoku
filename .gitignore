@@ -54,3 +54,5 @@ server.log
 /skills/
 
 mobile\node_modules
+.agents/**
+*_accessKeys.csv

@@ -56,11 +56,25 @@ from the same install if you also want the server row removed.
 
 ## Children
 
-ASSIZE is rated 4+ / Everyone. The occult theme ("Shades", "wax seals") is restrained
-puzzle dressing: no realistic violence, no gore, no gambling, no chat with strangers.
+ASSIZE is not directed at children under 13. Expected ratings: PEGI 12 (mild
+fantasy peril), ESRB Everyone 10+, App Store 12+. No chat with strangers, no
+gore, no gambling, no real-money play.
 
 ## Changes
 
 If a future release adds analytics, purchases, or any new data flow, this policy and the
 store Data Safety / App Privacy declarations will be updated **in the same release** —
 declarations must always match what the shipping binary can do.
+
+## Google Play Data safety mapping (fill the console from this table)
+
+| Play category | What | Purpose | Shared |
+|---|---|---|---|
+| Name (Personal info) | Display name shown on leaderboards | App functionality | No |
+| App activity (gameplay) | Duel seeds/results, daily times, streaks, Ink awards | App functionality, fraud prevention | No |
+| Device or other IDs | Random guest identifier (app-generated, reset on data purge) | App functionality, fraud prevention | No |
+| Contacts / location / photos / microphone | — | Not collected (no such permissions) | — |
+
+No data shared with third parties. No ads SDKs. Account deletion: in-app
+delete-data wipes the device; server rows removed on request to the contact
+below (include guest id).

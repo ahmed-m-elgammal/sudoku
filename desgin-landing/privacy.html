@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy : ASSIZE</title>
+<meta name="description" content="How ASSIZE collects, stores and deletes your data: guest identity, saves, Standing, daily results, recovery codes.">
+<meta name="theme-color" content="#0e0e0f">
+<link rel="canonical" href="https://assize.example/privacy.html">
+<link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg">
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{--ink-black:#0e0e0f;--charcoal:#17171a;--charcoal-2:#1d1d21;--parchment:#b8a27c;--parchment-light:#cdb992;--parchment-dim:#9a8560;--brass:#a58849;--brass-dim:#6f5b31;--oxblood:#7b1a1f;--bone:#d8d2c4;--ash:#8d8a82;--line:#3a352c;--line-strong:#574e3d;--bg:var(--ink-black);--bg-raised:var(--charcoal);--fg:var(--parchment-light);--fg-dim:var(--parchment-dim);--font-display:'IM Fell English SC','IM Fell DW Pica',Georgia,serif;--font-body:'IM Fell DW Pica',Georgia,'Times New Roman',serif;--font-digit:'Libre Caslon Text',Georgia,serif;--radius:4px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:32px 24px}
+nav.top{border-bottom:1px solid var(--line);padding:14px 0;background:rgba(14,14,15,.9);backdrop-filter:blur(6px);position:sticky;top:0}
+nav.top .inner{max-width:760px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:18px}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:20px;letter-spacing:.12em;color:var(--parchment-light)}
+.brand img{height:24px}
+nav.top a.l{color:var(--parchment-dim);font-size:14px;margin-left:auto}
+nav.top a.l:hover{color:var(--parchment)}
+h1{font-size:clamp(34px,5vw,52px);margin-bottom:6px}
+.lede{color:var(--parchment-dim);font-style:italic;margin-bottom:32px}
+h2{font-family:var(--font-display);font-size:24px;margin:32px 0 10px;color:var(--parchment)}
+h3{font-family:var(--font-display);font-size:18px;margin:20px 0 6px;color:var(--brass)}
+p{margin-bottom:14px;color:var(--fg)}
+ul{margin:0 0 14px 22px;color:var(--fg)}
+li{margin-bottom:6px}
+code{font-family:var(--font-digit);font-size:.9em;background:var(--charcoal);padding:1px 5px;border-radius:3px;border:1px solid var(--line)}
+.meta{font-size:13px;color:var(--ash);font-style:italic;margin-top:40px;padding-top:20px;border-top:1px solid var(--line)}
+footer{border-top:1px solid var(--line-strong);padding:32px 0;margin-top:48px;background:var(--charcoal)}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--ash)}
+footer a{color:var(--parchment-dim)} footer a:hover{color:var(--parchment)}
+a{color:var(--parchment)}
+</style>
+</head>
+<body>
+<nav class="top"><div class="inner"><a class="brand" href="index.html"><img src="assets/brand/favicon.svg" alt="">ASSIZE</a><a class="l" href="index.html">Home</a><a class="l" href="terms.html">Terms</a></div></nav>
+<div class="wrap">
+<h1>Privacy</h1>
+<p class="lede">The short version: ASSIZE keeps as little as it can, sorts your progress across two places on purpose, and never sells or trades what it has. The long version follows.</p>
+
+<p><strong>Last updated:</strong> 14 October 2026. This page is a plain-language description of the product's mechanics and a placeholder for counsel review (tracked internally as TODO T11). The final wording will be reviewed before any public store release.</p>
+
+<h2>1. What the product is</h2>
+<p>ASSIZE is a 1v1 sudoku duel. It can be played in the browser and as an installed app. Ranked, daily and friend duels need a network connection — including the Shade fallback the queue finds when no human opponent appears; the tutorial, campaign, practice and local Shade duels run entirely on your device.</p>
+
+<h2>2. The two places your data lives</h2>
+<p>By design, different data lives in different places. This is intentional, not an oversight:</p>
+<ul>
+  <li><strong>On your device (local app storage)</strong> : your save game: campaign position and ending, cosmetics, achievements, learned preferences, saved Echoes, Endless rung and best, offline duels, Ink and Season progress. On mobile this is MMKV/AsyncStorage plus a SQLite echo ring and the Keychain/Keystore identity; on web it is IndexedDB. This never leaves your device unless you export it yourself.</li>
+  <li><strong>On our servers (SQLite)</strong> : your Standing, duel history, daily results and streaks, Ink balance and its audit ledger, recovery code link, purchase records once payments ship, and security rows written only when anti-cheat checks trigger (see §3).</li>
+</ul>
+<p>Nothing like passwords or email is collected. There is no account login in guest play; identity is a random guest id minted on first launch.</p>
+
+<h2>3. What we collect and why</h2>
+<h3>Guest identity</h3>
+<p>A random identifier generated locally on first launch. Used to associate your Standing and daily results with you without an email or password.</p>
+<h3>Gameplay data</h3>
+<p>Seeds, tiers, scores, outcomes, mistakes, claim times and rung numbers. Used for matchmaking windows, leaderboards, anti-cheat sanity checks and to seed your personal Shade from your own Echoes.</p>
+<h3>Echoes and sealed chits</h3>
+<p>Recorded duels store a compact, validated log of your placements, abilities and resigns. A sealed chit is a copy-paste encoding of that log. <strong>Export redacts both player names to fixed fictional labels before a byte is encoded, and import redacts again.</strong> A chit carries the ink of a duel, never a name.</p>
+<h3>Recovery code</h3>
+<p>A four-word code restores the server-known parts of your progress on another device. Treat it like a key. Losing it is not recoverable by us, because we cannot link a recovery code back to an identity beyond the code itself.</p>
+<h3>Diagnostics</h3>
+<p>The Settings screen has a telemetry switch (on by default). In the current build the apps themselves send no telemetry events, so the switch currently governs nothing — there is nothing to turn off yet, and nothing to assume. Separately, the server records security rows (impossible placement intervals, uniform-timing flags, impossible daily times) tied to your guest id when those checks trigger; those rows keep cheaters off the ladder and cannot be switched off per account. When client-side diagnostics ship, the switch will govern them and this page will say so.</p>
+
+<h2>4. What we do not do</h2>
+<ul>
+  <li>We do not sell your data.</li>
+  <li>We do not run third-party analytics or advertising SDKs in the current build. Fonts ship with the app; sounds ship as pre-rendered audio assets — nothing streams, nothing phones home.</li>
+  <li>We do not collect precise location, contacts, photos or microphone audio. The game requests none of these permissions.</li>
+  <li>We do not require an account, email or payment to play today.</li>
+</ul>
+
+<h2>5. Payments</h2>
+<p>Payments and rewarded ads are not live (tracked as TODO T5). There is no way to spend real money today. Any purchase-related wording on this page is forward-looking.</p>
+
+<h2>6. Children</h2>
+<p>ASSIZE is not directed at children under 13: grim setting, mild fantasy peril, adult tone in the margins — but no chat with strangers, no gore, no gambling. Expected store ratings: PEGI 12, ESRB Everyone 10+, App Store 12+. If you believe a child has submitted personal data, contact us and we will delete it.</p>
+
+<h2>7. Retention and deletion</h2>
+<p>Client data lives on your device until you clear site data or uninstall; the Settings screen's delete-data control wipes local saves, echoes and identity. Server-side rows are retained while your guest identity is active and for a reasonable period after for leaderboard integrity and abuse investigation. There is no self-serve server wipe: request deletion by contacting us, and include your guest id or recovery code so we can find your record.</p>
+
+<h2>8. Security</h2>
+<p>Ranked duel moves are validated server-side, difficulty and economy claims are verified against server duel logs where implemented, and replay validation is fail-closed. No system is perfect; please report issues.</p>
+
+<h2>9. International transfers</h2>
+<p>The duel server is hosted in the EU (Sweden). If you play from outside the EU/EEA, your guest id and gameplay rows are processed there. This page will name a legal basis and safeguards on counsel sign-off; until then, EU players' data does not leave the EU.</p>
+
+<h2>10. Changes to this policy</h2>
+<p>Material changes will be dated at the top of this page and, where appropriate, surfaced in-game. Continued play after a change constitutes acceptance.</p>
+
+<h2>11. Contact</h2>
+<p>Privacy questions: <a href="mailto:privacy@assize.example">privacy@assize.example</a>. Please include your guest id or recovery code so we can find your record.</p>
+
+<p class="meta">This document is provided for transparency and pending counsel review. It describes current mechanics; store-listing privacy declarations will mirror it once counsel signs off.</p>
+</div>
+<footer><div class="wrap"><span>© ASSIZE</span><span><a href="index.html">Home</a> · <a href="terms.html">Terms</a> · <a href="llms.txt">llms.txt</a></span></div></footer>
+</body>
+</html>
