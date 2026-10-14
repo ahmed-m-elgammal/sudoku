@@ -4,6 +4,7 @@
   },
   "build": {
     "production": {
+      "channel": "production",
       "autoIncrement": true,
       "env": {
         "EXPO_NO_TELEMETRY": "1"
@@ -11,6 +12,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "autoIncrement": true,
       "env": {
         "EXPO_NO_TELEMETRY": "1"
@@ -18,7 +20,8 @@
     },
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "development"
     }
   },
   "submit": {

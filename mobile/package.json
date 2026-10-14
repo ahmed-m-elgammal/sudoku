@@ -14,7 +14,16 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "bundle": "expo export --platform all --output-dir dist",
-    "gate": "npm run typecheck && npm run lint && npm run test"
+    "gate": "npm run typecheck && npm run lint && npm run test",
+    "build:preview:android": "eas build --platform android --profile preview",
+    "build:preview:ios": "eas build --platform ios --profile preview",
+    "build:preview": "eas build --profile preview",
+    "build:production:android": "eas build --platform android --profile production",
+    "build:production:ios": "eas build --platform ios --profile production",
+    "build:production": "eas build --profile production",
+    "update:preview": "eas update --branch preview",
+    "update:production": "eas update --branch production",
+    "update:list": "eas update:list --branch"
   },
   "dependencies": {
     "@expo-google-fonts/im-fell-dw-pica": "^0.4.0",
@@ -35,6 +44,7 @@
     "expo-splash-screen": "~57.0.9",
     "expo-sqlite": "~57.0.4",
     "expo-status-bar": "~57.0.1",
+    "expo-updates": "~57.0.26",
     "react": "19.2.3",
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
