@@ -30,6 +30,8 @@ import {
 } from '@/game/fx';
 import { FOLIOS } from '@shared/orders';
 import { profileForStanding, tieredTechniques } from '@shared/shade';
+import { CONFIG, type StatusType } from '@shared/config';
+import { lexEntryForStatus } from '@shared/lexicon';
 import { BOSS_SCRIPTS } from '@shared/phaseScript';
 import { endlessFoe, newEndlessState } from '@shared/endless';
 import { weekIndexFor, weeklyForWeek } from '@shared/weekly';
@@ -42,6 +44,45 @@ export interface DuelFxState {
   hitStop: HitStop | null;
   slowInk: boolean;
   heat: Heat | null;
+}
+
+/** P3.3 — the first-hit status explainer toast (docs/STORY_HOLD_PLAN.md P3.3). */
+export interface StatusToast {
+  status: StatusType;
+  title: string;
+  body: string;
+}
+
+/** P3.3 — the toast's self-cleaning window (the fx Cue law, not a new timer). */
+export const STATUS_TOAST_MS = 8_000;
+
+/**
+ * P3.3 — first-hit explainer gate. Pure and fail-closed: only the Clerk's own
+ * suffering, outside the tutorial and outside the engine's final-10 s ban,
+ * earns an explanation — and only once per status, ever.
+ */
+export function shouldExplainStatus(args: {
+  status: unknown;
+  player: unknown;
+  mode: unknown;
+  clockMs: number;
+  durationMs: number;
+  explained: readonly string[] | undefined;
+}): StatusType | null {
+  const { status, player, mode } = args;
+  if (player !== 0 || mode === 'tutorial') return null;
+  if (
+    status !== 'chain' && status !== 'smudge' && status !== 'hush' &&
+    status !== 'miasma' && status !== 'quarantine'
+  ) return null;
+  if (!Number.isFinite(args.clockMs) || !Number.isFinite(args.durationMs) || args.durationMs <= 0) {
+    return null;
+  }
+  // The engine's own final-10 s status ban (CONFIG.duel.finalStatusBanMs): a
+  // status landing here is hostile input, never a lesson.
+  if (args.clockMs > args.durationMs - CONFIG.duel.finalStatusBanMs) return null;
+  if (Array.isArray(args.explained) && args.explained.includes(status)) return null;
+  return status;
 }
 export function useDuelSession(spec: DuelSessionSpec | null) {
   const lastSeqRef = useRef(0);
@@ -58,12 +99,15 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
   const [hitStop, setHitStop] = useState<HitStop | null>(null);
   const [slowInk, setSlowInk] = useState(false);
   const [heat, setHeat] = useState<Heat | null>(null);
+  // P3.3 — the explainer toast; self-cleaning like every other cue.
+  const [statusToast, setStatusToast] = useState<StatusToast | null>(null);
 
   const floodCue = useRef<Cue<Flood> | null>(null);
   const shakeCue = useRef<Cue<Shake> | null>(null);
   const hitStopCue = useRef<Cue<HitStop> | null>(null);
   const slowInkCue = useRef<Cue<true> | null>(null);
   const heatRef = useRef<Heat | null>(null);
+  const statusToastCue = useRef<Cue<StatusToast> | null>(null);
   const runsRef = useRef<[number, number]>([0, 0]);
   const lastClaimerRef = useRef(-1);
   const fxNonce = useRef(1);
@@ -72,6 +116,12 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
   if (!shakeCue.current) shakeCue.current = new Cue<Shake>((s) => SHAKE_MS[s.tier], setShake);
   if (!hitStopCue.current) hitStopCue.current = new Cue<HitStop>(() => HIT_STOP_MS, setHitStop);
   if (!slowInkCue.current) slowInkCue.current = new Cue<true>(() => SLOW_INK_MS, (v) => setSlowInk(v !== null));
+  if (!statusToastCue.current) statusToastCue.current = new Cue<StatusToast>(() => STATUS_TOAST_MS, setStatusToast);
+
+  const dismissStatusToast = useCallback(() => {
+    statusToastCue.current?.dispose();
+    setStatusToast(null);
+  }, []);
 
   const fireShake = useCallback((tier: ShakeTier) => {
     shakeCue.current?.set({ tier, nonce: fxNonce.current++ });
@@ -119,6 +169,7 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
       shakeCue.current?.dispose();
       hitStopCue.current?.dispose();
       slowInkCue.current?.dispose();
+      statusToastCue.current?.dispose();
       setFlood(null);
       setShake(null);
       setHitStop(null);
@@ -155,6 +206,7 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
   // and reads refs and the stable `fireShake`, so the effect deps stay [version, duel, fireShake].
   useEffect(() => {
     if (!duel) return;
+    const runtime = duel; // narrowed for the closures below (TS will not narrow across them)
 
     function hookEvent(e: DuelEvent) {
       switch (e.kind) {
@@ -169,6 +221,30 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
         case 'status':
           audio.statusApplied();
           haptics.status();
+          // P3.3 — first-hit explainer: the first time the Clerk suffers a
+          // status outside the tutorial, say what it means (once each, ever).
+          // Copy comes from the Lexicon; the flag persists the lesson.
+          {
+            const id = shouldExplainStatus({
+              status: e.status,
+              player: e.player,
+              mode: (runtime.opts as { mode?: string }).mode,
+              clockMs: runtime.state.clockMs,
+              durationMs: runtime.state.durationMs,
+              explained: useSave.getState().save?.flags?.statusExplained,
+            });
+            if (id) {
+              const entry = lexEntryForStatus(id);
+              if (entry) {
+                useSave.getState().markStatusExplained(id);
+                statusToastCue.current?.set({
+                  status: id,
+                  title: entry.fiction,
+                  body: entry.value ? `${entry.plain} (${entry.value})` : entry.plain,
+                });
+              }
+            }
+          }
           break;
         case 'statusEnded':
           audio.statusEnded();
@@ -220,7 +296,12 @@ export function useDuelSession(spec: DuelSessionSpec | null) {
     }
   }, [version, duel, fireShake]);
 
-  return { duel, version, flood, shake, hitStop, slowInk, heat } satisfies DuelFxState & { duel: DuelRuntime | null; version: number };
+  return { duel, version, flood, shake, hitStop, slowInk, heat, statusToast, dismissStatusToast } satisfies DuelFxState & {
+    duel: DuelRuntime | null;
+    version: number;
+    statusToast: StatusToast | null;
+    dismissStatusToast: () => void;
+  };
 }
 
 // ------------------------------------------------------------------ specFromUi
@@ -256,7 +337,7 @@ export function specFromUi(): DuelSessionSpec {
     // drop the tutorialScript field and the entire v1 path runs again (the script,
     // the note machine and the docked note are all still there behind the flag).
     return {
-      mode: 'tutorial', seed: 'tutorial-orsolo', tier: 'Easy',
+      mode: 'tutorial', seed: 'novem-lesson-21', tier: 'Easy',
       orders: ['scholar', 'executioner'],
       names: ['You', 'Shade of Orsolo'],
       tutorialScript: 'v2',
@@ -278,6 +359,7 @@ export function specFromUi(): DuelSessionSpec {
       seals: [7, foe.seals],
       adaptive: foe.adaptive === true,
       foeScript: foe.script ? BOSS_SCRIPTS[foe.script] : undefined,
+      magistrateKey: folio.key, // P2.2 — the folio's Magistrate speaks mid-duel
       foeProfile: {
         ...prof,
         name: foe.name,

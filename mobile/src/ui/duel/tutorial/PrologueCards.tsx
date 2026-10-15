@@ -1,13 +1,13 @@
 // PrologueCards.tsx — M2 phase t0 (docs/TUTORIAL_OPTIMIZATION_PLAN.md §5.2 T0, §6.2).
 //
 // The story.json prologue shipped but was NEVER rendered on either platform (the plan's
-// §3.2.8 "dead story content"). T0 finally renders two of its lines VERBATIM — this is
+// §3.2.8 "dead story content"). T0 renders all four of its lines VERBATIM — this is
 // presentation of existing canon, not a story change (§11.3.2) — each under one plain
 // sentence from the i18n dictionary (the §11 plain-first law: the canon line stays
 // untouched; the plain line carries the meaning).
 //
 // Full-screen blocking overlay inside the duel room: one card at a time, a tap
-// anywhere advances, the second card fires onDone (the director's prologueDone gate).
+// anywhere advances, the fourth card fires onDone (the director's prologueDone gate).
 // No animation to kill: the cards are static parchment, so the reduced-motion law
 // needs no guard here.
 import { useState } from 'react';
@@ -20,13 +20,26 @@ export interface PrologueCardsProps {
   onDone: () => void;
 }
 
-/** The two canon lines T0 renders (verbatim from story.json.prologue). */
-const CARD_LINES = [storyJson.prologue[2], storyJson.prologue[3]] as const;
+/** The four canon lines T0 renders (verbatim from story.json.prologue). */
+const CARD_LINES = [
+  storyJson.prologue[0],
+  storyJson.prologue[1],
+  storyJson.prologue[2],
+  storyJson.prologue[3],
+] as const;
 
 export default function PrologueCards({ theme, onDone }: PrologueCardsProps) {
   const [idx, setIdx] = useState(0);
   const last = idx === CARD_LINES.length - 1;
   const copy = [
+    {
+      title: i18n.tutorialV2.prologue3Title,
+      plain: i18n.tutorialV2.prologue3Plain,
+    },
+    {
+      title: i18n.tutorialV2.prologue4Title,
+      plain: i18n.tutorialV2.prologue4Plain,
+    },
     {
       title: i18n.tutorialV2.prologue1Title,
       plain: i18n.tutorialV2.prologue1Plain,

@@ -27,8 +27,9 @@
 //    dictionary has no key for them, so the port carries them verbatim rather than
 //    diverging the frozen en.json.
 import { useEffect, useMemo } from 'react';
-import { Image, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import Art from '@/ui/Art';
+import { artUriFor } from '@/ui/duel/duelAssets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { useUi } from '@/state/ui';
@@ -36,12 +37,13 @@ import { useSave } from '@/state/save';
 import { audio } from '@/platform/audio';
 import { useDisplaySettings } from '@/platform/display';
 import { fonts, layout, palette, themeFor, type as typeScale } from '@/theme/tokens';
-import { i18n } from '@/i18n';
+import { i18n, storyJson } from '@/i18n';
 
-// Metro needs a literal require (see metro.config.js: the raster twins are asset
-// extensions); resolveAssetSource turns the asset id into the URI the Art seam paints.
-const INK_DROP = require('../../../assets/game/icons/ink-drop.png');
-const inkDropUri = Image.resolveAssetSource(INK_DROP)?.uri ?? '';
+// Metro needs a literal require for raster twins (see metro.config.js); the twin
+// is resolved through the duel art registry (the Antechamber law), so the
+// runner can double one seam instead of parsing binary.
+const INK_DROP = artUriFor('/assets/icons/ink-drop.svg');
+const inkDropUri = INK_DROP ?? '';
 
 export default function ResultScreen() {
   const ui = useUi();
@@ -68,6 +70,9 @@ export default function ResultScreen() {
   const won = r.winner === 0;
   const draw = r.winner === 'draw';
   const banner = draw ? i18n.result.draw : won ? i18n.result.victory : i18n.result.defeat;
+  // P2.3 — the Magistrate speaks: defeat lines on a campaign win (plus the
+  // folio card on a folio-completing third duel), one dismissal line on a loss.
+  const magVoice = magVoiceFor(ui.duelMode, won, draw, r.campaignFolioKey, ui.campaignDuel?.duel);
   const mins = Math.floor(r.timeMs / 60000);
   const secs = Math.floor((r.timeMs % 60000) / 1000);
   const spark =
@@ -138,6 +143,18 @@ export default function ResultScreen() {
           </Text>
         ) : null}
       </View>
+
+      {/* P2.3 — the Magistrate's voice, above the economy: StoryCard caption
+          typography, no plate image, campaign duels only. */}
+      {magVoice && magVoice.length ? (
+        <View style={styles.magVoice}>
+          {magVoice.map((l, i) => (
+            <Text key={i} style={[styles.magLine, { color: theme.fg, fontSize: fs.md }]}>
+              {l}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       {/* the Ledger of this Duel — the five-row account (web:63-76) */}
       <View style={[styles.panel, { marginTop: 14, backgroundColor: theme.bgRaised, borderColor: theme.lineStrong }]}>
@@ -210,6 +227,39 @@ export default function ResultScreen() {
   );
 }
 
+/**
+ * P2.3 — the Magistrate speaks at the result (docs/STORY_HOLD_PLAN.md P2.3).
+ * Campaign wins show the defeat lines verbatim, plus the folio completion card
+ * on a folio-completing third duel; campaign losses show the challenge's
+ * opening line as dismissal (already taught pre-duel — a hook, not a spoiler).
+ * Every other mode, and draws, show none. Unknown keys show none (fail-closed).
+ */
+function magVoiceFor(
+  duelMode: string,
+  won: boolean,
+  draw: boolean,
+  folioKey: string | undefined,
+  duelIdx: number | undefined,
+): string[] | null {
+  if (duelMode !== 'campaign' || !folioKey) return null;
+  const mag = (
+    storyJson.mag as Record<string, { challenge?: unknown; defeat?: unknown; folio?: unknown }>
+  )[folioKey];
+  if (!mag) return null;
+  if (won && !draw) {
+    const lines = Array.isArray(mag.defeat)
+      ? mag.defeat.filter((l): l is string => typeof l === 'string')
+      : [];
+    if (duelIdx === 2 && typeof mag.folio === 'string' && mag.folio) lines.push(mag.folio);
+    return lines.length ? lines : null;
+  }
+  if (!won && !draw) {
+    const first = Array.isArray(mag.challenge) ? mag.challenge[0] : undefined;
+    return typeof first === 'string' && first ? [first] : null;
+  }
+  return null;
+}
+
 /** One account row of the Ledger: label left, digits right (web's dt/dd pair). */
 function LedgerRow({
   label,
@@ -279,6 +329,9 @@ const styles = StyleSheet.create({
   },
   bannerTitle: { fontFamily: fonts.display },
   shadeTag: { fontFamily: fonts.body, marginTop: 4 },
+  // P2.3 — StoryCard caption law: centered italic lines, no plate, no panel.
+  magVoice: { paddingHorizontal: 18, paddingTop: 12, alignItems: 'center' },
+  magLine: { fontFamily: fonts.bodyItalic, textAlign: 'center', marginTop: 6 },
   // web `.panel`: bg-raised ground, line-strong frame — and its ::before ring,
   // the engraved inner line: 4px inset, 1px var(--line). Outer padding 4 + inner
   // padding 10 puts the ring 4px inside the frame and the content 14px inside it,

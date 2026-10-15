@@ -21,7 +21,10 @@ export type Screen =
   | 'endingChoice' // T6 — the Balance / Burn verdict after the Orsolo reveal
   | 'echoes'       // T7 — the Shade Echoes shelf (duel a stored replay)
   | 'endless'      // T18 — the Endless Assize ladder
-  | 'weekly';      // T21 — the Weekly Assize (rotating rule modifiers)
+  | 'weekly'       // T21 — the Weekly Assize (rotating rule modifiers)
+  | 'chronicle'    // P2.4 — the re-readable Ledger of story beats (a reading
+                   // screen: deliberately NOT in DEAD_ENDS, so back can land)
+  | 'lexicon';     // P2.5 — the Clerk's Lexicon, the in-app glossary (same law)
 
 export interface StoryPayload {
   lines: string[];
@@ -91,6 +94,8 @@ interface UiStore {
     claims: [number, number]; mistakes: [number, number]; abilities: [number, number];
     timeMs: number; sealTimeline: [number, number, number][]; ratingDelta: number | null;
     ink: number; shadeDuel: boolean; reliquaryWon: boolean;
+    /** P2.3 — the fought folio's key (campaign only); lets ResultScreen voice the Magistrate. */
+    campaignFolioKey?: string;
   } | null;
   pendingFoe: { name: string; order: string; shade: boolean; standing: number; tier?: string; range?: [number, number] } | null;
   serverDuel: ServerDuelInit | null;

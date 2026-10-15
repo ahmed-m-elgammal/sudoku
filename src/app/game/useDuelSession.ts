@@ -163,7 +163,7 @@ export function specFromUi(): DuelSessionSpec {
   const mode = ui.duelMode;
   if (mode === 'tutorial') {
     return {
-      mode: 'tutorial', seed: 'tutorial-orsolo', tier: 'Easy',
+      mode: 'tutorial', seed: 'novem-lesson-21', tier: 'Easy',
       orders: ['scholar', 'executioner'],
       names: ['You', 'Shade of Orsolo'],
     };

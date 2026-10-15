@@ -30,7 +30,7 @@ import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
 import { audio } from '@/platform/audio';
 import { useDisplaySettings } from '@/platform/display';
-import { fonts, palette, themeFor, type as typeScale } from '@/theme/tokens';
+import { fonts, layout, palette, themeFor, type as typeScale } from '@/theme/tokens';
 import { i18n, tf } from '@/i18n';
 import { images } from '@/theme/assets';
 import Ribbon from '@/ui/Ribbon';
@@ -70,6 +70,18 @@ export default function FolioMap() {
           <Text style={[styles.sub, { color: theme.fgDim, fontSize: fs.md }]}>
             {tf('hub.foliosSub', { done })}
           </Text>
+          {/* P2.4 — the Chronicle: the story so far, re-readable. A reading
+              screen, reachable from the campaign map header. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={i18n.duel.chronicle.title}
+            onPress={() => { audio.uiTap(); go('chronicle'); }}
+            style={[styles.chronicleRow, { borderColor: theme.lineStrong, backgroundColor: theme.bgRaised }]}
+          >
+            <Text style={[styles.chronicleText, { color: theme.fg, fontSize: fs.sm }]}>
+              {i18n.duel.chronicle.title} · {i18n.duel.chronicle.sub}
+            </Text>
+          </Pressable>
         </View>
 
         {/* web width min(94vw, 420px), margin '8px auto', aspectRatio 1080/1600 */}
@@ -157,4 +169,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   nodeText: { fontFamily: fonts.display },
+  // P2.4 — the Chronicle entry row under the map header (hub-card framing)
+  chronicleRow: {
+    minHeight: layout.touch,
+    marginTop: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: layout.radius,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chronicleText: { fontFamily: fonts.display },
 });

@@ -196,6 +196,30 @@ export default function SettingsScreen() {
         >
           <Text style={[styles.relearnText, { color: theme.fg, fontSize: fs.md }]}>{i18n.tutorial.relearn}</Text>
         </Pressable>
+
+        {/* P2.4 — the Chronicle: the story so far, re-readable. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={i18n.duel.chronicle.title}
+          onPress={() => go('chronicle')}
+          style={[styles.relearn, { backgroundColor: theme.bgRaised, borderColor: theme.lineStrong }]}
+        >
+          <Text style={[styles.relearnText, { color: theme.fg, fontSize: fs.md }]}>
+            {i18n.duel.chronicle.title} · {i18n.duel.chronicle.sub}
+          </Text>
+        </Pressable>
+
+        {/* P2.5 — the Lexicon: what the court means by it. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={i18n.duel.lexicon.title}
+          onPress={() => go('lexicon')}
+          style={[styles.relearn, { backgroundColor: theme.bgRaised, borderColor: theme.lineStrong }]}
+        >
+          <Text style={[styles.relearnText, { color: theme.fg, fontSize: fs.md }]}>
+            {i18n.duel.lexicon.title} · {i18n.duel.lexicon.sub}
+          </Text>
+        </Pressable>
       </ScrollView>
       <Ribbon />
     </View>

@@ -101,6 +101,8 @@ export default function EndingChoice() {
   const seal = (e: Ending) => {
     audio.stamp(); // web synth.sealBreak() — nearest voice in the 18-method contract
     useSave.getState().update((cur) => ({ ...cur, campaign: { ...cur.campaign, ending: e } }));
+    // P2.4 — the verdict enters the Chronicle (idempotent).
+    useSave.getState().markChronicle(`ending:${e}`);
     go('story', {
       story: {
         lines: [...(e === 'balance' ? storyJson.endings.balance : storyJson.endings.burn)],

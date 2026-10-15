@@ -33,6 +33,51 @@ function tickerFor(mode: string) {
 
 const text = (node: unknown): string => JSON.stringify(node);
 
+describe('Ticker · P2.2 taunts (the court talks back)', () => {
+  const tauntDuel = (mode: string, taunt: unknown) =>
+    ({
+      state: { events: [{ kind: 'claim', player: 1, unit: 'r4', damage: 1, taunt }] },
+      opts: { mode },
+    }) as unknown as DuelRuntime;
+
+  it('TICK-4 a taunt renders the Magistrate speaking, display font, one line', () => {
+    const json = renderToJson(
+      <Ticker duel={tauntDuel('campaign', { key: 'halbrecht', idx: 0 })} theme={themeFor()} />,
+    );
+    const s = text(json);
+    expect(s).toContain('Halbrecht: ');
+    expect(s).toContain('You hold that pen like a knife you fear.');
+    expect(s).toContain('"numberOfLines":1');
+  });
+
+  it('TICK-5 the generic Shade voice answers for shade duels', () => {
+    const json = renderToJson(
+      <Ticker duel={tauntDuel('shade', { key: 'shade', idx: 1 })} theme={themeFor()} />,
+    );
+    const s = text(json);
+    expect(s).toContain(`${i18n.common.theShade}: `);
+    expect(s).toContain(i18n.duel.shadeTaunt[1]);
+  });
+
+  it('TICK-6 an invalid taunt falls through to the normal event text', () => {
+    for (const bad of [{ key: 'no-such-mag', idx: 0 }, { key: 'halbrecht', idx: 7 }, null, 'halbrecht']) {
+      const json = renderToJson(
+        <Ticker duel={tauntDuel('campaign', bad)} theme={themeFor()} />,
+      );
+      const s = text(json);
+      expect(s).not.toContain(': You hold that pen');
+      expect(s).toContain('Row');
+    }
+  });
+
+  it('TICK-7 tutorial duels stay silent even with a taunt field present', () => {
+    const json = renderToJson(
+      <Ticker duel={tauntDuel('tutorial', { key: 'halbrecht', idx: 0 })} theme={themeFor()} />,
+    );
+    expect(text(json)).not.toContain('You hold that pen');
+  });
+});
+
 describe('Ticker · the tutorial legibility law (M1 G5)', () => {
   it('TICK-1 the tutorial log names units in Arabic numerals', () => {
     const json = tickerFor('tutorial');

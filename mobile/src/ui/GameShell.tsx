@@ -40,6 +40,8 @@ import FriendScreen from './screens/FriendScreen';
 import EchoesScreen from './screens/EchoesScreen';
 import EndlessScreen from './screens/EndlessScreen';
 import WeeklyScreen from './screens/WeeklyScreen';
+import ChronicleScreen from './screens/ChronicleScreen';
+import LexiconScreen from './screens/LexiconScreen';
 
 export default function GameShell() {
   const screen = useUi((s) => s.screen);
@@ -87,6 +89,8 @@ export default function GameShell() {
     case 'echoes': return <EchoesScreen />;
     case 'endless': return <EndlessScreen />;
     case 'weekly': return <WeeklyScreen />;
+    case 'chronicle': return <ChronicleScreen />;
+    case 'lexicon': return <LexiconScreen />;
     default: return <BootScreen />;
   }
 }

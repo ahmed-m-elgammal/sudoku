@@ -13,6 +13,7 @@
 //     drift or drop web copy — this pins daily/weekly/endless forever.
 import { describe, it, expect } from 'vitest';
 import { fmtClock, fmtCountdown } from '@/ui/screens/dailyFormat';
+import { endlessSubFor } from '@/ui/screens/endlessLaw';
 import { palette, themeFor } from '@/theme/tokens';
 import webEn from '../../../../../src/i18n/en.json';
 import mobileEn from '@/i18n/en.json';
@@ -80,5 +81,20 @@ describe('the i18n superset law', () => {
       'title', 'sub', 'rungLabel', 'bestLabel', 'nextLabel', 'seals',
       'bossBadge', 'queueLabel', 'ascend', 'law', 'back',
     ]) expect(m.endless[key]).toBeDefined();
+  });
+});
+
+describe('endless ending-aware sub (P3.1)', () => {
+  it('both endings render their line; un-ended saves render the original', () => {
+    expect(endlessSubFor('burn')).toBe(mobileEn.endless.subBurned);
+    expect(endlessSubFor('balance')).toBe(mobileEn.endless.subBalanced);
+    expect(endlessSubFor(undefined)).toBe(mobileEn.endless.sub);
+  });
+
+  it('the ending lines carry the verdict (§6 drafts, owner-approved wording)', () => {
+    expect(mobileEn.endless.subBalanced).toContain('balanced');
+    expect(mobileEn.endless.subBurned).toContain('ash');
+    expect(mobileEn.endless.subBalanced).not.toBe(mobileEn.endless.sub);
+    expect(mobileEn.endless.subBurned).not.toBe(mobileEn.endless.sub);
   });
 });

@@ -27,6 +27,7 @@ import { audio } from '@/platform/audio';
 import { useDisplaySettings } from '@/platform/display';
 import { fonts, layout, palette, themeFor, type as typeScale } from '@/theme/tokens';
 import { i18n } from '@/i18n';
+import { endlessSubFor } from './endlessLaw';
 import { endlessFoe } from '@shared/endless';
 
 export default function EndlessScreen() {
@@ -67,7 +68,7 @@ export default function EndlessScreen() {
         >
           {i18n.endless.title}
         </Text>
-        <Text style={[styles.sub, { color: theme.fgDim, fontSize: fs.sm }]}>{i18n.endless.sub}</Text>
+        <Text style={[styles.sub, { color: theme.fgDim, fontSize: fs.sm }]}>{endlessSubFor(save.campaign.ending)}</Text>
 
         <View style={styles.column}>
           {/* rung + best — web .panel.card, flex row baseline, gap 18 */}

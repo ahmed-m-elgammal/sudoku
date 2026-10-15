@@ -25,7 +25,7 @@
 // `endedRef` guard inside `finish` still stops a double `onEnd` double-firing.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUi } from '@/state/ui';
 import { useSave } from '@/state/save';
@@ -34,8 +34,9 @@ import { loadIdentity } from '@/state/identity';
 import { net } from '@/game/net/client';
 import { audio } from '@/platform/audio';
 import { useDisplaySettings } from '@/platform/display';
-import { fonts, layout, themeFor } from '@/theme/tokens';
+import { fonts, layout, themeFor, type as typeScale } from '@/theme/tokens';
 import { storyJson, i18n } from '@/i18n';
+import { FOLIOS } from '@shared/orders';
 import { SLOW_INK_MS } from '@/game/fx';
 import type { LocalDuelOpts } from '@/game/duelRuntime';
 import { endlessInkBonus, endlessOnLoss, endlessOnWin } from '@shared/endless';
@@ -56,7 +57,8 @@ import HudHeader from './HudHeader';
 import MirrorStrip from './MirrorStrip';
 import Ticker from './Ticker';
 import { ShakeLayer, WorldDim, HeatVignette } from './FxLayers';
-import { PauseModal, ConcedeModal, AbandonModal, DisconnectModal, SkipModal, SwapBanner } from './Modals';
+import { PauseModal, ConcedeModal, AbandonModal, DisconnectModal, SkipModal, SwapBanner, DuelModal } from './Modals';
+import LexiconBody from '@/ui/screens/LexiconBody';
 
 export default function DuelScreen() {
   const ui = useUi();
@@ -75,7 +77,7 @@ export default function DuelScreen() {
 // mount effect and rendered a skeleton; a lazy initialiser removes that flash and the
 // setState-in-effect it required.
 const [spec] = useState<DuelSessionSpec>(specFromUi);
-  const { duel, flood, shake, hitStop, slowInk, heat } = useDuelSession(spec);
+  const { duel, flood, shake, hitStop, slowInk, heat, statusToast, dismissStatusToast } = useDuelSession(spec);
 
   // iOS and Android both refuse audio before a user gesture; this runs on mount so the
   // duel is not silent on a later tap.
@@ -84,6 +86,9 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   }, []);
 
   const [paused, setPaused] = useState(false);
+  // P2.5 — the Lexicon overlay over the paused room (not a nav screen: leaving
+  // the duel would destroy the live runtime).
+  const [showLexicon, setShowLexicon] = useState(false);
   const [confirmConcede, setConfirmConcede] = useState(false);
   const [confirmSkip, setConfirmSkip] = useState(false);
   // DAY2 back-nav hardening — hardware back on a live duel asks before it leaves.
@@ -92,11 +97,19 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
   const [boardSize, setBoardSize] = useState<number>(0);
   const endedRef = useRef(false);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // M2 — the lesson's overlay surfaces measure these four containers (spotlight holes)
+  // M2 — the lesson's overlay surfaces measure these containers (spotlight holes)
+  const rootRef = useRef<View | null>(null);
   const boardRef = useRef<View | null>(null);
   const padRef = useRef<View | null>(null);
   const toolbarRef = useRef<View | null>(null);
   const abilityRef = useRef<View | null>(null);
+  // The measure effect keys on this object: an inline literal would mint a new
+  // identity every render and re-fire the native measure storm. Refs are stable,
+  // so this memo is stable — the effect runs only when its real inputs move.
+  const spotRefs = useMemo(
+    () => ({ root: rootRef, board: boardRef, pad: padRef, toolbar: toolbarRef, ability: abilityRef }),
+    [rootRef, boardRef, padRef, toolbarRef, abilityRef],
+  );
   // T10 — the graduation card: null = no card; true/false = which graduation this is
   const [gradFirst, setGradFirst] = useState<boolean | null>(null);
 
@@ -251,6 +264,9 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         if (cd.folio === 0 && cd.duel === 2) s.unlockAchievement('folio-first');
         if (cd.folio === 4 && cd.duel === 2) s.unlockAchievement('folio-fifth');
         if (cd.folio === 8 && cd.duel === 2) s.unlockAchievement('folio-ninth');
+        // P2.4 — a folio completed: its card enters the Chronicle (idempotent;
+        // this path also covers first-clears that divert to a story beat below).
+        if (cd.duel === 2) s.markChronicle(`folio:${FOLIOS[cd.folio]?.key ?? cd.folio}`);
         if (firstClear) {
           if (cd.folio === 2 && cd.duel === 2) storyBeat = 'interlude1';
           else if (cd.folio === 5 && cd.duel === 2) storyBeat = 'interlude2';
@@ -352,9 +368,13 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
 
       // Story beats replace the result screen on their first clear.
       if (storyBeat) {
+        // P2.4 — one-shot drama, permanent memory: the beat enters the Chronicle.
+        s.markChronicle(storyBeat);
+        // P3.4 — the Clerk answers: one reply line after Orsolo's three, then
+        // the verdict choice. StoryCard renders the array verbatim.
         const payload =
           storyBeat === 'reveal'
-            ? { lines: [...storyJson.orsoloReveal], plate: '/assets/plates/plate-orsolo-reveal.webp', then: 'endingChoice' as const }
+            ? { lines: [...storyJson.orsoloReveal, ...storyJson.orsoloRevealReply], plate: '/assets/plates/plate-orsolo-reveal.webp', then: 'endingChoice' as const }
             : storyBeat === 'interlude1'
               ? { lines: [...storyJson.interlude1], plate: '/assets/plates/plate-interlude-1.webp', then: 'folioMap' as const, campaignIndex: { folio: 3, duel: 0 } }
               : { lines: [...storyJson.interlude2], plate: '/assets/plates/plate-interlude-2.webp', then: 'folioMap' as const, campaignIndex: { folio: 6, duel: 0 } };
@@ -372,6 +392,8 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
           winner,
           reason: r.reason,
           mode: ui.duelMode,
+          // P2.3 — the fought folio's key, so ResultScreen can voice the Magistrate.
+          campaignFolioKey: ui.duelMode === 'campaign' && cd ? FOLIOS[cd.folio]?.key : undefined,
           claims: [me.claimed.length, foe.claimed.length],
           mistakes: [me.mistakes, foe.mistakes],
           abilities: [
@@ -500,7 +522,6 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
 
   const board = (
     <View
-      ref={boardRef}
       style={styles.boardArea}
       onLayout={(e) => {
         const { width: w, height: h } = e.nativeEvent.layout;
@@ -510,23 +531,29 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         }
       }}
     >
-      <Board
-        duel={duel}
-        flood={flood}
-        hitStop={hitStop}
-        frozen={frozen}
-        cold={cold}
-        slowInk={slowInk}
-        heat={heatValue}
-        theme={theme}
-        size={boardSize > 50 ? boardSize : undefined}
-      />
+      <View
+        ref={boardRef}
+        collapsable={false}
+        style={boardSize > 50 ? { width: boardSize, height: boardSize } : null}
+      >
+        <Board
+          duel={duel}
+          flood={flood}
+          hitStop={hitStop}
+          frozen={frozen}
+          cold={cold}
+          slowInk={slowInk}
+          heat={heatValue}
+          theme={theme}
+          size={boardSize > 50 ? boardSize : undefined}
+        />
+      </View>
     </View>
   );
 
   const controls = (
     <View style={{ paddingBottom: insets.bottom + 8 }}>
-      <View ref={toolbarRef} style={styles.toolbar}>
+      <View ref={toolbarRef} collapsable={false} style={styles.toolbar}>
         {/* A14 — under Miasma the pencil is BARRED (the shared law: "notes erased,
             pencil disabled"). The button dims, reads disabled, cannot toggle on, and
             the pad swallows pencil taps; the player is never silently handed ink. */}
@@ -567,17 +594,17 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
       </View>
       {/* M2 — the pad and the rites are the spotlight's other two containers; the
         untaught ones dim with the stage (opacity wrapper — visual only, never blocking). */}
-      <View ref={padRef} style={teaching ? styles.dimCluster : null}>
+      <View ref={padRef} collapsable={false} style={teaching ? styles.dimCluster : null}>
         <NumPad duel={duel} frozen={frozen} heat={heatValue} theme={theme} onTap={() => audio.uiTap()} />
       </View>
-      <View ref={abilityRef} style={teaching ? styles.dimCluster : null}>
+      <View ref={abilityRef} collapsable={false} style={teaching ? styles.dimCluster : null}>
         <AbilityBar duel={duel} theme={theme} />
       </View>
     </View>
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.bg }]}>
+    <View ref={rootRef} collapsable={false} style={[styles.root, { backgroundColor: theme.bg }]}>
       {/* M2 §5.2 T1 — the untaught room dims to a whisper; t9 restores it. */}
       <View style={teaching ? styles.dimCluster : null}>
         <HudHeader duel={duel} theme={theme} info={tp !== null} />
@@ -589,6 +616,27 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
             <MirrorStrip duel={duel} theme={theme} />
           </View>
           <Ticker duel={duel} theme={theme} />
+          {/* P3.3 — the first-hit explainer: one telling per status, ever. A
+              tap opens the Lexicon over the paused room and dismisses the
+              toast; it also self-cleans after STATUS_TOAST_MS. */}
+          {statusToast ? (
+            <Pressable
+              onPress={() => { dismissStatusToast(); setPaused(true); setShowLexicon(true); }}
+              accessibilityRole="button"
+              accessibilityLabel={`${statusToast.title} — ${statusToast.body}`}
+              style={[styles.statusToast, { borderColor: theme.lineStrong, backgroundColor: theme.bgRaised }]}
+            >
+              <Text style={[styles.statusToastTitle, { color: theme.fg }]}>
+                {statusToast.title}
+              </Text>
+              <Text style={[styles.statusToastBody, { color: theme.fgDim }]}>
+                {statusToast.body}
+              </Text>
+              <Text style={[styles.statusToastHint, { color: theme.focus }]}>
+                {i18n.duel.lexicon.title} ›
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
         {/* J2 — the web shakes `.boardWrap` ONLY: the HUD, pad and rites hold still. */}
         <ShakeLayer shake={shake}>{board}</ShakeLayer>
@@ -611,8 +659,12 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
           phase={tp}
           theme={theme}
           boardSize={boardSize}
-          refs={{ board: boardRef, pad: padRef, toolbar: toolbarRef, ability: abilityRef }}
-          onGate={(g) => duel.tutorialAdvance?.(g)}
+          refs={spotRefs}
+          onGate={(g) => {
+            // P2.4 — the prologue was read: it enters the Chronicle (idempotent).
+            if (g === 'prologueDone') useSave.getState().markChronicle('prologue');
+            duel.tutorialAdvance?.(g);
+          }}
         />
       ) : null}
 
@@ -645,9 +697,32 @@ const [spec] = useState<DuelSessionSpec>(specFromUi);
         <PauseModal
           theme={theme}
           foeName={foeName}
-          onResume={() => setPaused(false)}
-          onConcede={() => { setPaused(false); duel.concede(); }}
+          onResume={() => { setShowLexicon(false); setPaused(false); }}
+          onConcede={() => { setShowLexicon(false); setPaused(false); duel.concede(); }}
+          onLexicon={() => setShowLexicon(true)}
         />
+      ) : null}
+
+      {/* P2.5 — the Lexicon over the paused room: the same body the Lexicon
+          screen paints, in a modal. The duel stays mounted underneath; resume
+          and concede both dismiss it, as does hardware back (which dismisses
+          the pause itself). */}
+      {paused && showLexicon ? (
+        <DuelModal title={i18n.duel.lexicon.title} theme={theme} onRequestClose={() => setShowLexicon(false)}>
+          <ScrollView style={styles.lexiconScroll}>
+            <LexiconBody theme={theme} fs={typeScale(theme.textScale)} />
+          </ScrollView>
+          <View style={styles.lexiconClose}>
+            <Pressable
+              onPress={() => setShowLexicon(false)}
+              accessibilityRole="button"
+              accessibilityLabel={i18n.common.close}
+              style={[styles.lexiconCloseBtn, { borderColor: theme.lineStrong }]}
+            >
+              <Text style={[styles.lexiconCloseText, { color: theme.fg }]}>{i18n.common.close}</Text>
+            </Pressable>
+          </View>
+        </DuelModal>
       ) : null}
 
       {confirmConcede ? (
@@ -722,4 +797,31 @@ const styles = StyleSheet.create({
   // web `.reconnectBanner`: fixed, top calc(safe-top + 8px), horizontally centered —
   // alignSelf centers the absolute child the way the web's left:50% translateX(-50%) did
   offline: { position: 'absolute', alignSelf: 'center', borderWidth: 1, borderRadius: 3, padding: 8 },
+  // P2.5 — the Lexicon overlay scroll + close (the pause sheet's chrome law)
+  lexiconScroll: { maxHeight: 420 },
+  lexiconClose: { alignItems: 'center', marginTop: 10 },
+  // P3.3 — the first-hit explainer toast: display title, body explainer,
+  // lexicon hint. Taps anywhere on it.
+  statusToast: {
+    marginHorizontal: 12,
+    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: 3,
+    alignItems: 'center',
+  },
+  statusToastTitle: { fontFamily: fonts.display, fontSize: 15, letterSpacing: 0.5 },
+  statusToastBody: { fontFamily: fonts.body, fontSize: 13, textAlign: 'center', marginTop: 2 },
+  statusToastHint: { fontFamily: fonts.body, fontSize: 12, marginTop: 4 },
+  lexiconCloseBtn: {
+    minHeight: layout.touch,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderRadius: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lexiconCloseText: { fontFamily: fonts.display },
 });

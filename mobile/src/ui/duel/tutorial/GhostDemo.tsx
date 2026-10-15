@@ -13,7 +13,7 @@
 // exact rhythm the live flood plays. Reduced motion starts settled — the settled state
 // IS the state, so there is nothing to kill.
 import { useEffect, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { i18n } from '@/i18n';
 import { floodDelayMs } from '../motionLaw';
 import { useMotionReduced } from '@/platform/display';
@@ -24,11 +24,13 @@ export interface GhostDemoProps {
   theme: Theme;
   /** the digits the demo's row shows (the lesson's own prepared truth) */
   digits: readonly (1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)[];
+  /** optional tap-to-dismiss callback for timed demos (§5.2 T7) */
+  onDismiss?: () => void;
 }
 
 const CELL_COUNT = 9;
 
-export default function GhostDemo({ kind, theme, digits }: GhostDemoProps) {
+export default function GhostDemo({ kind, theme, digits, onDismiss }: GhostDemoProps) {
   const motionReduced = useMotionReduced();
   // one shared progress value, created once with the motion law already applied
   const [progress] = useState(() => new Animated.Value(motionReduced ? 1 : 0));
@@ -57,31 +59,58 @@ export default function GhostDemo({ kind, theme, digits }: GhostDemoProps) {
   });
   const settled = motionReduced || played;
 
-  return (
+  const content = (
     <View
       accessibilityRole="text"
       accessibilityLabel={kind === 'rule' ? i18n.tutorialV2.t2Plain : i18n.tutorialV2.t7Plain}
       style={[styles.card, { borderColor: theme.lineStrong, backgroundColor: theme.bgRaised }]}
-      pointerEvents="none"
     >
       <Text style={[styles.head, { color: theme.fgBright }]}>
         {kind === 'rule' ? i18n.tutorialV2.t2Plain : i18n.tutorialV2.t7Plain}
       </Text>
       <View style={[styles.row, settled && kind === 'claim' && { backgroundColor: theme.floodYou }]}>
         {digits.slice(0, CELL_COUNT).map((d, i) => (
-          <DemoCell key={i} value={d} opacity={settleFor(i)} theme={theme} />
+          <DemoCell key={i} value={d} opacity={settleFor(i)} theme={theme} isFirst={i === 0} />
         ))}
       </View>
       <Text style={[styles.ruleLine, { color: settled ? theme.focus : 'transparent' }]}>
-        {i18n.tutorialV2.t2Flavor}
+        {kind === 'rule' ? i18n.tutorialV2.t2Flavor : i18n.tutorialV2.t7Flavor}
       </Text>
     </View>
   );
+
+  if (onDismiss) {
+    return (
+      <Pressable onPress={onDismiss} accessibilityRole="button" accessibilityLabel={i18n.common.close}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return <View pointerEvents="none">{content}</View>;
 }
 
-function DemoCell({ value, opacity, theme }: { value: number; opacity: Animated.AnimatedInterpolation<number>; theme: Theme }) {
+function DemoCell({
+  value,
+  opacity,
+  theme,
+  isFirst,
+}: {
+  value: number;
+  opacity: Animated.AnimatedInterpolation<number>;
+  theme: Theme;
+  isFirst: boolean;
+}) {
   return (
-    <View style={[styles.cell, { borderColor: theme.lineStrong }]}>
+    <View
+      style={[
+        styles.cell,
+        {
+          borderColor: theme.lineStrong,
+          borderLeftWidth: isFirst ? 1 : 0,
+        },
+      ]}
+    >
       <Animated.Text style={[styles.digit, { color: theme.fgBright, opacity }]}>{value}</Animated.Text>
     </View>
   );
@@ -94,19 +123,21 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderRadius: 8,
-    padding: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
     gap: 12,
     alignItems: 'center',
+    maxWidth: '100%',
   },
-  head: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21 },
-  row: { flexDirection: 'row' },
+  head: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  row: { flexDirection: 'row', alignSelf: 'center' },
   cell: {
-    width: 34,
-    height: 34,
+    width: 30,
+    height: 30,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  digit: { fontFamily: fonts.digit, fontSize: 18 },
+  digit: { fontFamily: fonts.digit, fontSize: 16 },
   ruleLine: { fontFamily: fonts.bodyItalic, fontSize: 13, lineHeight: 18, textAlign: 'center' },
 });

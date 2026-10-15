@@ -2,7 +2,7 @@
 // (docs/TUTORIAL_OPTIMIZATION_PLAN.md §6.1 "UI", §6.2). DuelScreen renders this once;
 // the layer decides what a phase floats over the room:
 //
-//   t0  PrologueCards  — the blocking two-card canon intro
+//   t0  PrologueCards  — the blocking four-card canon intro
 //   t2  GhostDemo      — the rule demo (its own mini-board; the real Board is untouched)
 //   t7  GhostDemo      — the claim demo, auto-dismissed so the board can be played
 //   t1,3–8  Spotlight  — scrim + hole over the measured target container
@@ -13,13 +13,13 @@
 // the four target containers — DuelScreen wires the refs, nothing else is measured.
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, StatusBar, StyleSheet, View, useWindowDimensions } from 'react-native';
 import type { DuelRuntime, TutorialSpotTarget } from '@/game/duelRuntime';
 import type { TutorialPhase } from '@/game/tutorialDirector';
 import PrologueCards from './PrologueCards';
 import GhostDemo, { DEMO_ROW } from './GhostDemo';
 import Spotlight from './Spotlight';
-import { abilityHole, cellHole, digitHole, toolbarHole, type Rect } from './spotlight';
+import { abilityHole, cellHole, digitHole, measuredRect, sameRect, toolbarHole, type Rect } from './spotlightGeometry';
 import { layout, type Theme } from '@/theme/tokens';
 
 export interface TutorialLayerProps {
@@ -29,6 +29,7 @@ export interface TutorialLayerProps {
   /** the measured board-wrap edge (DuelScreen's own onLayout state) */
   boardSize: number;
   refs: {
+    root?: RefObject<View | null>;
     board: RefObject<View | null>;
     pad: RefObject<View | null>;
     toolbar: RefObject<View | null>;
@@ -68,12 +69,44 @@ export default function TutorialLayer({ duel, phase, theme, boardSize, refs, onG
     prevPhase.current = phase;
   }, [phase]);
 
-  // measure the container the live target sits in (phase / layout / board size moves it)
+  // measure the container the live target sits in (phase / layout / board size moves it).
+  // The write guard is load-bearing: measure callbacks mint fresh objects, and a
+  // blind set() would re-render → re-measure forever, starving layout and freezing
+  // stale rects on screen. Equal values keep the previous object (no render).
   const target: TutorialSpotTarget = duel.tutorialTarget ? duel.tutorialTarget() : null;
   const want = wantContainer(target);
   useEffect(() => {
-    const read = (ref: RefObject<View | null>, set: (r: WindowRect) => void) => {
-      ref.current?.measureInWindow((x, y, w, h) => set({ x, y, w, h }));
+    const read = (
+      ref: RefObject<View | null>,
+      set: (update: (prev: WindowRect) => WindowRect) => void,
+    ) => {
+      const node = ref.current;
+      if (!node) return;
+      const rootNode = refs.root?.current;
+
+      const apply = (x: number, y: number, w: number, h: number) => {
+        const r = measuredRect(x, y, w, h);
+        if (!r) return;
+        set((prev) => (sameRect(prev, r) ? prev : r));
+      };
+
+      if (rootNode && node.measureLayout) {
+        node.measureLayout(
+          rootNode,
+          (x, y, w, h) => apply(x, y, w, h),
+          () => {
+            node.measureInWindow((x, y, w, h) => {
+              const statusOffset = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
+              apply(x, y + statusOffset, w, h);
+            });
+          },
+        );
+      } else {
+        node.measureInWindow((x, y, w, h) => {
+          const statusOffset = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
+          apply(x, y + statusOffset, w, h);
+        });
+      }
     };
     if (want === 'board') read(refs.board, setBoardRect);
     else if (want === 'pad') read(refs.pad, setPadRect);
@@ -94,11 +127,13 @@ export default function TutorialLayer({ duel, phase, theme, boardSize, refs, onG
       ) : null}
       {claimDemo ? (
         <View pointerEvents="box-none" style={styles.demoHost}>
-          <GhostDemo kind="claim" theme={theme} digits={DEMO_ROW} />
+          <GhostDemo kind="claim" theme={theme} digits={DEMO_ROW} onDismiss={() => setClaimDemo(false)} />
         </View>
       ) : null}
 
-      {spot ? <Spotlight theme={theme} container={spot.container} hole={spot.hole} /> : null}
+      {spot && (!claimDemo || phase !== 't7') ? (
+        <Spotlight theme={theme} container={spot.container} hole={spot.hole} />
+      ) : null}
     </>
   );
 }
@@ -133,18 +168,17 @@ function spotlightFor(
   switch (target.kind) {
     case 'board': {
       if (!boardSize || rects.boardRect.w <= 0) return null;
-      // the wrap is centered in the board area (boardArea's centering law)
-      const ox = (rects.boardRect.w - boardSize) / 2;
-      const oy = (rects.boardRect.h - boardSize) / 2;
+      const ox = Math.max(0, (rects.boardRect.w - boardSize) / 2);
+      const oy = Math.max(0, (rects.boardRect.h - boardSize) / 2);
       return {
         container: rects.boardRect,
-        hole: { x: Math.max(0, ox), y: Math.max(0, oy), w: boardSize, h: boardSize },
+        hole: { x: ox, y: oy, w: boardSize, h: boardSize },
       };
     }
     case 'cell': {
       if (!boardSize || rects.boardRect.w <= 0) return null;
-      const ox = (rects.boardRect.w - boardSize) / 2;
-      const oy = (rects.boardRect.h - boardSize) / 2;
+      const ox = Math.max(0, (rects.boardRect.w - boardSize) / 2);
+      const oy = Math.max(0, (rects.boardRect.h - boardSize) / 2);
       const h = cellHole(boardSize, target.cell);
       return { container: rects.boardRect, hole: { x: h.x + ox, y: h.y + oy, w: h.w, h: h.h } };
     }

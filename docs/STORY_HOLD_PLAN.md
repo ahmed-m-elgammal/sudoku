@@ -310,18 +310,21 @@ Recommended sequence: **P1.1 → P1.2 → P2.1 → P3.2** (one afternoon of guar
 - `endless.subBurned` — "The Ledger is ash; the Nine ride a lawless circuit, and the strong write their own."
 - `orsoloRevealReply` (optional P3.4) — "Then hear my plea, Magistrate: the folios are mine, and the pen is in my hand."
 
-## 7. Story surfaces map (maintained under P4.2)
+## 7. Story surfaces map (maintained under P4.2 — verified by `audit:story`)
 
 | Key group | Mobile renders at | Web renders at | First seen |
 |---|---|---|---|
-| `prologue[0..3]` | PrologueCards (T0) — *0..1 pending P2.1* | tutorial | first boot |
+| `prologue[0..3]` | PrologueCards, all four (P2.1) | tutorial | first boot |
 | `tutorial` | TutorialLayer / GraduationCard | tutorial | first boot |
-| `folios.*` | FolioMap / FolioDetail | FolioMap / FolioDetail | campaign |
-| `mag.*.challenge/taunt` | FolioDetail; *taunt mid-duel pending P2.2* | same | campaign |
-| `mag.*.defeat/folio` | FolioDetail; *ResultScreen pending P2.3* | same | campaign |
-| `interlude1/2` | StoryCard via DuelScreen:355–361 | StoryCard | after Folios III/VI |
-| `orsoloReveal` | StoryCard → EndingChoice | StoryCard | after Folio IX |
-| `endings.*` | StoryCard via EndingChoice | StoryCard | verdict |
-| Ending acknowledgment | hub `foliosSettled`; *Endless sub pending P3.1* | same | post-game |
-| Statuses / rites glossary | *Lexicon pending P2.5* | — | any |
-| Beats seen | *Chronicle pending P2.4* | — | any |
+| `folios.*` | FolioMap / FolioDetail / Chronicle | FolioMap / FolioDetail | campaign |
+| `mag.*.challenge` | FolioDetail (pre-duel) + ResultScreen dismissal (P2.3) | FolioDetail | campaign |
+| `mag.*.taunt` | Ticker mid-duel via event `{key, idx}` (P2.2); generic Shade voice via `duel.shadeTaunt` | — | campaign |
+| `mag.*.defeat` | ResultScreen `magVoiceFor` (P2.3) | — | campaign win |
+| `mag.*.folio` | ResultScreen on third duels (P2.3) + Chronicle (P2.4) | — | folio completion |
+| `interlude1/2` | StoryCard via DuelScreen + Chronicle (P2.4) | StoryCard | after Folios III/VI |
+| `orsoloReveal` | StoryCard → EndingChoice + Chronicle (P2.4) | StoryCard | after Folio IX |
+| `orsoloRevealReply` | DuelScreen reveal payload + Chronicle (P3.4) | — | after Folio IX |
+| `endings.*` | StoryCard via EndingChoice + Chronicle (P2.4) | StoryCard | verdict |
+| Ending acknowledgment | hub `foliosSettled` + `endlessSubFor` (P3.1) | hub only | post-game |
+| Statuses / rites glossary | LexiconScreen + pause overlay via `shared/lexicon.ts` (P2.5) | — | any |
+| Beats seen | ChronicleScreen via `chronicleSeen` (P2.4) | — | any |

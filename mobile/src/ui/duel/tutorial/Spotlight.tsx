@@ -10,7 +10,7 @@
 // (there is deliberately no pulse animation to kill — the settled state IS the state).
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { dimRectsAround, type Rect } from './spotlight';
+import { dimRectsAround, holeInsideContainer, type Rect } from './spotlightGeometry';
 import type { Theme } from '@/theme/tokens';
 
 export interface SpotlightProps {
@@ -24,6 +24,11 @@ export interface SpotlightProps {
 
 export default function Spotlight({ container, hole, theme, style }: SpotlightProps) {
   const rects = dimRectsAround(hole, { w: container.w, h: container.h });
+  // The outline obeys the same inside-check as the dim tiles: a stale
+  // measurement (hole outside the container) dims the container whole AND
+  // paints no floating brass box over the HUD — the frame self-heals on the
+  // next measurement instead of lying about the target.
+  const showHole = holeInsideContainer(hole, container);
   return (
     <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, style]}>
       {rects.map((r, i) => {
@@ -45,7 +50,7 @@ export default function Spotlight({ container, hole, theme, style }: SpotlightPr
           />
         );
       })}
-      {hole ? (
+      {hole && showHole ? (
         <View
           pointerEvents="none"
           style={[

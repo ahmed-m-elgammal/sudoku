@@ -104,3 +104,7 @@ Both endings ship verbatim in `story.endings.balance` / `story.endings.burn`, cl
 ## Achievements ("Marginalia", 24)
 
 First Verdict · A Clean Hand · Seal-Breaker · Lord of Rows · Saint of Columns · Box-Wright · Unflinching · Tide-Turner · Unspoken · Unchained · Miasma-Walker · Reader of Blots · Augur-Faithful · Reckoning Dealt · Sworn to the Lantern · Sworn to the Quill · Sworn to the Axe · Sworn to the Vial · The First Folio · Halfway Hanged · The Ninth Seal Broken · Daily Ember · Seven Unbroken · Keeper of the Ledger. Titles and descriptions live in `i18n.achievements`.
+
+---
+
+*Guardrails: `shared/__tests__/storyCanon.test.ts` pins this bible to the shipped `story.json` (byte-equality web↔mobile); `tools/audit-story.mjs` fails on canon lines that ship nowhere. If you edit the story, run `node tools/sync-story.mjs` and keep both green.*

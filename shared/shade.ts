@@ -124,6 +124,72 @@ export type ShadeAction =
   // lapses windows while preserving everything earned or suffered.
   | { kind: 'swap'; to: OrderId };
 
+// ---------------------------------------------------------------- P2.2 taunts
+// The court talks back (docs/STORY_HOLD_PLAN.md P2.2). The bot layer decides
+// when a line is ALLOWED; it never invents text — the Ticker resolves
+// `{key, idx}` against story.json, so copy stays in the canon.
+//
+// Why the decision lives at event-attachment time (LocalDuel), not in
+// shadeAct/bossAct: the triggers (foe claimed, Clerk erred) are engine
+// outcomes that only exist AFTER the action resolves. The pure law below is
+// the throttle; the runtime feeds it the trigger it just observed.
+export interface TauntRef {
+  /** story.json magistrate key (folio key), or 'shade' for the generic voice. */
+  key: string;
+  idx: 0 | 1;
+}
+
+export interface TauntState {
+  /** duel-clock ms of the last emitted taunt; NEGATIVE_INFINITY before the first. */
+  lastTauntAtMs: number;
+  /** the event immediately before the trigger already carries a taunt. */
+  lastEventWasTaunt: boolean;
+  /** taunt indices already spoken this duel (pool resets when exhausted). */
+  usedIdx: (0 | 1)[];
+}
+
+/** ≥ 45 s between taunts — flavour, not spam. */
+export const TAUNT_COOLDOWN_MS = 45_000;
+/** never in the final 30 s — the endgame stays silent. */
+export const TAUNT_QUIET_MS = 30_000;
+
+export const freshTauntState = (): TauntState => ({
+  lastTauntAtMs: Number.NEGATIVE_INFINITY,
+  lastEventWasTaunt: false,
+  usedIdx: [],
+});
+
+export type TauntTrigger = 'claim' | 'mistake' | 'phase';
+
+/**
+ * Which taunt index may fire now, or null. Pure and fail-closed: a hostile
+ * clock, a null trigger, or a spent cooldown never speaks.
+ *
+ *  - 'claim'   — the foe just claimed one of the Clerk's units.
+ *  - 'mistake' — the Clerk just made a mistake.
+ *  - 'phase'   — a Magistrate changed composure (highest priority at the call
+ *                site; the throttle applies equally once chosen).
+ */
+export function eligibleTaunt(
+  trigger: TauntTrigger | null,
+  nowMs: number,
+  durationMs: number,
+  state: TauntState,
+  rand: () => number,
+): 0 | 1 | null {
+  if (trigger !== 'claim' && trigger !== 'mistake' && trigger !== 'phase') return null;
+  if (!Number.isFinite(nowMs) || !Number.isFinite(durationMs) || durationMs <= 0) return null;
+  if (nowMs > durationMs - TAUNT_QUIET_MS) return null;
+  const last = state?.lastTauntAtMs;
+  if (typeof last === 'number' && Number.isFinite(last) && nowMs - last < TAUNT_COOLDOWN_MS) return null;
+  if (state?.lastEventWasTaunt === true) return null;
+  const used = Array.isArray(state?.usedIdx) ? state.usedIdx : [];
+  let pool = ([0, 1] as (0 | 1)[]).filter((i) => !used.includes(i));
+  if (!pool.length) pool = [0, 1];
+  const pick = Math.floor(rand() * pool.length);
+  return pool[Number.isFinite(pick) ? Math.min(pick, pool.length - 1) : 0] ?? null;
+}
+
 // ---------------------------------------------------------------- T16 tempo adaptation
 // One sealed gap between the pleaders and the Shade changes tempo — bounded so the
 // envelope can never be escaped by any state. Pure: reads state, returns a fresh

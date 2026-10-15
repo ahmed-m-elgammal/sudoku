@@ -6,8 +6,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   abilityHole, BOARD_GUTTER, cellHole, dimArea, dimRectsAround, digitHole, toolbarHole,
+  holeInsideContainer, measuredRect, roundRect, sameRect,
   ABILITY_H, ABILITY_GAP, PAD_GAP, PAD_TILE_H, TOOLBAR_BTN_H, TOOLBAR_GAP, TOOLBAR_PAD_Y,
-} from '../spotlight';
+} from '../spotlightGeometry';
 
 const CONTAINER = { w: 360, h: 240 };
 
@@ -104,6 +105,35 @@ describe('spotlight · dimRectsAround (the tiling law)', () => {
       const rects = dimRectsAround(bad as never, CONTAINER);
       expect(rects[0]).toEqual({ x: 0, y: 0, w: CONTAINER.w, h: CONTAINER.h });
       expect(dimArea(rects.slice(1))).toBe(0);
+    }
+  });
+
+  it('SPOT-9 the brass outline obeys the same inside-check as the dim tiles', () => {
+    // a stale measurement (hole above the container — the floating-box defect)
+    // must never paint: outline and dim agree on every input.
+    expect(holeInsideContainer({ x: 40, y: 30, w: 50, h: 40 }, CONTAINER)).toBe(true);
+    for (const bad of [null, { x: -5, y: 0, w: 10, h: 10 }, { x: 0, y: -120, w: 80, h: 80 }, { x: 0, y: 0, w: 0, h: 0 }, { x: 0, y: 0, w: 9999, h: 10 }]) {
+      expect(holeInsideContainer(bad as never, CONTAINER)).toBe(false);
+    }
+  });
+
+  it('SPOT-10 measurements round to pixels and equal values write nothing', () => {
+    // sub-pixel jitter between identical layouts must not read as movement —
+    // otherwise every measure re-renders and the measure storm never settles.
+    expect(roundRect(10.4, 20.6, 300.2, 400.8)).toEqual({ x: 10, y: 21, w: 300, h: 401 });
+    const a = { x: 10, y: 21, w: 300, h: 401 };
+    expect(sameRect(a, { ...a })).toBe(true);
+    expect(sameRect(a, { ...a, w: 302 })).toBe(false);
+  });
+
+  it('SPOT-11 non-finite measurements are dropped, never written', () => {
+    // Android fires undefined for unlaid-out / detached views; NaN would
+    // poison the rect AND defeat the equality guard (NaN !== NaN), so the
+    // callback must refuse the write at the source.
+    expect(measuredRect(10, 20, 300, 400)).toEqual({ x: 10, y: 20, w: 300, h: 400 });
+    for (const bad of [[undefined, 0, 0, 0], [0, undefined, 0, 0], [0, 0, NaN, 0], [0, 0, 0, Infinity]]) {
+      const [x, y, w, h] = bad as unknown as [number, number, number, number];
+      expect(measuredRect(x, y, w, h)).toBeNull();
     }
   });
 });

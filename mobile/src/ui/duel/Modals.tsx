@@ -51,9 +51,11 @@ export interface PauseModalProps {
   foeName: string;
   onResume: () => void;
   onConcede: () => void;
+  /** P2.5 — open the Lexicon overlay (the duel stays mounted underneath). */
+  onLexicon: () => void;
 }
 
-export function PauseModal({ theme, foeName, onResume, onConcede }: PauseModalProps) {
+export function PauseModal({ theme, foeName, onResume, onConcede, onLexicon }: PauseModalProps) {
   return (
     <DuelModal title={i18n.duel.toolbar.pause} theme={theme} onRequestClose={onResume}>
       <Text style={[styles.body, { color: theme.fgDim }]}>
@@ -73,6 +75,14 @@ export function PauseModal({ theme, foeName, onResume, onConcede }: PauseModalPr
           style={[styles.btn, { backgroundColor: theme.accent }]}
         >
           <Text style={[styles.btnText, { color: theme.fg }]}>{i18n.duel.toolbar.concede}</Text>
+        </Pressable>
+        <Pressable
+          onPress={onLexicon}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.duel.lexicon.title}
+          style={[styles.btn, { borderColor: theme.lineStrong, borderWidth: 1 }]}
+        >
+          <Text style={[styles.btnText, { color: theme.fg }]}>{i18n.duel.lexicon.title}</Text>
         </Pressable>
       </View>
     </DuelModal>

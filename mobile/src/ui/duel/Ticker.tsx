@@ -17,7 +17,9 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 import type { DuelRuntime } from '@/game/duelRuntime';
-import { i18n, tf } from '@/i18n';
+import { i18n, storyJson, tf } from '@/i18n';
+import { FOLIOS } from '@shared/orders';
+import type { TauntRef } from '@shared/shade';
 import { type Theme, fonts } from '@/theme/tokens';
 
 export interface TickerProps {
@@ -36,6 +38,26 @@ export default function Ticker({ duel, theme }: TickerProps) {
   const quiet = tutorial
       ? tf('tutorial.waits', { name: i18n.tutorial.shadeName })
       : i18n.duel.log.waiting;
+  // P2.2 — the court talks back: a taunt-carrying event renders the Magistrate
+  // speaking, in the display font. Tutorial duels stay silent (defense in depth:
+  // the runtime never attaches taunts there either). An invalid taunt falls
+  // through to the normal event text — a hostile field never blanks the log.
+  const taunt = !tutorial ? tauntLineFor(last as unknown as Record<string, unknown>) : null;
+  if (taunt) {
+    return (
+      <View style={styles.wrap}>
+        <Text
+          accessibilityRole="text"
+          accessibilityLiveRegion="polite"
+          numberOfLines={1}
+          style={[styles.text, styles.taunt, { color: theme.fg }]}
+          allowFontScaling={false}
+        >
+          {taunt}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.wrap}>
@@ -129,9 +151,46 @@ function orderName(id: string): string {
   return o?.name ?? id;
 }
 
+/** A structurally valid taunt reference, or null (fail-closed). */
+function validTaunt(e: Record<string, unknown> | undefined): TauntRef | null {
+  if (!e || typeof e !== 'object') return null;
+  const t = (e as { taunt?: unknown }).taunt;
+  if (!t || typeof t !== 'object') return null;
+  const { key, idx } = t as { key?: unknown; idx?: unknown };
+  if (typeof key !== 'string' || !key) return null;
+  if (idx !== 0 && idx !== 1) return null;
+  return { key, idx };
+}
+
+/**
+ * P2.2 — resolve a taunt-carrying event to its spoken line, or null when the
+ * reference is invalid (unknown magistrate, spent index, missing copy).
+ * Campaign duels speak with the folio's Magistrate; the generic voice answers
+ * for Shade duels. Copy is never invented here — it comes from story.json or
+ * the dictionary, verbatim.
+ */
+function tauntLineFor(last: Record<string, unknown> | undefined): string | null {
+  const taunt = validTaunt(last);
+  if (!taunt) return null;
+  if (taunt.key === 'shade') {
+    const lines = i18n.duel.shadeTaunt;
+    const line = Array.isArray(lines) ? lines[taunt.idx] : undefined;
+    if (typeof line !== 'string' || !line) return null;
+    return `${tf('duel.tauntPrefix', { name: i18n.common.theShade })}${line}`;
+  }
+  const mag = (storyJson.mag as Record<string, { taunt?: unknown }>)[taunt.key];
+  const lines = mag?.taunt;
+  const line = Array.isArray(lines) ? lines[taunt.idx] : undefined;
+  if (typeof line !== 'string' || !line) return null;
+  const speaker = FOLIOS.find((f) => f.key === taunt.key)?.duels[0]?.name ?? taunt.key;
+  return `${tf('duel.tauntPrefix', { name: speaker })}${line}`;
+}
+
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 12, paddingVertical: 2, minHeight: 22 },
   // tokens.ts law: italics come from the registered italic FAMILY, not fontStyle —
   // RN cannot synthesize italics for custom-loaded faces (web: IM Fell DW Pica Italic).
   text: { fontFamily: fonts.bodyItalic, fontSize: 13, textAlign: 'center' },
+  // P2.2 — the Magistrate speaks in the display font, not the log's italic.
+  taunt: { fontFamily: fonts.display },
 });

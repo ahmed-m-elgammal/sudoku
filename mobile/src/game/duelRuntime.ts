@@ -168,6 +168,12 @@ export interface LocalDuelOpts {
   seals?: [number, number];
   foeProfile?: ShadeProfile;
   mode: 'tutorial' | 'campaign' | 'daily' | 'practice' | 'shade' | 'replay' | 'endless' | 'weekly';
+  /**
+   * P2.2 — the folio key whose Magistrate speaks mid-duel (campaign only).
+   * Absent ≡ no mag voice. Ranked/shade duels use the generic Shade voice;
+   * every other mode is taunt-silent.
+   */
+  magistrateKey?: string;
   adaptive?: boolean;
   foeScript?: unknown;
   mods?: DuelState['rules'];
@@ -207,6 +213,8 @@ export interface DuelSessionSpec {
   seals?: [number, number];
   foeProfile?: ShadeProfile;
   adaptive?: boolean;
+  /** P2.2 — see LocalDuelOpts.magistrateKey */
+  magistrateKey?: string;
   foeScript?: unknown;
   mods?: DuelState['rules'];
   replay?: DuelReplay;

@@ -23,7 +23,7 @@ import {
   createDuel, place, useAbility as engineUseAbility, tick, resign, cellFlags, swapOrder,
   type DuelState, type RuleMods,
 } from '@shared/engine';
-import { shadeAct, profileForStanding, type ShadeProfile } from '@shared/shade';
+import { shadeAct, profileForStanding, eligibleTaunt, freshTauntState, type ShadeProfile, type TauntState } from '@shared/shade';
 import { tutorialAct, newTutorialScript, type TutorialScriptState } from '@shared/tutorial';
 import {
   tutorialV2Act, newTutorialV2Script, armTutorialRace, tutorialV2Telegraph,
@@ -177,10 +177,19 @@ export class LocalDuel implements DuelRuntime {
   // here like the tutorial's script state; present only when opts.foeScript is set.
   private bossState: BossScriptState | null = null;
 
+  // P2.2 — the court's voice. Duel-scoped throttle state for mid-duel taunts;
+  // the copy itself is never stored here (the event carries {key, idx} and the
+  // Ticker resolves it against story.json). `tauntRng` rides its own seeded
+  // stream so flavour draws never perturb the bot's decision rng.
+  private tauntLastAtMs: number = freshTauntState().lastTauntAtMs;
+  private tauntUsed: (0 | 1)[] = [];
+  private tauntRng: Rng;
+
   constructor(opts: LocalDuelOpts) {
     this.opts = opts;
     const puz = generatePuzzle(opts.seed, opts.tier);
     this.rng = new Rng(`${opts.seed}-shade`);
+    this.tauntRng = new Rng(`${opts.seed}-taunt`);
     this.scriptRng = new Rng(`${opts.seed}-script`);
     this.v2 = opts.mode === 'tutorial' && opts.tutorialScript === 'v2';
     if (this.v2) {
@@ -361,6 +370,7 @@ export class LocalDuel implements DuelRuntime {
       this.lastWrongDigit = digit;
       this.lastWrongClearAt = this.state.clockMs + 1000; // digit clears after 1.0s
       if (this.opts.settingsHaptics?.() ?? true) haptics.mistake();
+      this.maybeTauntOnMistake();
     }
     this.opts.onEvent?.({ seq: -1, atMs: this.state.clockMs, kind: res.correct ? 'placed' : 'mistake', player: 0, cell, digit });
     // tutorial pacing hooks
@@ -468,6 +478,65 @@ export class LocalDuel implements DuelRuntime {
 
   flags() { return cellFlags(this.state, 0); }
 
+  // ------------------------------------------------------------------ P2.2 taunts
+  // The court talks back. Trigger evaluation runs where engine outcomes exist:
+  // the Clerk's mistake in place(), the foe's claim or a phase entry in
+  // shadeWake(). The throttle law itself is shared (eligibleTaunt); this file
+  // only observes triggers and staples {key, idx} onto the trigger event,
+  // which the Ticker renders. Copy is never invented here.
+  private tauntVoice(): string | null {
+    if (this.opts.mode === 'campaign' && typeof this.opts.magistrateKey === 'string' && this.opts.magistrateKey) {
+      return this.opts.magistrateKey;
+    }
+    if (this.opts.mode === 'shade') return 'shade';
+    return null;
+  }
+
+  private attachTaunt(trigger: 'claim' | 'mistake' | 'phase', targetIdx: number): boolean {
+    const key = this.tauntVoice();
+    if (!key || this.state.phase !== 'live') return false;
+    const events = this.state.events;
+    const target = events[targetIdx];
+    if (!target) return false;
+    const prev = targetIdx > 0 ? events[targetIdx - 1] : undefined;
+    const state: TauntState = {
+      lastTauntAtMs: this.tauntLastAtMs,
+      lastEventWasTaunt: !!prev && (prev as { taunt?: unknown }).taunt != null,
+      usedIdx: this.tauntUsed,
+    };
+    const idx = eligibleTaunt(trigger, target.atMs, this.state.durationMs, state, () => this.tauntRng.next());
+    if (idx === null) return false;
+    (target as { taunt?: { key: string; idx: 0 | 1 } }).taunt = { key, idx };
+    this.tauntLastAtMs = target.atMs;
+    this.tauntUsed = [...this.tauntUsed, idx].slice(-2);
+    return true;
+  }
+
+  /** The Clerk just erred: the fresh mistake event may carry a taunt. */
+  private maybeTauntOnMistake() {
+    const events = this.state.events;
+    const last = events[events.length - 1];
+    if (!last || last.kind !== 'mistake' || last.player !== 0) return;
+    this.attachTaunt('mistake', events.length - 1);
+  }
+
+  /** The Shade just acted: a foe claim — or a phase entry first — may speak. */
+  private maybeTauntOnWake(eventsBefore: number, phaseAdvanced: boolean) {
+    const events = this.state.events;
+    if (events.length <= eventsBefore) return;
+    if (phaseAdvanced) {
+      this.attachTaunt('phase', events.length - 1);
+      return;
+    }
+    for (let i = events.length - 1; i >= eventsBefore; i--) {
+      const e = events[i];
+      if (e.kind === 'claim' && e.player === 1) {
+        this.attachTaunt('claim', i);
+        return;
+      }
+    }
+  }
+
   // ------------------------------------------------------------------ shade
   private scheduleShade(delay: number) {
     if (this.shadeTimer) clearTimeout(this.shadeTimer);
@@ -515,6 +584,7 @@ export class LocalDuel implements DuelRuntime {
     // acts through the same calibrated Shade (phase-patched); every other mode keeps
     // the plain calibrated Shade bot.
     const prevPhase = this.bossState ? this.bossState.phaseIdx : -1;
+    const eventsBefore = this.state.events.length;
     const act = this.opts.mode === 'tutorial'
       ? this.v2 && this.scriptV2
         ? tutorialV2Act(this.scriptV2, this.state, 1, this.scriptRng, performance.now())
@@ -546,6 +616,9 @@ export class LocalDuel implements DuelRuntime {
         this.bump(true);
       }
     }
+    // P2.2 — the court may answer this wake (phase entry outranks a claim).
+    const phaseAdvanced = !!this.bossState && this.bossState.phaseIdx > prevPhase;
+    this.maybeTauntOnWake(eventsBefore, phaseAdvanced);
     // post-action cadence: shipped bots reschedule at a fixed 900 ms; a T17 mined
     // profile carries its own ink cadence so your Shade paces ink at YOUR tempo
     const cadence = prof.placeCadenceMs;

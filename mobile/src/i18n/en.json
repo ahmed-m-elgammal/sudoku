@@ -75,6 +75,10 @@
     "prologue1Plain": "Two pleaders. One sealed Tablet. Nine by nine.",
     "prologue2Title": "The Shade at the door",
     "prologue2Plain": "An ink-echo of your master has come to prepare you.",
+    "prologue3Title": "The Sealed City",
+    "prologue3Plain": "Before the first digit: remember why the court exists.",
+    "prologue4Title": "The Third Row",
+    "prologue4Plain": "The Shade at your door was your master. The Assize took him from you twice.",
     "prologueTap": "Tap to continue",
     "step": "Step {n} of {total}",
     "t1Plain": "This is the Tablet — the puzzle board. Eighty-one cells.",
@@ -94,7 +98,7 @@
     "t6Flavor": "A careful hand keeps its marginalia.",
     "t6Notes": "Pencil two digits into the glowing cell.",
     "t6Erase": "Now strike one out — tap the erase tile.",
-    "t7Plain": "Fill the row, column, or box of the glowing cell to claim it.",
+    "t7Plain": "Tap the glowing cell, then its missing digit to complete Row 5 and claim it.",
     "t7Flavor": "Territory is taken one completed line at a time.",
     "t8Plain": "Tap the Eye. It reveals a true digit — freely given.",
     "t8Flavor": "The Augur sees what you have not yet read.",
@@ -201,7 +205,25 @@
       "youOffline": "Your line to the court frays. Rekindling the wax…",
       "reconnected": "The line is whole again."
     },
-    "waitingShade": "No human answers the summons. A Shade will take the plea."
+    "waitingShade": "No human answers the summons. A Shade will take the plea.",
+    "chronicle": {
+      "title": "The Chronicle",
+      "sub": "The story so far.",
+      "prologue": "Prologue",
+      "interlude1": "Interlude — Three Folios",
+      "interlude2": "Interlude — Six Folios",
+      "reveal": "The Ninth Seal",
+      "sealed": "Sealed"
+    },
+    "lexicon": {
+      "title": "Lexicon",
+      "sub": "What the court means by it."
+    },
+    "tauntPrefix": "{name}: ",
+    "shadeTaunt": [
+      "The Shade sets its digit and waits, politely, for yours.",
+      "Another Seal cracks. Ink remembers."
+    ]
   },
   "orders": {
     "select": "Hall of Orders",
@@ -327,6 +349,8 @@
   "endless": {
     "title": "The Endless Assize",
     "sub": "The Nine ride their circuit again, forever. Every third rung is a Magistrate's duel — eight Seals and their arc.",
+    "subBalanced": "The Ledger is balanced; the Nine ride their circuit under the law you restored.",
+    "subBurned": "The Ledger is ash; the Nine ride a lawless circuit, and the strong write their own.",
     "rungLabel": "Rung",
     "bestLabel": "Best",
     "nextLabel": "WAITING ON THIS RUNG",

@@ -75,7 +75,7 @@ function walkToRace(duel: LocalDuel): { sealsBefore: number; shadeFrozen: string
   const sealsBefore = duel.state.players[0].seals;
   const shadeFrozen = Buffer.from(duel.state.players[1].board).toString('hex');
 
-  // t0 — the prologue: two taps, the only copy the player reads
+  // t0 — the prologue: four taps through the full canon, the only copy the player reads
   expect(duel.tutorialPhase()).toBe('t0');
   duel.tutorialAdvance('prologueDone');
   expect(duel.tutorialPhase()).toBe('t1');

@@ -21,7 +21,7 @@ export interface SaveStateV2 {
   v: 2;
   tutorialDone: boolean;
   antechamberUnlocked: boolean;
-  campaign: { folioIdx: number; duelIdx: number; stars: Record<string, number>; ended: boolean; ending?: 'balance' | 'burn' };
+  campaign: { folioIdx: number; duelIdx: number; stars: Record<string, number>; ended: boolean; ending?: 'balance' | 'burn'; chronicleSeen: string[] };
   order: OrderId;
   unlockedOrders: OrderId[];
   economy: { ink: number; sigils: number; reliquaryProgress: number; pending: PendingInk[] };
@@ -49,6 +49,12 @@ export interface SaveStateV2 {
     music: number; fx: number; haptics: boolean; contrast: boolean; reducedMotion: boolean;
     text: 's' | 'm' | 'l'; autoNotes: boolean; highlights: boolean; leftHand: boolean; telemetry: boolean;
   };
+  /**
+   * P3.3 — first-hit explainer flags. statusExplained lists every status the
+   * Clerk has already suffered once (and been told about); hostile-proofed
+   * like chronicleSeen.
+   */
+  flags: { statusExplained: string[] };
   name: string;
 }
 
@@ -60,7 +66,7 @@ export const freshSave = (name: string): SaveStateV2 => ({
   v: 2,
   tutorialDone: false,
   antechamberUnlocked: false,
-  campaign: { folioIdx: 0, duelIdx: 0, stars: {}, ended: false },
+  campaign: { folioIdx: 0, duelIdx: 0, stars: {}, ended: false, chronicleSeen: [] },
   order: 'scholar',
   unlockedOrders: ['scholar', 'executioner'],
   economy: { ink: 0, sigils: 0, reliquaryProgress: 0, pending: [] },
@@ -83,6 +89,7 @@ export const freshSave = (name: string): SaveStateV2 => ({
     music: 0.3, fx: 0.7, haptics: true, contrast: false, reducedMotion: false,
     text: 'm', autoNotes: true, highlights: true, leftHand: false, telemetry: true,
   },
+  flags: { statusExplained: [] },
   name,
 });
 
@@ -94,6 +101,17 @@ interface SaveStore {
   load: () => Promise<void>;
   update: (fn: (s: SaveStateV2) => SaveStateV2) => void;
   unlockAchievement: (id: string) => void;
+  /**
+   * P2.4 — record a story beat as seen ('prologue', 'interlude1', 'folio:<key>',
+   * …). Append-only and idempotent: re-marking never duplicates, and a hostile
+   * id degrades to a capped string, never a crash.
+   */
+  markChronicle: (beat: string) => void;
+  /**
+   * P3.3 — record a status as explained (first-hit toast shown). Same
+   * append-only, idempotent, hostile-proofed law.
+   */
+  markStatusExplained: (status: string) => void;
   addInk: (n: number) => void;
   addSigils: (n: number) => void;
 }
@@ -164,13 +182,57 @@ export const useSave = create<SaveStore>((set, get) => ({
     if (!s || s.achievements[id]) return;
     get().update((cur) => ({ ...cur, achievements: { ...cur.achievements, [id]: Date.now() } }));
   },
+  markChronicle: (beat) => {
+    if (typeof beat !== 'string' || !beat) return;
+    const id = beat.slice(0, 40);
+    const s = get().save;
+    if (!s || (s.campaign.chronicleSeen ?? []).includes(id)) return;
+    get().update((cur) => ({
+      ...cur,
+      campaign: {
+        ...cur.campaign,
+        chronicleSeen: [...(cur.campaign.chronicleSeen ?? []), id].slice(0, 64),
+      },
+    }));
+  },
+  /**
+   * P3.3 — record a status as explained (first-hit toast shown). Same
+   * append-only, idempotent, hostile-proofed law as markChronicle.
+   */
+  markStatusExplained: (status) => {
+    if (typeof status !== 'string' || !status) return;
+    const id = status.slice(0, 40);
+    const s = get().save;
+    if (!s || (s.flags?.statusExplained ?? []).includes(id)) return;
+    get().update((cur) => ({
+      ...cur,
+      flags: { ...(cur.flags ?? {}), statusExplained: [...(cur.flags?.statusExplained ?? []), id].slice(0, 16) },
+    }));
+  },
   addInk: (n) => get().update((s) => ({ ...s, economy: { ...s.economy, ink: Math.max(0, s.economy.ink + n) } })),
   addSigils: (n) => get().update((s) => ({ ...s, economy: { ...s.economy, sigils: Math.max(0, s.economy.sigils + n) } })),
 }));
 
 // UNCHANGED from the web build — every branch here is a hostile-input guard.
-function migrate(s: SaveStateV2): SaveStateV2 {
+// Exported for the gate: the chronicle migration is pinned by chronicle.test.ts.
+export function migrate(s: SaveStateV2): SaveStateV2 {
   if (s.v === 2) {
+    // P2.4 — saves from before the Chronicle gain an empty ledger; a hostile
+    // chronicleSeen degrades to one, like every sibling here.
+    const chronicleSeen = Array.isArray((s.campaign as { chronicleSeen?: unknown } | undefined)?.chronicleSeen)
+      ? ((s.campaign as { chronicleSeen: unknown[] }).chronicleSeen
+        .filter((b): b is string => typeof b === 'string' && b.length > 0)
+        .map((b) => b.slice(0, 40))
+        .slice(0, 64))
+      : [];
+    // P3.3 — saves from before the first-hit explainer gain empty flags; a
+    // hostile flags blob degrades the same way.
+    const statusExplained = Array.isArray((s.flags as { statusExplained?: unknown } | undefined)?.statusExplained)
+      ? ((s.flags as { statusExplained: unknown[] }).statusExplained
+        .filter((b): b is string => typeof b === 'string' && b.length > 0)
+        .map((b) => b.slice(0, 40))
+        .slice(0, 16))
+      : [];
     // T18 — hostile/legacy endless states are sanitized on every load, and a
     // save from before this iteration gains a fresh (persisted) ladder.
     // T21 — saves from before the Weekly Assize gain its ledger, hostile or not.
@@ -188,6 +250,8 @@ function migrate(s: SaveStateV2): SaveStateV2 {
       : [];
     return {
       ...s,
+      campaign: { ...s.campaign, chronicleSeen },
+      flags: { ...(s.flags ?? {}), statusExplained },
       economy: { ...s.economy, pending },
       endless: sanitizeEndless(s.endless),
       weekly: s.weekly && typeof s.weekly === 'object'
