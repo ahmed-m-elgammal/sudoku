@@ -74,9 +74,7 @@
       }
     },
     "owner": "ahmedmelgammal6",
-    "runtimeVersion": {
-      "policy": "fingerprint"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/9025d0f3-ac36-4f9b-bbca-8ecf11668912",
       "fallbackToCacheTimeout": 0
