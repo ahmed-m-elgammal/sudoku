@@ -1,0 +1,94 @@
+{
+  "platform": "iOS App Store",
+  "app": {
+    "bundleId": "com.assize.game",
+    "name": "ASSIZE",
+    "version": "1.0.0",
+    "preparedBy": "ASO Agent Skill v2.0.2 (Challenger tier)",
+    "preparedAt": "2026-10-16"
+  },
+  "metadata": {
+    "appName": {
+      "value": "ASSIZE: Gothic Sudoku Duel",
+      "limit": 30,
+      "used": 26,
+      "rationale": "Brand first for wordmark consistency and recognition; 'Sudoku' is the head keyword with real volume; 'Gothic' differentiates in a sea of minimalist sudoku listings and pre-frames the art style; 'Duel' names the mechanic. Play-store variant uses title case: 'Assize: Gothic Sudoku Duel'."
+    },
+    "subtitle": {
+      "value": "Dark puzzle PvP in plague city",
+      "limit": 30,
+      "used": 30,
+      "rationale": "Every word is new indexed inventory (no repeats of title words, per Apple's one-index-per-word rule): dark, puzzle, pvp, plague, city. 'PvP' and 'dark' capture the two most distinctive search angles this app can own; 'plague city' carries atmosphere and long-tail intent.",
+      "alternates": [
+        { "value": "Dark 1v1 puzzle duels, Novem", "used": 28 },
+        { "value": "Puzzle duels in a dark city", "used": 27 }
+      ]
+    },
+    "keywords": {
+      "value": "battle,versus,vs,multiplayer,logic,brain,number,daily,campaign,medieval,ranked,friends,grimoire",
+      "limit": 100,
+      "usedBytes": 95,
+      "rules": "Hidden field, 100 BYTES, comma-separated with no spaces. No word repeats the title or subtitle (Apple indexes each word once). No competitor names, no trademarks, no 'best/free' (guideline 2.3.7).",
+      "why": {
+        "battle": "high-intent gamer term; 'sudoku battle' is the closest thing this niche has to a category keyword",
+        "versus,vs": "covers 'sudoku versus' queries; both forms cost few bytes",
+        "multiplayer": "'multiplayer sudoku' is the strongest commercial modifier for this concept",
+        "logic,brain": "the two biggest puzzle-intent modifiers sudoku players search",
+        "number": "covers 'number puzzle/game' long tail; singular matches Apple's light stemming",
+        "daily": "'daily sudoku' is a top-5 sudoku modifier; the app ships a true Daily mode",
+        "campaign": "differentiates from utility sudoku apps; matches the 27-duel story spine",
+        "medieval": "setting keyword with low competition; pre-frames the gothic brand",
+        "ranked": "competitive-intent keyword; matches the Elo ladder",
+        "friends": "covers 'sudoku with friends' intent; matches Friend Duel mode",
+        "grimoire": "atmosphere long-tail; near-zero competition, on-brand"
+      }
+    },
+    "primaryCategory": { "value": "Games > Puzzle", "rationale": "Sudoku search intent lives in Puzzle; this is where the conversion impressions are." },
+    "secondaryCategory": { "value": "Games > Board", "rationale": "Captures the turn-based 1v1 duel audience and the Board browse chart, where a competitive sudoku title stands out sharply." },
+    "promotionalText": {
+      "value": "The Tablet does not forgive. Duel a Shade that learns your pace, claim rows to break wax Seals, and settle the plague-walled city of Novem - one puzzle at a time.",
+      "limit": 170,
+      "used": 162,
+      "note": "Not indexed (Apple-confirmed). Updatable any time without a new build - use it for rotating hooks, seasonal events, or featuring calls."
+    },
+    "description": {
+      "limit": 4000,
+      "indexed": false,
+      "value": "You were a clerk when they hanged your master for forging the Great Ledger. This morning, an ink-echo wearing his voice stood at your door and told you to win the truth back, folio by folio.\n\nWelcome to the Assize - a 1v1 sudoku duel in the plague-walled city of Novem, where law is settled by solving.\n\nTHE DUEL\n\nTwo pleaders. One sealed Tablet of nine by nine. Both solve the same puzzle, at the same table, at the same time.\n\nPlace correct digits and build Momentum. Complete a row, a column, or a box to claim it - and wound your foe's wax Seals. Place false ink, and your own Seals crack.\n\nCast engraved Rites to hinder one another: Chains that lock cells, Smudges that blur digits, Hushes that still your hand, Miasmas that erase your notes, Quarantines that seal whole units from claim. The first pleader to break the other's Seals - or fill the Tablet - prevails.\n\nFOUR ORDERS\n\nChoose your Order before each duel. The Scholar forgives your first mistake and reveals truth. The Executioner punishes the wounded. The Apothecary distills longer torments and mends her own Seals. The Warden wards, mirrors, and quarantines. Twelve Rites in total - every one earned through play, never bought.\n\nTHE NINE FOLIOS\n\nTwenty-seven duels across nine Magistrates, from Halbrecht the Headsman to the Ninth Seal himself. A full gothic campaign with prologue, interludes, a twist three Folios in the making, and one choice the Ledger remembers forever: balance the truth, or burn it.\n\nA SHADE THAT LEARNS\n\nThe game's opponents are Shades - ink-echoes that genuinely solve the Tablet, climbing the same deduction ladder you do. Duel your own Shade, raised from the record of your past duels: it paces its ink at your tempo, errs where you erred, and adapts when the duel tightens.\n\nEVERY DAY, ONE TABLET\n\nThe Daily Assize: one seeded puzzle for every soul on earth, mistakes paid in seconds, streaks tracked in candles. The Weekly Assize: two rotating rule-writs, one sitting. The Endless Assize: the Nine ride again forever - wins ascend, losses return you to the foot.\n\nRANKED DUELS\n\nAuthoritative matchmaking with server-side move validation, Elo Standing, and anticheat heuristics. Duel friends with a shared code. Duels survive disconnects with a live grace countdown.\n\nTHE HOUSE RULES\n\n- No accounts. No email. No trackers.\n- Free to play. Nothing that affects the duel is ever sold.\n- Full offline play for campaign, practice, daily, and Shade duels.\n- Complete accessibility: full keyboard play, screen-reader labels, reduced-motion and high-contrast modes, three text sizes.\n\nAn engraved grimoire, not a kids' game - grim, restrained, and adult in tone.\n\nTake up your pen, Clerk. The Tablet does not forgive."
+    },
+    "whatsNew": {
+      "value": "First sitting of the Assize. The Nine Folios campaign, ranked duels, the Daily and Weekly Assize, the Endless circuit, and a Shade that learns your ink - all in one Tablet.",
+      "limit": 4000
+    }
+  },
+  "inAppEvents": [
+    { "badge": "Special Event", "name": "The Ninth Seal", "nameLimit": 30,
+      "shortDesc": "Face Magistrate Orsolo and settle the Great Ledger.", "shortLimit": 50,
+      "longDesc": "The final Folio is open. Nine Orders wait, and the Ninth Seal adapts to yours.", "longLimit": 120 },
+    { "badge": "Challenge", "name": "The Weekly Assize", "nameLimit": 30,
+      "shortDesc": "Two writs, one sitting. Every Clerk the same duel.", "shortLimit": 50,
+      "longDesc": "Rotating rule-writs twist the Reckoning each week. One Tablet, seven days, no excuses.", "longLimit": 120 },
+    { "badge": "Competition", "name": "The Endless Circuit", "nameLimit": 30,
+      "shortDesc": "The Nine ride again. Climb as far as ink carries.", "shortLimit": 50,
+      "longDesc": "A ranked ladder through all nine Magistrates. Wins ascend; losses return you to the foot.", "longLimit": 120 }
+  ],
+  "customProductPages": [
+    { "theme": "PvP / competitive", "targetKeywords": "sudoku battle, multiplayer sudoku, pvp puzzle",
+      "screenshotOrder": ["01-duel", "02-tablet", "03-claims", "04-orders", "08-ranked"],
+      "promoText": "Race a living foe on the same Tablet. Claim rows, cast Rites, break their Seals." },
+    { "theme": "Story / gothic", "targetKeywords": "gothic puzzle, dark sudoku, story puzzle game",
+      "screenshotOrder": ["06-campaign", "09-ending", "05-shade", "01-duel", "10-enter"],
+      "promoText": "Nine Magistrates. Twenty-seven duels. One choice the Ledger remembers forever." },
+    { "theme": "Daily ritual", "targetKeywords": "daily sudoku challenge, daily puzzle",
+      "screenshotOrder": ["07-daily", "08-ranked", "02-tablet", "10-enter"],
+      "promoText": "One Tablet a day for every soul on earth. Keep the candle lit." }
+  ],
+  "ageRating": {
+    "expected": "9+ (Apple) after honest questionnaire answers",
+    "notes": "Grim gothic framing (executions referenced in story text, plague imagery) with zero gore, no realistic violence, no gambling, no adult content. Answer the violence/fear questions honestly; do not inflate."
+  },
+  "futureIapNames": {
+    "note": "No IAP ships in 1.0 (monetization spec 09 - RevenueCat planned). When it does, IAP names ARE indexed by Apple - choose them as keyword inventory:",
+    "examples": ["Wax Seals Skin: Oxblood Court", "Candles, Bundle of Ten", "Patron's Pouch"]
+  }
+}
